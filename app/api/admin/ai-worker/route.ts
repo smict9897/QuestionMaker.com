@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { NCTB_CLASSES } from "@/lib/nctb-data";
+import { checkAdminOrCron } from "@/lib/route-guard";
 
 export const maxDuration = 60; 
 export const dynamic = "force-dynamic";
@@ -48,7 +49,11 @@ function pickChapter(raw: unknown, list: string[], fallback: string): string {
   return near || fallback;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  // 🔒 শুধু লগইন করা ADMIN অথবা GitHub cron (Bearer CRON_SECRET)
+  const denied = await checkAdminOrCron(req);
+  if (denied) return denied;
+
   let currentTaskId = null;
 
   try {
