@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { checkAdmin } from "@/lib/route-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -7,6 +8,10 @@ export const dynamic = "force-dynamic";
 // ?pending=1 দিলে শুধু যেগুলো এখনো অ্যাপ্রুভ হয়নি সেগুলো আসবে (সর্বোচ্চ ১০০টি)
 // ?pending=1 না দিলে আগের মতোই সব AI প্রশ্ন (সর্বশেষ ৫০টি)
 export async function GET(req: Request) {
+  // 🔒 শুধু লগইন করা ADMIN
+  const denied = await checkAdmin();
+  if (denied) return denied;
+
   try {
     const { searchParams } = new URL(req.url);
     const pendingOnly = searchParams.get("pending") === "1";
@@ -20,12 +25,17 @@ export async function GET(req: Request) {
     });
     return NextResponse.json({ success: true, questions });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error("ai-approvals GET error:", error?.message);
+    return NextResponse.json({ success: false, error: "সার্ভারে সমস্যা হয়েছে।" }, { status: 500 });
   }
 }
 
 // 🎯 ২. অ্যাপ্রুভ / এডিট করা
 export async function POST(req: Request) {
+  // 🔒 শুধু লগইন করা ADMIN
+  const denied = await checkAdmin();
+  if (denied) return denied;
+
   try {
     const body = await req.json();
 
@@ -89,7 +99,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error("ai-approvals POST error:", error?.message);
+    return NextResponse.json({ success: false, error: "সার্ভারে সমস্যা হয়েছে।" }, { status: 500 });
   }
 }
 
