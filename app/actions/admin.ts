@@ -7,7 +7,10 @@ import { db } from "@/lib/db";
 import { admin, staff } from "@/lib/guard";
 import { social } from "@/lib/social";
 
-const done = () => revalidatePath("/", "layout");
+const done = () => {
+  revalidatePath("/admin");
+  revalidatePath("/", "layout");
+};
 const str = (fd: FormData, k: string) => { const v = fd.get(k); return typeof v === "string" ? v : ""; };
 const link = z.string().trim().refine((s) => s === "" || /^https:\/\/\S+$/.test(s), "Links must start with https://");
 
@@ -38,18 +41,52 @@ export async function deleteNotice(id: string): Promise<void> {
   done();
 }
 
+// 🎯 ১. রোল পরিবর্তন (smict9897 এর জন্য সম্পূর্ণ লক)
 export async function setRole(id: string, fd: FormData): Promise<void> {
   const me = await admin();
-  const role = z.enum(["ADMIN", "TEACHER", "STUDENT"]).parse(fd.get("role"));
-  if (id === me.id) throw new Error("You cannot change your own role.");
-  await db.user.update({ where: { id }, data: { role } });
+  
+  const targetId = id || String(fd.get("id") || fd.get("userId") || "");
+  const rawRole = String(fd.get("role") || "").trim();
+  const role = z.enum(["ADMIN", "TEACHER", "STUDENT"]).parse(rawRole);
+
+  if (!targetId) throw new Error("User ID পাওয়া যায়নি।");
+
+  // 🔒 মাস্টার সুপার অ্যাডমিন প্রোটেকশন (smict9897)
+  const targetUser = await db.user.findUnique({ where: { id: targetId } });
+  if (targetUser?.email?.toLowerCase().includes("smict9897")) {
+    throw new Error("নিরাপত্তা সতর্কতা: smict9897 হলো মূল সুপার অ্যাডমিন অ্যাকাউন্ট। এর রোল কখনো পরিবর্তন করা যাবে না।");
+  }
+
+  if (me?.id && targetId === me.id) throw new Error("আপনি নিজের রোল পরিবর্তন করতে পারবেন না।");
+
+  await db.user.update({
+    where: { id: targetId },
+    data: { role },
+  });
+
+  revalidatePath("/admin");
   revalidatePath("/admin/users");
+  revalidatePath("/", "layout");
 }
-export async function deleteUser(id: string): Promise<void> {
+
+// 🎯 ২. ইউজার ডিলিট (smict9897 কখনোই ডিলিট করা যাবে না)
+export async function deleteUser(id: string, fd?: FormData): Promise<void> {
   const me = await admin();
-  if (id === me.id) throw new Error("You cannot delete your own account.");
-  await db.user.delete({ where: { id } });
+  const targetId = id || String(fd?.get("id") || fd?.get("userId") || "");
+
+  // 🔒 মাস্টার সুপার অ্যাডমিন প্রোটেকশন (smict9897)
+  const targetUser = await db.user.findUnique({ where: { id: targetId } });
+  if (targetUser?.email?.toLowerCase().includes("smict9897")) {
+    throw new Error("নিরাপত্তা সতর্কতা: smict9897 হলো মূল সুপার অ্যাডমিন অ্যাকাউন্ট। এটি ডিলিট করা সম্পূর্ণ নিষিদ্ধ।");
+  }
+
+  if (me?.id && targetId === me.id) throw new Error("আপনি নিজের অ্যাকাউন্ট মুছতে পারবেন না।");
+
+  await db.user.delete({ where: { id: targetId } });
+
+  revalidatePath("/admin");
   revalidatePath("/admin/users");
+  revalidatePath("/", "layout");
 }
 
 const slugRe = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -75,7 +112,7 @@ export async function deletePage(id: string): Promise<void> {
 
 export async function deleteTest(id: string): Promise<void> {
   await staff();
-  await db.$transaction([db.attempt.deleteMany({ where: { testId: id } }), db.modelTest.delete({ where: { id } })]);
+  await db.$transaction([db.practiceAttempt.deleteMany({ where: { testId: id } }), db.practiceTest.delete({ where: { id } })]);
   revalidatePath("/tests");
   revalidatePath("/admin/tests");
 }

@@ -2,10 +2,21 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Printer, Shuffle, Wand2 } from "lucide-react";
+import MathText from "@/components/MathText";
 
 type Item = {
-  id: string; text: string; options: Record<string, string>; correct: string;
-  explanation: string; category: string; subject: string; topic: string; source: string;
+  id: string; 
+  text: string; 
+  options?: any; 
+  correct?: string;
+  explanation?: string; 
+  category?: string; 
+  subject?: string; 
+  topic?: string; 
+  source?: string;
+  type?: string; 
+  stimulus?: string;
+  subQuestions?: { k: string; kh: string; g: string; gh: string };
 };
 
 const LABELS = {
@@ -58,11 +69,34 @@ function shuffle<T>(arr: T[], seed: number): T[] {
   return a;
 }
 
+// 🎯 সৃজনশীল প্রশ্নের অংশ ও নম্বর
+// ঘ খালি থাকলে (গণিত): ক-২, খ-৪, গ-৪
+// ঘ থাকলে (অন্য বিষয়): ক-১, খ-২, গ-৩, ঘ-৪
+function cqParts(sq?: Item["subQuestions"]): { label: string; text: string; mark: string }[] {
+  if (!sq) return [];
+  const k = (sq.k || "").trim();
+  const kh = (sq.kh || "").trim();
+  const g = (sq.g || "").trim();
+  const gh = (sq.gh || "").trim();
+  const three = !gh;
+  const marks = three
+    ? { ক: "২", খ: "৪", গ: "৪", ঘ: "" }
+    : { ক: "১", খ: "২", গ: "৩", ঘ: "৪" };
+  const all = [
+    { label: "ক", text: k, mark: marks["ক"] },
+    { label: "খ", text: kh, mark: marks["খ"] },
+    { label: "গ", text: g, mark: marks["গ"] },
+    { label: "ঘ", text: gh, mark: marks["ঘ"] },
+  ];
+  return all.filter((p) => p.text);
+}
+
 const printCss = `
 @page { size: A4; margin: 12mm; }
 @media print {
   header, footer, nav, .fixed, [data-noprint] { display: none !important; }
   body { background: #fff !important; }
+  .katex { font-size: 1.05em !important; }
 }`;
 
 export default function QbBuilder() {
@@ -107,28 +141,33 @@ export default function QbBuilder() {
     try { localStorage.setItem(SETTINGS, JSON.stringify({ show, info, cfg })); } catch {}
   }, [show, info, cfg, ready]);
 
-  const view = useMemo(() => {
+  // 🎯 ৩ ধরনের প্রশ্ন আলাদা করা
+  const mcqs = useMemo(() => items.filter(q => q.type === "MCQ" || (!q.type && q.options)), [items]);
+  const sqs = useMemo(() => items.filter(q => q.type === "SHORT"), [items]);
+  const cqs = useMemo(() => items.filter(q => q.type === "CQ" || (!q.type && q.stimulus)), [items]);
+
+  const viewMcqs = useMemo(() => {
     const base = seed ? seed + (setName === "খ" ? 7919 : 0) : setName === "খ" ? 7919 : 0;
-    return shuffle(items, base).map((q, i) => {
-      const entries = Object.entries(q.options ?? {}).sort(([a], [b]) => a.localeCompare(b));
+    return shuffle(mcqs, base).map((q, i) => {
+      let entries: [string, string][] = [];
+      if (q.options && typeof q.options === "object") {
+        // 🎯 টাইপ কাস্টিং ঠিক করা হলো
+        entries = (Object.entries(q.options) as [string, string][]).sort(([a], [b]) => a.localeCompare(b));
+      }
       const opts = shuffle(entries, base ? base + i + 1 : 0);
       return { q, opts: opts.map(([, v]) => v), ci: opts.findIndex(([k]) => k === q.correct) };
     });
-  }, [items, seed, setName]);
+  }, [mcqs, seed, setName]);
 
-  const uniq = (f: (q: Item) => string) =>
-    Array.from(new Set(items.map(f).filter(Boolean))).join(", ");
+  const viewSqs = useMemo(() => shuffle(sqs, seed), [sqs, seed]);
+  const viewCqs = useMemo(() => shuffle(cqs, seed), [cqs, seed]);
 
-  const autoLayout = () => {
-    const max = Math.max(0, ...view.flatMap((v) => v.opts.map((o) => o.length)));
-    setCfg({ ...cfg, optCols: max <= 18 ? 4 : max <= 40 ? 2 : 1 });
-  };
+  const uniq = (f: (q: Item) => string) => Array.from(new Set(items.map(f).filter(Boolean))).join(", ");
 
   const L = LABELS[cfg.label];
   const marked = cfg.format === "qa" || cfg.format === "sug";
   const input = "w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm";
-  const chip = (on: boolean) =>
-    `rounded-lg border px-3 py-1.5 text-sm ${on ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-300 bg-white"}`;
+  const chip = (on: boolean) => `rounded-lg border px-3 py-1.5 text-sm ${on ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-300 bg-white"}`;
 
   function tag(i: number, correct: boolean) {
     const l = L[i];
@@ -151,22 +190,20 @@ export default function QbBuilder() {
       </div>
     );
 
-  const isMcq = view.some((v) => v.opts.length > 0);
-  const fullMarks = info.marks || String(items.length);
-  // "উত্তরপত্র" ফরম্যাটে শুধু উত্তর। অন্য ফরম্যাটে টিক দিলে তবেই উত্তরমালা, নতুন পাতায়।
-  const showKey = isMcq && (cfg.format === "ans" || cfg.ansKey);
+  const showKey = viewMcqs.length > 0 && (cfg.format === "ans" || cfg.ansKey);
   const keyOnNewPage = cfg.format !== "ans";
 
   return (
     <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
       <style>{printCss}</style>
 
+      {/* সাইডবার সেটিংস */}
       <aside data-noprint className="space-y-3 text-sm">
         <div className="flex flex-wrap gap-2">
           <button onClick={() => window.print()} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 font-semibold text-white">
             <Printer size={16} /> প্রিন্ট / PDF
           </button>
-          <Link href="/question-builder/create" className="rounded-lg border px-3 py-2">+ আরও প্রশ্ন যোগ</Link>
+          <Link href="/question-builder" className="rounded-lg border px-3 py-2">+ আরও প্রশ্ন যোগ</Link>
         </div>
 
         <details open className="rounded-xl border bg-white p-3">
@@ -179,9 +216,6 @@ export default function QbBuilder() {
           </div>
           <label className="mt-3 flex items-center gap-2">
             <input type="checkbox" checked={cfg.ansKey} onChange={(e) => setCfg({ ...cfg, ansKey: e.target.checked })} /> উত্তরপত্র সাথে দিন (আলাদা পাতায়)
-          </label>
-          <label className="mt-1 flex items-center gap-2">
-            <input type="checkbox" checked={edit} onChange={(e) => setEdit(e.target.checked)} /> এডিটিং মুড (লেখায় ক্লিক করে বদলান)
           </label>
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
             {(["ক", "খ"] as const).map((n) => (
@@ -198,14 +232,12 @@ export default function QbBuilder() {
           <summary className="cursor-pointer font-semibold">Page Setup</summary>
           <div className="mt-2 space-y-2">
             <input className={input} placeholder="প্রতিষ্ঠানের নাম" value={info.inst} onChange={(e) => setInfo({ ...info, inst: e.target.value })} />
-            <input className={input} placeholder="ঠিকানা" value={info.address} onChange={(e) => setInfo({ ...info, address: e.target.value })} />
             <input className={input} placeholder="পরীক্ষার নাম (যেমন: এসএসসি - ২০২৬)" value={info.exam} onChange={(e) => setInfo({ ...info, exam: e.target.value })} />
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <input className={input} placeholder="সময় (মিনিট)" value={info.minutes} onChange={(e) => setInfo({ ...info, minutes: e.target.value })} />
               <input className={input} placeholder="পূর্ণমান" value={info.marks} onChange={(e) => setInfo({ ...info, marks: e.target.value })} />
-              <input className={input} placeholder="বিষয় কোড" value={info.code} onChange={(e) => setInfo({ ...info, code: e.target.value })} />
             </div>
-            <textarea className={input} rows={3} placeholder="নির্দেশনা" value={info.instr} onChange={(e) => setInfo({ ...info, instr: e.target.value })} />
+            <textarea className={input} rows={2} placeholder="নির্দেশনা" value={info.instr} onChange={(e) => setInfo({ ...info, instr: e.target.value })} />
           </div>
         </details>
 
@@ -222,130 +254,121 @@ export default function QbBuilder() {
         </details>
 
         <details className="rounded-xl border bg-white p-3">
-          <summary className="cursor-pointer font-semibold">প্রশ্ন ফরম্যাট</summary>
-          <p className="mt-2 text-xs text-slate-500">কলাম সংখ্যা</p>
-          <div className="mt-1 flex gap-1.5">
-            {[1, 2, 3].map((n) => <button key={n} className={chip(cfg.cols === n)} onClick={() => setCfg({ ...cfg, cols: n })}>{n} কলাম</button>)}
-          </div>
-          <p className="mt-3 text-xs text-slate-500">অপশন স্টাইল</p>
-          <div className="mt-1 flex gap-1.5">
-            {[["circle", "(ক) গোল"], ["dot", "ক."], ["paren", "(ক)"], ["close", "ক)"]].map(([k, l]) => (
+          <summary className="cursor-pointer font-semibold">ফরম্যাটিং</summary>
+          <p className="mt-2 text-xs text-slate-500">MCQ অপশন স্টাইল</p>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {[["circle", "গোল"], ["dot", "ক."], ["paren", "(ক)"], ["close", "ক)"]].map(([k, l]) => (
               <button key={k} className={chip(cfg.style === k)} onClick={() => setCfg({ ...cfg, style: k })}>{l}</button>
             ))}
           </div>
-          <p className="mt-3 text-xs text-slate-500">অপশন লেবেল</p>
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            {([["bn", "ক খ গ"], ["abc", "a b c"], ["num", "১ ২ ৩"], ["roman", "i ii iii"]] as [LabelKey, string][]).map(([k, l]) => (
-              <button key={k} className={chip(cfg.label === k)} onClick={() => setCfg({ ...cfg, label: k })}>{l}</button>
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-slate-500">অপশন কলাম সংখ্যা</p>
+          <p className="mt-3 text-xs text-slate-500">MCQ অপশন কলাম</p>
           <div className="mt-1 flex gap-1.5">
             {[1, 2, 3, 4].map((n) => <button key={n} className={chip(cfg.optCols === n)} onClick={() => setCfg({ ...cfg, optCols: n })}>{n}</button>)}
-            <button className={chip(false) + " flex items-center gap-1"} onClick={autoLayout}><Wand2 size={14} /> অটো</button>
           </div>
         </details>
       </aside>
 
+      {/* মূল প্রশ্নপত্র (প্রিভিউ) */}
       <section className="overflow-x-auto">
-        <div id="paper" className="mx-auto w-full max-w-[820px] bg-white p-6 text-black shadow print:max-w-none print:p-0 print:shadow-none">
-          <div className="text-center">
+        <div id="paper" className="mx-auto w-full max-w-[820px] bg-white p-6 text-black shadow print:max-w-none print:p-0 print:shadow-none font-sans">
+          
+          {/* হেডার */}
+          <div className="text-center border-b-2 border-black pb-2 mb-4">
             {show.title && <h2 className="text-lg font-bold" contentEditable={edit} suppressContentEditableWarning>{info.inst || "প্রতিষ্ঠানের নাম"}</h2>}
-            {show.address && info.address && <p className="text-xs">{info.address}</p>}
-            {info.exam && <p className="text-sm">{info.exam}</p>}
-            {show.cls && uniq((q) => q.category) && <p className="text-sm">শ্রেণি: {uniq((q) => q.category)}</p>}
-            {show.subject && uniq((q) => q.subject) && <p className="text-sm">বিষয়: {uniq((q) => q.subject)}</p>}
-            {show.chapter && uniq((q) => q.topic) && <p className="text-sm">অধ্যায়: {uniq((q) => q.topic)}</p>}
-          </div>
-
-          <div className="mt-2 flex items-start justify-between text-xs">
-            <span>{info.minutes ? `সময়— ${info.minutes} মিনিট` : ""} {show.subjCode && info.code ? `· বিষয় কোড: ${info.code}` : ""}</span>
-            <span className="flex items-center gap-2">
-              {show.setCode && <span className="border border-black px-2 py-0.5">সেট: {setName}</span>}
-              <span>পূর্ণমান— {fullMarks}</span>
-              {show.obtained && <span className="border border-black px-3 py-0.5">প্রাপ্ত:</span>}
-            </span>
-          </div>
-
-          {show.examinee && (
-            <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-              <span className="border-b border-black">নাম:</span>
-              <span className="border-b border-black">রোল:</span>
-              <span className="border-b border-black">শাখা:</span>
+            {info.exam && <p className="text-sm font-semibold">{info.exam}</p>}
+            <div className="flex justify-between text-xs mt-1">
+              <span>{show.cls && uniq((q) => q.category || "")}</span>
+              <span>বিষয়: {uniq((q) => q.subject || "")}</span>
+              <span>সময়: {info.minutes || "..."} মিনিট</span>
+              <span>পূর্ণমান: {info.marks || "..."}</span>
             </div>
-          )}
-          {show.instr && info.instr && <p className="mt-2 border-y border-black py-1 text-center text-[11px] italic">{info.instr}</p>}
+          </div>
 
-          {cfg.format !== "ans" && (
-            <div
-              className="mt-3"
-              style={{
-                columnCount: cfg.cols,
-                columnGap: "20px",
-                columnRule: show.divider && cfg.cols > 1 ? "1px solid #888" : undefined,
-              }}
-            >
-              {view.map(({ q, opts, ci }, i) => (
-                <div key={q.id} style={{ breakInside: "avoid" }} className="mb-3 text-[13px] leading-snug">
-                  <div className="flex justify-between gap-2">
-                    <p contentEditable={edit} suppressContentEditableWarning><b>{i + 1}.</b> {q.text}</p>
-                    {show.marks && <span className="shrink-0 text-xs">[১]</span>}
-                  </div>
-                  {opts.length > 0 && (
-                    <div className="mt-1 grid gap-x-3 gap-y-1" style={{ gridTemplateColumns: `repeat(${cfg.optCols}, minmax(0, 1fr))` }}>
-                      {opts.map((o, k) => (
-                        <p key={k} className="flex items-start gap-1.5">
-                          {tag(k, k === ci)}
-                          <span contentEditable={edit} suppressContentEditableWarning>{o}</span>
-                        </p>
-                      ))}
-                    </div>
-                  )}
-                  {show.tags && (
-                    <p className="mt-1 text-[10px] text-slate-600">
-                      {[q.category, q.subject, q.topic, q.source].filter(Boolean).map((t) => `[${t}]`).join(" ")}
+          {show.instr && info.instr && <p className="mb-3 text-[11px] italic">{info.instr}</p>}
+
+          {/* 🎯 ক-বিভাগ: বহুনির্বাচনি (MCQ) */}
+          {cfg.format !== "ans" && viewMcqs.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-center font-bold text-sm border-b border-black inline-block mx-auto mb-2">ক-বিভাগ: বহুনির্বাচনি প্রশ্ন</h3>
+              <div style={{ columnCount: cfg.cols, columnGap: "20px" }}>
+                {viewMcqs.map(({ q, opts, ci }, i) => (
+                  <div key={q.id} style={{ breakInside: "avoid" }} className="mb-3 text-[13px] leading-snug">
+                    <p contentEditable={edit} suppressContentEditableWarning>
+                      <b>{i + 1}.</b> {edit ? q.text : <MathText text={q.text} />}
                     </p>
-                  )}
-                  {cfg.format === "sug" && q.explanation && (
-                    <p className="mt-1 text-[11px] text-slate-700">ব্যাখ্যা: {q.explanation}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {showKey && (
-            <div
-              className={keyOnNewPage ? "mt-4 border-t border-black pt-2 print:mt-0 print:border-0 print:pt-0" : "mt-4 border-t border-black pt-2"}
-              style={keyOnNewPage ? { breakBefore: "page", pageBreakBefore: "always" } : undefined}
-            >
-              <p className="text-sm font-bold">উত্তরমালা: সেট {setName}</p>
-              <div className="mt-1 grid grid-cols-5 gap-x-3 gap-y-0.5 text-xs">
-                {view.map((v, i) => v.ci >= 0 && <span key={i}>{i + 1}. {L[v.ci]}</span>)}
-              </div>
-            </div>
-          )}
-
-          {show.omr && isMcq && (
-            <div
-              className="mt-4 border-t border-black pt-2 print:mt-0 print:border-0 print:pt-0"
-              style={{ breakBefore: "page", pageBreakBefore: "always" }}
-            >
-              <p className="text-sm font-bold">OMR</p>
-              <div className="mt-1 grid grid-cols-5 gap-x-2 gap-y-1 text-[10px]">
-                {view.map((_, i) => (
-                  <div key={i} className="flex items-center gap-0.5">
-                    <span className="w-5 text-right">{i + 1}</span>
-                    {LABELS.bn.map((l) => (
-                      <span key={l} className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-black text-[8px]">{l}</span>
-                    ))}
+                    {opts.length > 0 && (
+                      <div className="mt-1 grid gap-x-3 gap-y-1" style={{ gridTemplateColumns: `repeat(${cfg.optCols}, minmax(0, 1fr))` }}>
+                        {opts.map((o, k) => (
+                          <p key={k} className="flex items-start gap-1.5">
+                            {tag(k, k === ci)}
+                            <span contentEditable={edit} suppressContentEditableWarning>{edit ? o : <MathText text={o} />}</span>
+                          </p>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
           )}
+
+          {/* 🎯 খ-বিভাগ: সংক্ষিপ্ত প্রশ্ন (SQ) */}
+          {cfg.format !== "ans" && viewSqs.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-center font-bold text-sm border-b border-black inline-block mx-auto mb-2">খ-বিভাগ: সংক্ষিপ্ত প্রশ্ন</h3>
+              <div style={{ columnCount: cfg.cols, columnGap: "20px" }}>
+                {viewSqs.map((q, i) => (
+                  <div key={q.id} style={{ breakInside: "avoid" }} className="mb-2 text-[13px] leading-snug flex gap-1">
+                    <b>{i + 1}.</b> <span contentEditable={edit} suppressContentEditableWarning>{edit ? q.text : <MathText text={q.text} />}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 🎯 গ-বিভাগ: সৃজনশীল প্রশ্ন (CQ) */}
+          {cfg.format !== "ans" && viewCqs.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-center font-bold text-sm border-b border-black inline-block mx-auto mb-2">গ-বিভাগ: সৃজনশীল প্রশ্ন</h3>
+              <div className="space-y-4">
+                {viewCqs.map((q, i) => {
+                  const parts = cqParts(q.subQuestions);
+                  return (
+                    <div key={q.id} className="text-[13px] leading-snug border-b border-dashed border-gray-300 pb-2">
+                      <b>{i + 1}.</b> <span contentEditable={edit} suppressContentEditableWarning><MathText text={q.stimulus || q.text || ""} /></span>
+                      {parts.length > 0 && (
+                        <div className="mt-1 grid grid-cols-1 gap-1 pl-2">
+                          {parts.map((p) => (
+                            <p key={p.label} className="flex items-start justify-between gap-2">
+                              <span>
+                                <b>({p.label})</b> <MathText text={p.text} />
+                              </span>
+                              {p.mark && <span className="shrink-0 whitespace-nowrap font-semibold">[{p.mark}]</span>}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* উত্তরমালা */}
+          {showKey && (
+            <div className="mt-4 border-t border-black pt-2" style={keyOnNewPage ? { breakBefore: "page", pageBreakBefore: "always" } : undefined}>
+              <p className="text-sm font-bold">উত্তরমালা (ক-বিভাগ): সেট {setName}</p>
+              <div className="mt-1 grid grid-cols-5 gap-x-3 gap-y-0.5 text-xs">
+                {viewMcqs.map((v, i) => v.ci >= 0 && <span key={i}>{i + 1}. {L[v.ci]}</span>)}
+              </div>
+            </div>
+          )}
+
         </div>
       </section>
     </div>
   );
 }
+
+// ===== ফাইল শেষ =====

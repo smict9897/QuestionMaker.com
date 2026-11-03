@@ -21,9 +21,21 @@ function Inline({ text }: { text: string }) {
 }
 
 export default function PostBody({ body }: { body: string }) {
-  if (isHtml(body)) return <div className="post-html mt-6" dangerouslySetInnerHTML={{ __html: renderHtml(body) }} />;
+  if (!body) return null;
+
+  // 🎯 HTML হলে সম্পূর্ণ ডিজাইন ও রেসপনসিভ টেবিল সহ হুবহু রেন্ডার হবে
+  if (isHtml(body)) {
+    return (
+      <div 
+        className="post-html raw-html not-prose w-full overflow-hidden mt-6" 
+        dangerouslySetInnerHTML={{ __html: renderHtml(body) }} 
+      />
+    );
+  }
+
+  // প্লেইন টেক্সট বা মার্কডাউনের জন্য আগের কোড
   return (
-    <div className="mt-6 grid gap-4 leading-relaxed">
+    <div className="mt-6 grid gap-4 leading-relaxed text-slate-800 dark:text-slate-100">
       {body.split(/\n{2,}/).map((raw, i) => {
         const t = raw.trim();
         const m = t.match(img);

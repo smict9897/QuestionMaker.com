@@ -1,138 +1,273 @@
+import React from "react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { addQuestion, importQuestions, deleteQuestion, toggleApproved } from "./actions";
-import AdminQuestionMeta from "@/components/admin-question-meta";
+import { staff } from "@/lib/guard";
+import { 
+  CheckCircle2, XCircle, Trash2, Check, 
+  Database, ShieldCheck 
+} from "lucide-react";
+import PdfImport from "@/components/pdf-import";
+import { toggleApprove, deleteQuestion, approveAllPending } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-const PER_PAGE = 20;
-const input = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:bg-slate-900 dark:border-slate-700";
-const btn = "rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white";
+const CATEGORIES = ["1", "2", "3", "4", "5", "6", "7", "8", "SSC", "HSC", "Admission", "Job"];
 
-const QUICK: [string, string, string][] = [
-  ["/admin/questions/manage", "প্রশ্ন ম্যানেজ", "গণনা, ফিল্টার, অনুমোদন ও মোছা"],
-  ["/admin/questions", "প্রশ্ন ব্যাংক", "সব প্রশ্ন দেখুন ও যোগ করুন"],
-  ["/question-builder", "প্রশ্নপত্র তৈরি", "প্রশ্ন বেছে প্রশ্নপত্র বানান"],
-  ["/question-builder/saved", "সংরক্ষিত প্রশ্নপত্র", "আগে সেভ করা প্রশ্নপত্র"],
-  ["/admin/questions/extract", "ইমপোর্ট প্রশ্ন", "PDF বা ছবি থেকে প্রশ্ন তুলুন"],
-];
-
-export default async function AdminQuestions({
+export default async function AdminQuestionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; err?: string; ok?: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const session = await auth();
-  const role = session?.user?.role;
-  if (role !== "ADMIN" && role !== "TEACHER") redirect("/");
+  await staff();
+  const params = await searchParams;
 
-  const { page: p, err, ok } = await searchParams;
-  const page = Math.max(1, Number(p) || 1);
+  const page = Math.max(1, Number(params.page || 1));
+  const category = typeof params.category === "string" ? params.category : "";
+  const subject = typeof params.subject === "string" ? params.subject : "";
+  const status = typeof params.status === "string" ? params.status : "all";
+  const query = typeof params.q === "string" ? params.q.trim() : "";
+  const okMsg = typeof params.ok === "string" ? params.ok : null;
+  const errMsg = typeof params.err === "string" ? params.err : null;
 
-  const [rows, total] = await Promise.all([
-    db.question.findMany({ orderBy: { createdAt: "desc" }, skip: (page - 1) * PER_PAGE, take: PER_PAGE }),
-    db.question.count(),
+  const take = 30;
+  const skip = (page - 1) * take;
+
+  const where: any = {};
+  if (category) where.category = category;
+  if (subject) where.subject = { contains: subject, mode: "insensitive" };
+  if (status === "approved") where.approved = true;
+  if (status === "pending") where.approved = false;
+  if (query) {
+    where.OR = [
+      { text: { contains: query, mode: "insensitive" } },
+      { topic: { contains: query, mode: "insensitive" } },
+    ];
+  }
+
+  const [questions, total, pendingCount] = await Promise.all([
+    db.question.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+    }),
+    db.question.count({ where }),
+    db.question.count({ where: { approved: false } }),
   ]);
-  const pages = Math.max(1, Math.ceil(total / PER_PAGE));
+
+  const totalPages = Math.ceil(total / take) || 1;
 
   return (
-    <main className="mx-auto max-w-4xl space-y-8 px-4 py-8">
-      <h1 className="text-2xl font-bold">প্রশ্ন ব্যাংক ({total})</h1>
+    <div className="mx-auto max-w-6xl px-3 py-6 font-sans">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+            <Database className="text-blue-600" />
+            প্রশ্ন ব্যাংক ব্যবস্থাপনা
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            মোট প্রশ্ন: {total}টি | অনুমোদনের অপেক্ষায়: {pendingCount}টি
+          </p>
+        </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-        <h2 className="mb-3 font-semibold">প্রশ্ন ব্যাংক মেনু</h2>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {QUICK.map(([href, title, sub]) => (
-            <Link
-              key={href}
-              href={href}
-              className="rounded-xl border border-slate-200 p-3 transition hover:border-blue-500 hover:bg-blue-50 dark:border-slate-700 dark:hover:bg-slate-800"
+        {pendingCount > 0 && (
+          <form action={approveAllPending}>
+            <button
+              type="submit"
+              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-xs transition"
             >
-              <p className="text-sm font-semibold">{title}</p>
-              <p className="mt-0.5 text-xs text-slate-500">{sub}</p>
-            </Link>
-          ))}
+              <ShieldCheck size={16} />
+              <span>সব অপেক্ষমাণ প্রশ্ন অনুমোদন করুন ({pendingCount})</span>
+            </button>
+          </form>
+        )}
+      </div>
+
+      {okMsg && (
+        <div className="mb-4 rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs font-bold text-emerald-800 flex items-center gap-2">
+          <CheckCircle2 size={16} /> <span>{okMsg}</span>
         </div>
-      </section>
+      )}
+      {errMsg && (
+        <div className="mb-4 rounded-xl bg-red-50 border border-red-200 p-3 text-xs font-bold text-red-800 flex items-center gap-2">
+          <XCircle size={16} /> <span>{errMsg}</span>
+        </div>
+      )}
 
-      {err && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{err}</p>}
-      {ok && <p className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{ok}</p>}
+      {/* 🎯 ১. PDF থেকে প্রশ্ন আমদানি ড্রপডাউন */}
+      <PdfImport categories={CATEGORIES} />
 
-      <section className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-        <h2 className="mb-3 font-semibold">একটি প্রশ্ন যোগ করুন</h2>
-        <form action={addQuestion} className="space-y-2">
-          <AdminQuestionMeta />
-          <select name="type" className={input} defaultValue="MCQ">
-            <option value="MCQ">বহুনির্বাচনি (MCQ)</option>
-            <option value="WRITTEN">লিখিত</option>
-          </select>
-          <textarea name="text" placeholder="প্রশ্ন" rows={3} className={input} required />
-          <div className="grid grid-cols-2 gap-2">
-            {["A", "B", "C", "D"].map((k) => (
-              <input key={k} name={k} placeholder={`অপশন ${k} (MCQ হলে)`} className={input} />
-            ))}
+      {/* ২. ফিল্টার ও সার্চ */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs mb-6">
+        <form method="GET" action="/admin/questions" className="grid gap-3 sm:grid-cols-4">
+          <div>
+            <select
+              name="category"
+              defaultValue={category}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none"
+            >
+              <option value="">সকল শ্রেণি</option>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
           </div>
-          <select name="correct" className={input} defaultValue="A">
-            {["A", "B", "C", "D"].map((k) => (
-              <option key={k} value={k}>
-                সঠিক উত্তর: {k}
-              </option>
-            ))}
-          </select>
-          <textarea name="explanation" placeholder="ব্যাখ্যা (ঐচ্ছিক)" rows={2} className={input} />
-          <button className={btn}>যোগ করুন</button>
-        </form>
-      </section>
 
-      <section className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-        <h2 className="mb-1 font-semibold">একসাথে অনেক MCQ ইমপোর্ট</h2>
-        <p className="mb-3 text-xs text-slate-500">
-          প্রতি লাইনে একটি প্রশ্ন, আলাদা করুন | দিয়ে: প্রশ্ন | A | B | C | D | সঠিক (A-D) | ব্যাখ্যা
-        </p>
-        <form action={importQuestions} className="space-y-2">
-          <AdminQuestionMeta />
-          <textarea
-            name="bulk"
-            rows={6}
-            className={input}
-            placeholder="CMOS এর পূর্ণরূপ কী? | Computer Metal-Oxide Semiconductor | Connection ... | Contrast ... | Complementary Metal-Oxide Semiconductor | D | ..."
-          />
-          <button className={btn}>ইমপোর্ট করুন</button>
-        </form>
-      </section>
+          <div>
+            <select
+              name="status"
+              defaultValue={status}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none"
+            >
+              <option value="all">অনুমোদনের স্ট্যাটাস: সকল</option>
+              <option value="approved">অনুমোদিত (Approved)</option>
+              <option value="pending">অপেক্ষমাণ (Pending)</option>
+            </select>
+          </div>
 
-      <section>
-        <h2 className="mb-3 font-semibold">সাম্প্রতিক প্রশ্ন</h2>
-        <ul className="space-y-3">
-          {rows.map((q) => (
-            <li key={q.id} className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-700">
-              <p className="font-medium">{q.text}</p>
-              <p className="mt-1 text-xs text-slate-500">
-                {q.category} · {q.subject} · {q.topic} · {q.source} · {q.approved ? "অনুমোদিত" : "অপেক্ষমাণ"}
-              </p>
-              <div className="mt-2 flex gap-2">
-                <form action={toggleApproved.bind(null, q.id)}>
-                  <button className="rounded border px-2 py-1 text-xs">
-                    {q.approved ? "অনুমোদন তুলুন" : "অনুমোদন দিন"}
-                  </button>
-                </form>
-                <form action={deleteQuestion.bind(null, q.id)}>
-                  <button className="rounded border border-red-300 px-2 py-1 text-xs text-red-600">মুছুন</button>
-                </form>
-              </div>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-4 flex items-center justify-center gap-3 text-sm">
-          {page > 1 && <Link href={`?page=${page - 1}`}>‹ Prev</Link>}
-          <span>
-            {page} / {pages}
-          </span>
-          {page < pages && <Link href={`?page=${page + 1}`}>Next ›</Link>}
+          <div>
+            <input
+              type="text"
+              name="subject"
+              defaultValue={subject}
+              placeholder="বিষয় খুঁজুন..."
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              name="q"
+              defaultValue={query}
+              placeholder="প্রশ্নের কী-ওয়ার্ড..."
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none"
+            />
+            <button
+              type="submit"
+              className="rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-xs transition"
+            >
+              ফিল্টার
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* ৩. তালিকা */}
+      {questions.length === 0 ? (
+        <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center text-slate-500">
+          কোনো প্রশ্ন পাওয়া যায়নি।
         </div>
-      </section>
-    </main>
+      ) : (
+        <div className="space-y-3">
+          {questions.map((q, idx) => {
+            const options: any = typeof q.options === "object" && q.options !== null ? q.options : {};
+            return (
+              <div
+                key={q.id}
+                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs transition hover:border-slate-300"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5 mb-1.5 text-[10px]">
+                      <span className="font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded">
+                        {q.category}
+                      </span>
+                      <span className="font-semibold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
+                        {q.subject}
+                      </span>
+                      {q.topic && (
+                        <span className="text-slate-500 px-1">
+                          • {q.topic}
+                        </span>
+                      )}
+                      <span className={`font-bold px-2 py-0.5 rounded ${
+                        q.approved ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-800 border border-amber-200"
+                      }`}>
+                        {q.approved ? "অনুমোদিত" : "অপেক্ষমাণ"}
+                      </span>
+                    </div>
+
+                    <p className="text-xs sm:text-sm font-bold text-slate-900 leading-relaxed">
+                      {skip + idx + 1}. {q.text}
+                    </p>
+
+                    {Object.keys(options).length > 0 && (
+                      <div className="mt-2.5 grid grid-cols-2 gap-2 text-xs">
+                        {Object.entries(options).map(([k, v]) => {
+                          const isCorrect = q.correct === k;
+                          return (
+                            <div
+                              key={k}
+                              className={`p-2 rounded-xl border flex items-center gap-1.5 ${
+                                isCorrect 
+                                  ? "bg-emerald-50/70 border-emerald-300 font-bold text-emerald-900" 
+                                  : "bg-slate-50 border-slate-100 text-slate-700"
+                              }`}
+                            >
+                              <span className="text-[10px] text-slate-400">({k})</span>
+                              <span>{String(v)}</span>
+                              {isCorrect && <Check size={12} className="ml-auto text-emerald-600" />}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    <form action={toggleApprove.bind(null, q.id, q.approved)}>
+                      <button
+                        type="submit"
+                        className={`p-2 rounded-xl text-xs font-bold transition ${
+                          q.approved
+                            ? "bg-amber-50 hover:bg-amber-100 text-amber-700"
+                            : "bg-emerald-50 hover:bg-emerald-100 text-emerald-700"
+                        }`}
+                        title={q.approved ? "অনুমোদন বাতিল করুন" : "অনুমোদন করুন"}
+                      >
+                        {q.approved ? <XCircle size={16} /> : <CheckCircle2 size={16} />}
+                      </button>
+                    </form>
+
+                    <form action={deleteQuestion.bind(null, q.id)}>
+                      <button
+                        type="submit"
+                        className="p-2 rounded-xl text-xs font-bold bg-red-50 hover:bg-red-100 text-red-600 transition"
+                        title="প্রশ্নটি মুছে ফেলুন"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-center gap-2 text-xs font-bold">
+          {page > 1 && (
+            <Link
+              href={`/admin/questions?page=${page - 1}&category=${category}&subject=${subject}&status=${status}&q=${query}`}
+              className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50"
+            >
+              আগের পাতা
+            </Link>
+          )}
+          <span className="text-slate-500">পাতা {page} / {totalPages}</span>
+          {page < totalPages && (
+            <Link
+              href={`/admin/questions?page=${page + 1}&category=${category}&subject=${subject}&status=${status}&q=${query}`}
+              className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50"
+            >
+              পরের পাতা
+            </Link>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

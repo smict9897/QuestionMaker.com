@@ -4,16 +4,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FilePlus2, Loader2, LogIn, Sparkles, Square, X } from "lucide-react";
 import { generateQuiz, saveQuizToBank, type QuizItem } from "@/app/actions/generate-quiz";
-import curriculum from "../nctb-curriculum.json";
+import { NCTB_CLASSES, type NctbClass } from "../lib/nctb-data";
 
 type Triple = { category: string; subject: string; topic: string };
-type Meta = { subject: string; category: string; topic: string; difficulty: "Easy" | "Medium" | "Hard"; lang: "Bangla" | "English" };
+type Meta = { subject: string; category: string; topic: string; difficulty: "Easy" | "Medium" | "Hard"; lang: "Bangla" | "English"; type?: "MCQ" | "SHORT" | "CQ" | "MIXED" };
 
 const BASE_CLASSES = ["1", "2", "3", "4", "5", "6", "7", "8", "SSC", "HSC", "Admission", "Job"];
 const OTHER = "__other__";
 const BN = ["ক", "খ", "গ", "ঘ"];
 const DRAFT = "qb:draft";
-const BATCH = 10;
 const PREVIEW = 30;
 const MAX_PAPER = 50;
 const uniq = (a: string[]) => Array.from(new Set(a.filter(Boolean)));
@@ -26,29 +25,19 @@ const classLabel = (v: string) => {
 };
 const f = "w-full rounded-xl border border-slate-300 bg-white px-3 py-2";
 
-// NCTB JSON থেকে ক্লাস ম্যাপিং
-const CLASS_MAP: Record<string, string> = {
-  "6": "Class 6",
-  "7": "Class 7",
-  "8": "Class 8",
-  "SSC": "Class 9-10",
-  "HSC": "Class 11-12",
-};
-
-function getCurriculumSubjects(cat: string): string[] {
-  const key = CLASS_MAP[cat];
-  if (!key) return [];
-  const cls = curriculum.classes.find((c) => c.class === key);
-  return cls ? cls.subjects.map((s) => s.name) : [];
-}
-
-function getCurriculumChapters(cat: string, subject: string): string[] {
-  const key = CLASS_MAP[cat];
-  if (!key) return [];
-  const cls = curriculum.classes.find((c) => c.class === key);
-  if (!cls) return [];
-  const sub = cls.subjects.find((s) => s.name === subject);
-  return sub ? sub.chapters : [];
+// 🎯 lib/nctb-data.ts থেকে ক্লাস খুঁজে বের করা
+function findClassData(key: string): NctbClass | undefined {
+  if (!key) return undefined;
+  if (["6", "7", "8"].includes(key)) {
+    return NCTB_CLASSES.find((c) => c.class === `Class ${key}`);
+  }
+  if (key === "SSC") {
+    return NCTB_CLASSES.find((c) => /9|10|SSC/i.test(c.class));
+  }
+  if (key === "HSC") {
+    return NCTB_CLASSES.find((c) => /11|12|HSC/i.test(c.class));
+  }
+  return undefined;
 }
 
 function countOptions(role: string | null): number[] {
@@ -65,11 +54,17 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
   const [cat, setCat] = useState("");
   const [subjSel, setSubjSel] = useState("");
   const [subjOther, setSubjOther] = useState("");
+
+  // 🎯 ইউনিট/ক্যাটাগরি (subCategories থাকলে) + নির্দিষ্ট অধ্যায়
+  const [topCatSel, setTopCatSel] = useState("");
   const [topSel, setTopSel] = useState("");
   const [topOther, setTopOther] = useState("");
+
   const [difficulty, setDifficulty] = useState<"Easy" | "Medium" | "Hard">("Medium");
   const [count, setCount] = useState<number>(opts[0]);
   const [lang, setLang] = useState<"Bangla" | "English">("Bangla");
+
+  const [qType, setQType] = useState<"MCQ" | "SHORT" | "CQ" | "MIXED">("MCQ");
 
   const [items, setItems] = useState<QuizItem[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -93,8 +88,12 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
     } catch {}
   }, []);
 
-  // Curriculum + database subjects
-  const curriculumSubjects = useMemo(() => getCurriculumSubjects(cat), [cat]);
+  const selectedClassData = useMemo(() => findClassData(cat), [cat]);
+
+  const curriculumSubjects = useMemo(
+    () => (selectedClassData ? selectedClassData.subjects.map((s) => s.name) : []),
+    [selectedClassData]
+  );
   const dbSubjects = useMemo(
     () => uniq(triples.filter((t) => t.category === cat).map((t) => t.subject)),
     [triples, cat],
@@ -104,15 +103,35 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
   const subjIsOther = subjSel === OTHER || (cat !== "" && subjects.length === 0);
   const subject = subjIsOther ? subjOther.trim() : subjSel;
 
-  // Curriculum + database chapters
-  const curriculumChapters = useMemo(() => getCurriculumChapters(cat, subjSel), [cat, subjSel]);
+  // 🎯 নির্বাচিত সাবজেক্টের পুরো ডেটা (chapters/subCategories সহ)
+  const currentSubjectData = useMemo(
+    () => selectedClassData?.subjects.find((s) => s.name === subjSel),
+    [selectedClassData, subjSel]
+  );
+
+  const flatChapters = useMemo(() => currentSubjectData?.chapters ?? [], [currentSubjectData]);
+  const groupedTopics = useMemo(() => currentSubjectData?.subCategories ?? [], [currentSubjectData]);
+  const hasGroups = groupedTopics.length > 0;
+
   const dbTopics = useMemo(
     () => (subjIsOther ? [] : uniq(triples.filter((t) => t.category === cat && t.subject === subjSel).map((t) => t.topic))),
     [triples, cat, subjSel, subjIsOther],
   );
-  const topics = useMemo(() => uniq([...curriculumChapters, ...dbTopics]), [curriculumChapters, dbTopics]);
 
-  const topIsOther = topSel === OTHER || (subject !== "" && topics.length === 0);
+  // flat কেসে (subCategories না থাকলে) curriculum chapters + db topics মার্জ করা
+  const flatTopicsMerged = useMemo(() => uniq([...flatChapters, ...dbTopics]), [flatChapters, dbTopics]);
+
+  const topicsInSelectedCategory = useMemo(() => {
+    if (!topCatSel) return [];
+    const grp = groupedTopics.find((g) => g.category === topCatSel);
+    return grp?.topics ?? [];
+  }, [groupedTopics, topCatSel]);
+
+  // 🎯 ড্রপডাউনে দেখানোর জন্য চূড়ান্ত তালিকা
+  const chapterOptions = hasGroups ? topicsInSelectedCategory : flatTopicsMerged;
+
+  const topIsOther =
+    topSel === OTHER || (subject !== "" && chapterOptions.length === 0 && (!hasGroups || !!topCatSel));
   const topic = topIsOther ? topOther.trim() : topSel;
 
   async function generate() {
@@ -128,10 +147,17 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
       setError("ক্লাস, বিষয় ও অধ্যায় তিনটিই দিন।");
       return;
     }
-    const m: Meta = { subject, category: cat, topic, difficulty, lang };
+
+    const m: Meta = { subject, category: cat, topic, difficulty, lang, type: qType };
     setMeta(m);
     stopRef.current = false;
     setLoading(true);
+
+    // 🎯 প্রশ্নের ধরন অনুযায়ী ব্যাচ সাইজ পরিবর্তন (টাইমআউট এড়াতে)
+    let currentBatch = 10;
+    if (qType === "CQ") currentBatch = 2;
+    else if (qType === "SHORT") currentBatch = 5;
+    else if (qType === "MIXED") currentBatch = 3;
 
     const all: QuizItem[] = [];
     const ids: string[] = [];
@@ -142,15 +168,15 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
 
     try {
       while (all.length < count && !stopRef.current && fails < 3) {
-        const need = Math.min(BATCH, count - all.length);
-        const r = await generateQuiz({ ...m, count: need, avoid: all.slice(-40).map((q) => q.text.slice(0, 80)) });
+        const need = Math.min(currentBatch, count - all.length);
+        const r = await generateQuiz({ ...m, count: need, avoid: all.slice(-40).map((q) => (q.text || q.stimulus || "").slice(0, 80)) });
         if (!r.ok) {
           fails++;
           lastErr = r.error;
           continue;
         }
-        const seen = new Set(all.map((q) => norm(q.text)));
-        const fresh = r.items.filter((q) => !seen.has(norm(q.text))).slice(0, need);
+        const seen = new Set(all.map((q) => norm(q.text || q.stimulus || "")));
+        const fresh = r.items.filter((q) => !seen.has(norm(q.text || q.stimulus || ""))).slice(0, need);
         if (!fresh.length) {
           fails++;
           continue;
@@ -277,6 +303,7 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
               setCat(e.target.value);
               setSubjSel("");
               setSubjOther("");
+              setTopCatSel("");
               setTopSel("");
               setTopOther("");
             }}
@@ -301,6 +328,7 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
                   onChange={(e) => {
                     setSubjSel(e.target.value);
                     setSubjOther("");
+                    setTopCatSel("");
                     setTopSel("");
                     setTopOther("");
                   }}
@@ -320,13 +348,36 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
           )}
         </div>
 
+        {/* 🎯 ইউনিট/ক্যাটাগরি (শুধু subCategories থাকলে দেখাবে) */}
+        {subject && hasGroups && (
+          <label className="grid gap-1 text-sm font-medium">
+            <span>ইউনিট/ক্যাটাগরি</span>
+            <select
+              value={topCatSel}
+              onChange={(e) => {
+                setTopCatSel(e.target.value);
+                setTopSel("");
+                setTopOther("");
+              }}
+              className={f}
+            >
+              <option value="">ইউনিট/ক্যাটাগরি বাছুন</option>
+              {groupedTopics.map((g) => (
+                <option key={g.category} value={g.category}>{g.category}</option>
+              ))}
+            </select>
+          </label>
+        )}
+
         <div className="grid gap-1 text-sm font-medium">
           <span>অধ্যায়</span>
           {!subject ? (
             <select disabled className={f}><option>আগে বিষয় দিন</option></select>
+          ) : hasGroups && !topCatSel ? (
+            <select disabled className={f}><option>আগে ইউনিট/ক্যাটাগরি বাছুন</option></select>
           ) : (
             <>
-              {topics.length > 0 && (
+              {chapterOptions.length > 0 && (
                 <select
                   value={topSel}
                   onChange={(e) => {
@@ -336,7 +387,7 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
                   className={f}
                 >
                   <option value="">অধ্যায় বাছুন</option>
-                  {topics.map((t) => (
+                  {chapterOptions.map((t) => (
                     <option key={t} value={t}>{t}</option>
                   ))}
                   <option value={OTHER}>অন্য (নিজে লিখুন)</option>
@@ -348,6 +399,16 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
             </>
           )}
         </div>
+
+        <label className="grid gap-1 text-sm font-medium">
+          <span>প্রশ্নের ধরন</span>
+          <select value={qType} onChange={(e) => setQType(e.target.value as any)} className={f} disabled={loading}>
+            <option value="MCQ">📝 শুধু MCQ (বহুনির্বাচনি)</option>
+            <option value="SHORT">✍️ শুধু সংক্ষিপ্ত প্রশ্ন</option>
+            <option value="CQ">🧠 শুধু সৃজনশীল প্রশ্ন</option>
+            <option value="MIXED">🎲 মিক্স (MCQ + সংক্ষিপ্ত + সৃজনশীল)</option>
+          </select>
+        </label>
 
         <div className="grid grid-cols-3 gap-2">
           <label className="grid gap-1 text-sm font-medium">
@@ -381,7 +442,7 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
           className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white disabled:opacity-60"
         >
           {loading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-          {loading ? `প্রশ্ন তৈরি হচ্ছে… \( {items.length}/ \){count}` : "এক ক্লিকে প্রশ্ন তৈরি করুন"}
+          {loading ? `প্রশ্ন তৈরি হচ্ছে… (${items.length}/${count})` : "এক ক্লিকে প্রশ্ন তৈরি করুন"}
         </button>
 
         {loading && (
@@ -413,7 +474,7 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
         <div className="mt-5 grid gap-4">
           <p className="text-sm text-slate-600">
             {allSaved && meta
-              ? `\( {items.length} টি প্রশ্ন তৈরি হয়েছে ও প্রশ্ন ব্যাংকে সংরক্ষিত হয়েছে ( \){meta.category} › ${meta.subject} › ${meta.topic})`
+              ? `${items.length} টি প্রশ্ন তৈরি হয়েছে ও প্রশ্ন ব্যাংকে সংরক্ষিত হয়েছে (${meta.category} › ${meta.subject} › ${meta.topic})`
               : `${items.length} টি প্রশ্ন তৈরি হয়েছে`}
           </p>
 
@@ -442,35 +503,58 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
 
           {items.slice(0, PREVIEW).map((q, i) => {
             const chosen = picked[i];
+            const isCq = q.type === "CQ" || !!q.subQuestions;
+            const isShort = q.type === "SHORT";
+            const isMcq = !isCq && !isShort;
+
             return (
               <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4">
-                <p className="font-semibold">{i + 1}. {q.text}</p>
-                <div className="mt-2 grid gap-2">
-                  {(["A", "B", "C", "D"] as const).map((k, j) => {
-                    const isCorrect = k === q.correct;
-                    const isChosen = chosen === k;
-                    const cls = chosen
-                      ? isCorrect
-                        ? "border-emerald-600 bg-emerald-50"
-                        : isChosen
-                          ? "border-red-500 bg-red-50"
-                          : "border-slate-200"
-                      : "border-slate-300 hover:bg-slate-50";
-                    return (
-                      <button
-                        key={k}
-                        type="button"
-                        disabled={!!chosen}
-                        onClick={() => setPicked((p) => ({ ...p, [i]: k }))}
-                        className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-left text-sm ${cls}`}
-                      >
-                        <b>{BN[j]}.</b>
-                        <span>{q.options[k]}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {chosen && q.explanation && (
+                <p className="font-semibold mb-2">
+                  {i + 1}. {isCq ? (q.stimulus || "উদ্দীপক") : (q.text || "প্রশ্ন")}
+                </p>
+
+                {isCq && q.subQuestions && (
+                  <div className="mt-2 text-sm text-slate-700 space-y-1 pl-2">
+                    <p><b>(ক)</b> {q.subQuestions.k || ""}</p>
+                    <p><b>(খ)</b> {q.subQuestions.kh || ""}</p>
+                    <p><b>(গ)</b> {q.subQuestions.g || ""}</p>
+                    <p><b>(ঘ)</b> {q.subQuestions.gh || ""}</p>
+                  </div>
+                )}
+
+                {isMcq && (
+                  <div className="mt-2 grid gap-2">
+                    {(["A", "B", "C", "D"] as const).map((k, j) => {
+                      const isCorrect = k === q.correct;
+                      const isChosen = chosen === k;
+                      const cls = chosen
+                        ? isCorrect
+                          ? "border-emerald-600 bg-emerald-50"
+                          : isChosen
+                            ? "border-red-500 bg-red-50"
+                            : "border-slate-200"
+                        : "border-slate-300 hover:bg-slate-50";
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          disabled={!!chosen}
+                          onClick={() => setPicked((p) => ({ ...p, [i]: k }))}
+                          className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-left text-sm ${cls}`}
+                        >
+                          <b>{BN[j]}.</b>
+                          <span>{q.options?.[k] || ""}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {isShort && (
+                  <p className="mt-2 text-sm text-slate-600">ব্যাখ্যা/উত্তর: {q.explanation || "সংরক্ষিত আছে"}</p>
+                )}
+
+                {chosen && q.explanation && isMcq && (
                   <p className="mt-2 rounded-lg bg-slate-50 p-2 text-sm text-slate-700">{q.explanation}</p>
                 )}
               </div>
@@ -480,4 +564,4 @@ export default function QuizBox({ triples = [], role = null }: { triples?: Tripl
       )}
     </div>
   );
-                               }
+}

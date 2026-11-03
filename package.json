@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && prisma db push && next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -19,7 +19,11 @@
     "@vercel/blob": "^0.27.0",
     "next-auth": "5.0.0-beta.25",
     "bcryptjs": "^2.4.3",
-    "sanitize-html": "^2.13.0"
+    "sanitize-html": "^2.14.0",
+    "mammoth": "^1.9.0",
+    "katex": "^0.16.11",
+    "pdf-parse": "^1.1.1",
+    "pdfjs-dist": "3.11.174"
   },
   "devDependencies": {
     "typescript": "^5",
@@ -27,6 +31,8 @@
     "@types/node": "^22",
     "@types/bcryptjs": "^2.4.6",
     "@types/sanitize-html": "^2.13.0",
+    "@types/katex": "^0.16.7",
+    "@types/pdf-parse": "^1.1.4",
     "tailwindcss": "^3.4",
     "postcss": "^8",
     "autoprefixer": "^10",

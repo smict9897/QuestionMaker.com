@@ -1,3 +1,13 @@
+/* 🎯 শুধুমাত্র বাংলা ইউনিকোড অক্ষরের জন্য আদর্শলিপি ফন্ট */
+@font-face {
+  font-family: 'AdorshoLipi';
+  src: url('/fonts/AdorshoLipi.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  /* ম্যাজিক লাইন: এটি নিশ্চিত করে ফন্টটি শুধু বাংলা অক্ষরের উপর কাজ করবে, ইংরেজির উপর নয় */
+  unicode-range: U+0980-09FF, U+200C-200D;
+}
 @tailwind base;@tailwind components;@tailwind utilities;
 body{@apply bg-paper text-navy-900 antialiased}
 :focus-visible{outline:2px solid #2563eb;outline-offset:2px}
@@ -69,3 +79,126 @@ body{@apply bg-paper text-navy-900 antialiased}
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='160'%3E%3Ctext x='20' y='90' transform='rotate(-25 130 80)' font-size='20' font-family='sans-serif' fill='rgba(100,116,139,0.18)'%3Esaifulsir.com%3C/text%3E%3C/svg%3E");
 }
 @media print { .no-copy { display: none !important; } }
+/* রেসপনসিভ টেবিল ও আর্টিকেলের সিএসএস */
+.raw-html table,
+.post-html table {
+  width: 100% !important;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.raw-html th,
+.raw-html td,
+.post-html th,
+.post-html td {
+  border: 1px solid #cbd5e1;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.raw-html th,
+.post-html th {
+  background-color: #f1f5f9;
+  font-weight: 700;
+}
+/* ========================================================
+   🎯 পোস্টের টেবিল ও কন্টেন্ট স্টাইলিং (প্রিভিউয়ের মতো হুবহু লাইভ লুক)
+   ======================================================== */
+
+/* ১. টেবিল যেন মোবাইল বা পিসিতে কখনোই না ভাঙে (অটোমেটিক মসৃণ স্ক্রোল) */
+.raw-html table,
+.post-html table,
+article table,
+.prose table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 1.5rem 0 !important;
+  display: block !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+}
+
+/* ২. টেবিল হেডার */
+.raw-html th,
+.post-html th,
+article th,
+.prose th {
+  background-color: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+  padding: 10px 14px !important;
+  font-weight: 700 !important;
+  text-align: left !important;
+  color: #0f172a !important;
+  white-space: nowrap !important;
+}
+
+/* ৩. টেবিল ডেটা */
+.raw-html td,
+.post-html td,
+article td,
+.prose td {
+  border: 1px solid #cbd5e1 !important;
+  padding: 8px 12px !important;
+  color: #334155 !important;
+  line-height: 1.6 !important;
+  font-size: 0.925rem !important;
+}
+
+/* ৪. ডার্ক মোডে টেবিল কালার */
+.dark .raw-html table,
+.dark .post-html table,
+.dark article table,
+.dark .prose table {
+  border-color: #334155 !important;
+}
+
+.dark .raw-html th,
+.dark .post-html th,
+.dark article th,
+.dark .prose th {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark .raw-html td,
+.dark .post-html td,
+.dark article td,
+.dark .prose td {
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+/* ৫. ছবি রেসপনসিভ রাখা */
+.raw-html img,
+.post-html img,
+article img,
+.prose img {
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: 12px !important;
+  display: block !important;
+  margin: 1.25rem auto !important;
+}
+
+/* ৬. কোটেশন ও লিংক */
+.raw-html blockquote,
+.post-html blockquote {
+  border-left: 4px solid #2563eb !important;
+  padding-left: 1rem !important;
+  margin: 1.25rem 0 !important;
+  color: #475569 !important;
+  font-style: italic !important;
+}
+
+.raw-html a,
+.post-html a {
+  color: #2563eb !important;
+  text-decoration: underline !important;
+}
