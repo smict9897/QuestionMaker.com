@@ -10,3 +10,4 @@ Next: auth + role middleware, admin CRUD pages, PDF upload (Vercel Blob), model 
 - Run `npx auth secret` and put AUTH_SECRET in .env.local; set ADMIN_EMAIL, then `npx prisma db push` again.
 - Register at /login with ADMIN_EMAIL to get the ADMIN role; everyone else is STUDENT. Teachers: change role in `npx prisma studio`.
 - /admin/* is protected by middleware (ADMIN or TEACHER); saveQuestions re-checks the role on the server.
+
