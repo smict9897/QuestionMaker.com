@@ -1,0 +1,201 @@
+/* প্রশ্নোদয় — ড্যাশবোর্ডের স্টাইল (সব ক্লাস qd- দিয়ে শুরু) */
+
+.qd-root{
+  --night:#0d0926; --night2:#1a1247;
+  --violet:#7c3aed; --violet2:#a78bfa;
+  --pink:#f43f8e; --amber:#ffb020;
+  --cyan:#19c6e6; --mint:#12d6a0;
+  --ink:#16112e; --muted:#645f82;
+  --bg:#faf8ff; --line:#ebe6fb;
+  --grad:linear-gradient(135deg,#7c3aed,#f43f8e);
+  --hf:var(--qk-head),"Anek Bangla",system-ui,sans-serif;
+  --bf:var(--qk-body),"Hind Siliguri",system-ui,sans-serif;
+  font-family:var(--bf);
+  background:var(--bg);
+  color:var(--ink);
+  line-height:1.55;
+  min-height:100vh;
+  -webkit-text-size-adjust:100%;
+  -webkit-tap-highlight-color:transparent;
+  overflow-x:clip;
+}
+:where(.qd-root) *{box-sizing:border-box;margin:0;padding:0}
+:where(.qd-root) :is(h1,h2,h3,b){font-family:var(--hf)}
+:where(.qd-root) a{color:inherit;text-decoration:none}
+:where(.qd-root) button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+@media(max-width:767px){
+  .qd-root{margin-bottom:-4rem}
+}
+
+.qd-ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ---------- সাইডবার (ডেস্কটপ) ---------- */
+.qd-side{position:fixed;inset:0 auto 0 0;width:268px;background:linear-gradient(180deg,#140c3b 0%,#0d0926 100%);color:#fff;display:flex;flex-direction:column;padding:22px 14px 16px;z-index:30;overflow:hidden}
+.qd-side::before{content:"";position:absolute;width:260px;height:260px;right:-120px;top:-90px;border-radius:50%;background:radial-gradient(circle,rgba(244,63,142,.35),transparent 65%);pointer-events:none}
+.qd-side::after{content:"";position:absolute;width:240px;height:240px;left:-110px;bottom:60px;border-radius:50%;background:radial-gradient(circle,rgba(25,198,230,.22),transparent 65%);pointer-events:none}
+.qd-logo{display:flex;align-items:center;gap:11px;padding:0 8px 22px;position:relative;z-index:1;color:#fff}
+.qd-logo i{width:40px;height:40px;border-radius:13px;background:var(--grad);display:grid;place-items:center;box-shadow:0 10px 24px -8px rgba(244,63,142,.7);color:#fff;flex:none}
+.qd-logo span{font-family:var(--hf);font-weight:800;font-size:20px;letter-spacing:.2px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qd-nav{position:relative;z-index:1;flex:1;overflow:auto}
+.qd-nav a{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:5px;border-radius:14px;color:#c9c3ee;font-weight:600;transition:.2s}
+.qd-nav a:hover{background:rgba(255,255,255,.08);color:#fff}
+.qd-nav a.qd-on{background:var(--grad);color:#fff;box-shadow:0 12px 26px -10px rgba(244,63,142,.75)}
+.qd-nb{margin-left:auto;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:99px;background:rgba(255,176,32,.18);color:var(--amber);border:1px solid rgba(255,176,32,.35)}
+.qd-nav a.qd-on .qd-nb{background:rgba(255,255,255,.22);color:#fff;border-color:rgba(255,255,255,.4)}
+.qd-me{position:relative;z-index:1;margin-top:10px;padding:12px;border-radius:18px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:10px}
+.qd-av{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#ffb020,#f43f8e);display:grid;place-items:center;font-family:var(--hf);font-weight:800;color:#fff;flex:none}
+.qd-me-t{min-width:0;flex:1}
+.qd-me-t b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qd-me-t small{color:#b8b1e0;font-size:12px}
+.qd-me button{color:#c9c3ee;padding:8px;border-radius:10px;display:grid;place-items:center}
+.qd-me button:hover{background:rgba(255,255,255,.1);color:#fff}
+
+/* ---------- মেইন ও টপবার ---------- */
+.qd-main{margin-left:268px;min-width:0}
+.qd-top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:14px clamp(14px,3vw,32px);background:rgba(250,248,255,.86);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.qd-mlogo{display:none;align-items:center;gap:9px;font-family:var(--hf);font-weight:800;font-size:18px;min-width:0}
+.qd-mlogo i{width:34px;height:34px;border-radius:11px;background:var(--grad);display:grid;place-items:center;color:#fff;flex:none}
+.qd-mlogo .qd-ic{width:19px;height:19px}
+.qd-mlogo span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qd-srch{flex:1;max-width:540px;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:0 14px;height:48px;color:var(--muted);transition:.2s}
+.qd-srch:focus-within{border-color:var(--violet2);box-shadow:0 0 0 4px rgba(124,58,237,.12)}
+.qd-srch input{flex:1;min-width:0;border:0;outline:0;background:none;font:inherit;color:var(--ink);font-size:15px}
+.qd-sp{flex:1}
+.qd-ib{width:46px;height:46px;border-radius:15px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);flex:none}
+.qd-logout-m{display:none}
+.qd-prof{display:flex;align-items:center;gap:10px;padding:4px 14px 4px 4px;border-radius:99px;background:#fff;border:1px solid var(--line);flex:none}
+.qd-prof .qd-av{width:38px;height:38px}
+.qd-prof span{text-align:left;line-height:1.25;max-width:160px}
+.qd-prof b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qd-prof small{font-size:12px;color:var(--muted)}
+
+.qd-wrap{max-width:1180px;margin:0 auto;padding:20px clamp(14px,3vw,32px) 60px}
+
+/* ---------- ওয়েলকাম ব্যানার ---------- */
+.qd-hero{position:relative;overflow:hidden;border-radius:28px;padding:clamp(22px,4vw,42px);color:#fff;display:grid;grid-template-columns:1.25fr .75fr;gap:24px;align-items:center;background:linear-gradient(135deg,#0d0926 0%,#241466 55%,#4a1a7c 100%);box-shadow:0 30px 60px -30px rgba(76,29,149,.6)}
+.qd-hero.qd-solo{grid-template-columns:1fr}
+.qd-hero::before{content:"";position:absolute;width:420px;height:420px;right:-110px;top:-170px;border-radius:50%;background:radial-gradient(circle,rgba(244,63,142,.5),transparent 65%)}
+.qd-hero::after{content:"";position:absolute;width:360px;height:360px;left:-120px;bottom:-190px;border-radius:50%;background:radial-gradient(circle,rgba(25,198,230,.35),transparent 65%)}
+.qd-hero>*{position:relative;z-index:1}
+.qd-pills{display:flex;flex-wrap:wrap;gap:8px}
+.qd-hi{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:99px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);font-size:13.5px;font-weight:600;color:#fff}
+.qd-hi .qd-ic{width:16px;height:16px;color:var(--amber)}
+.qd-hero h1{font-size:clamp(27px,4.6vw,44px);line-height:1.22;font-weight:800;margin:14px 0 10px;color:#fff}
+.qd-hero h1 em{font-style:normal;background:linear-gradient(90deg,#ffb020,#ff6fa8);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.qd-hero p{color:#d4cdf5;font-size:clamp(14.5px,1.6vw,16.5px);max-width:520px}
+.qd-cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.qd-btn{display:inline-flex;align-items:center;gap:9px;padding:13px 22px;border-radius:15px;font-weight:700;font-size:15.5px;transition:.2s}
+.qd-btn-p{background:linear-gradient(135deg,#ffb020,#f43f8e);color:#fff;box-shadow:0 14px 28px -10px rgba(244,63,142,.8)}
+.qd-btn-p:hover{transform:translateY(-2px)}
+.qd-btn-g{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);color:#fff}
+.qd-btn-g:hover{background:rgba(255,255,255,.18)}
+.qd-btn .qd-ic{width:19px;height:19px}
+
+.qd-mock{position:relative;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-radius:22px;padding:18px 18px 22px;transform:rotate(2deg)}
+.qd-mh{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:#e6e0ff;margin-bottom:12px}
+.qd-mh i{width:9px;height:9px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 0 rgba(18,214,160,.6);animation:qd-pu 1.6s infinite}
+@keyframes qd-pu{70%{box-shadow:0 0 0 9px rgba(18,214,160,0)}100%{box-shadow:0 0 0 0 rgba(18,214,160,0)}}
+.qd-ln{height:8px;border-radius:6px;background:rgba(255,255,255,.28);margin:10px 0;transform-origin:left;animation:qd-wr 4.6s ease-in-out infinite;animation-delay:var(--d,0s)}
+.qd-ln-t{height:13px;background:linear-gradient(90deg,#ffb020,#f43f8e)}
+.qd-ln-h{margin-top:16px;background:rgba(167,139,250,.65)}
+@keyframes qd-wr{0%{transform:scaleX(0)}45%,85%{transform:scaleX(1)}100%{transform:scaleX(0)}}
+.qd-chip{position:absolute;left:-14px;bottom:-14px;display:flex;align-items:center;gap:7px;background:#fff;color:#047857;font-weight:700;font-size:12.5px;padding:7px 13px;border-radius:99px;box-shadow:0 14px 28px -10px rgba(0,0,0,.5)}
+.qd-chip .qd-ic{width:15px;height:15px;stroke-width:2.6}
+
+/* ---------- সেকশন ---------- */
+.qd-sh{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin:32px 2px 14px}
+.qd-sh h2{font-size:clamp(19px,2.4vw,23px);font-weight:800;color:var(--ink)}
+.qd-sh small{color:var(--muted);font-size:13.5px}
+
+.qd-qa{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.qd-qc{position:relative;overflow:hidden;background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:6px;transition:.25s;min-height:150px;color:var(--ink)}
+.qd-qc:hover{transform:translateY(-4px);box-shadow:0 22px 40px -22px rgba(76,29,149,.45);border-color:#d8ccfa}
+.qd-qi{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;color:#fff;margin-bottom:8px;box-shadow:0 12px 22px -10px var(--sh,#7c3aed)}
+.qd-qc h3{font-size:17.5px;font-weight:800;color:inherit}
+.qd-qc p{font-size:13.5px;color:var(--muted);line-height:1.5}
+.qd-go{margin-top:auto;padding-top:8px;color:var(--violet);display:flex}
+.qd-go .qd-ic{width:20px;height:20px;transition:.2s}
+.qd-qc:hover .qd-go .qd-ic{transform:translateX(5px)}
+.qd-feat{grid-column:span 2;color:#fff;border:0;background:linear-gradient(135deg,#7c3aed 0%,#c2318f 60%,#f43f8e 100%);padding:24px;box-shadow:0 26px 50px -24px rgba(194,49,143,.8)}
+.qd-feat:hover{border-color:transparent}
+.qd-feat::before{content:"";position:absolute;width:260px;height:260px;right:-80px;top:-90px;border-radius:50%;background:rgba(255,255,255,.14)}
+.qd-feat::after{content:"";position:absolute;width:150px;height:150px;right:60px;bottom:-80px;border-radius:50%;background:rgba(255,176,32,.35)}
+.qd-feat>*{position:relative;z-index:1}
+.qd-feat .qd-qi{background:rgba(255,255,255,.22);box-shadow:none;width:54px;height:54px}
+.qd-feat h3{font-size:clamp(21px,2.6vw,27px);color:#fff}
+.qd-feat p{color:#ffe3f1;font-size:14.5px;max-width:340px}
+.qd-fb{align-self:flex-start;display:inline-flex;align-items:center;gap:8px;background:#fff;color:#a21caf;font-weight:800;padding:10px 18px;border-radius:13px;margin-top:auto}
+.qd-feat p+.qd-fb{margin-top:14px}
+.qd-fb .qd-ic{width:19px;height:19px}
+.qd-feat>.qd-lv{position:absolute;top:18px;right:18px;z-index:2;display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);padding:5px 13px;border-radius:99px;font-size:12.5px;font-weight:700;color:#fff}
+.qd-lv i{width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 0 rgba(255,176,32,.7);animation:qd-pl 1.5s infinite}
+@keyframes qd-pl{70%{box-shadow:0 0 0 9px rgba(255,176,32,0)}100%{box-shadow:0 0 0 0 rgba(255,176,32,0)}}
+
+.qd-cls{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.qd-cc{position:relative;overflow:hidden;border-radius:20px;padding:16px 15px;background:var(--c);color:var(--f);display:flex;flex-direction:column;transition:.25s}
+.qd-cc:hover{transform:translateY(-4px);box-shadow:0 18px 30px -18px var(--f)}
+.qd-cc b{font-size:27px;font-weight:800;line-height:1.1}
+.qd-cc small{font-weight:700;opacity:.8;font-size:13px;margin-top:3px}
+.qd-cc .qd-ic{position:absolute;right:12px;bottom:12px;width:20px;height:20px;opacity:0;transform:translateX(-6px);transition:.25s}
+.qd-cc:hover .qd-ic{opacity:1;transform:none}
+.qd-cc::after{content:"";position:absolute;width:70px;height:70px;border-radius:50%;right:-22px;top:-22px;background:var(--f);opacity:.08}
+
+.qd-two{display:grid;grid-template-columns:1.45fr 1fr;gap:16px;margin-top:32px}
+.qd-two.qd-one{grid-template-columns:1fr}
+.qd-pn{background:#fff;border:1px solid var(--line);border-radius:24px;padding:20px;min-width:0}
+.qd-pn h2{font-size:19px;font-weight:800;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--ink)}
+.qd-pn h2 a{font-family:var(--bf);font-size:13px;font-weight:700;color:var(--violet)}
+.qd-row{display:flex;align-items:center;gap:12px;padding:13px 0;border-top:1px solid var(--line);color:var(--ink)}
+.qd-row:first-of-type{border-top:0}
+.qd-ri{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;color:#fff;flex:none}
+.qd-rt{flex:1;min-width:0}
+.qd-rt b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qd-rt small{color:var(--muted);font-size:12.5px}
+.qd-arr{color:var(--violet);display:flex;flex:none}
+.qd-arr .qd-ic{width:20px;height:20px}
+.qd-note{margin-top:8px;font-size:12.5px;color:var(--muted);background:#faf6ff;border-radius:12px;padding:9px 12px}
+
+/* ---------- মোবাইল বটম বার ---------- */
+.qd-bn{display:none;position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(255,255,255,.93);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-top:1px solid var(--line);padding:8px 6px calc(8px + env(safe-area-inset-bottom));justify-content:space-around;align-items:flex-end;box-shadow:0 -14px 30px -22px rgba(76,29,149,.5)}
+.qd-bn a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11.5px;font-weight:600;color:var(--muted);padding:4px 0;position:relative}
+.qd-bn a.qd-on{color:var(--violet)}
+.qd-bn a.qd-on::before{content:"";position:absolute;top:-9px;width:26px;height:3px;border-radius:0 0 4px 4px;background:var(--grad)}
+.qd-bn a.qd-fab{margin-top:-30px;color:var(--ink)}
+.qd-bn a.qd-fab i{width:58px;height:58px;border-radius:50%;background:var(--grad);display:grid;place-items:center;color:#fff;box-shadow:0 14px 26px -8px rgba(244,63,142,.8);border:4px solid #fff}
+.qd-bn a.qd-fab i .qd-ic{width:26px;height:26px;stroke-width:2.4}
+
+.qd-rise{animation:qd-rise .6s both}
+@keyframes qd-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* ---------- রেসপন্সিভ ---------- */
+@media (max-width:1060px){
+  .qd-cls{grid-template-columns:repeat(4,1fr)}
+}
+@media (max-width:899px){
+  .qd-side{display:none}
+  .qd-main{margin-left:0}
+  .qd-bn{display:flex}
+  .qd-mlogo{display:flex}
+  .qd-logout-m{display:block}
+  .qd-top{flex-wrap:wrap;gap:10px;padding-top:12px;padding-bottom:12px}
+  .qd-srch{order:3;flex-basis:100%;max-width:none;height:46px}
+  .qd-prof span{display:none}
+  .qd-prof{padding:3px}
+  .qd-wrap{padding-bottom:120px}
+}
+@media (max-width:760px){
+  .qd-hero{grid-template-columns:1fr;border-radius:24px}
+  .qd-mock{display:none}
+  .qd-qa{grid-template-columns:repeat(2,1fr);gap:12px}
+  .qd-feat{grid-column:span 2}
+  .qd-qc{min-height:140px;padding:16px}
+  .qd-cls{grid-template-columns:repeat(2,1fr)}
+  .qd-two{grid-template-columns:1fr}
+  .qd-cta .qd-btn{flex:1;justify-content:center;padding:13px 14px}
+}
+@media (prefers-reduced-motion:reduce){
+  .qd-ln{animation:none;transform:none}
+  .qd-rise,.qd-mh i,.qd-lv i{animation:none}
+}
+
+/* ===== ফাইল শেষ ===== */
