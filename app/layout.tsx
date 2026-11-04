@@ -7,13 +7,18 @@ import { MessageCircle } from "lucide-react";
 import { auth, signOut } from "@/auth";
 import { db } from "@/lib/db";
 import { getSite } from "@/lib/site";
+import { qkHead, qkBody } from "@/lib/qk-fonts";
+import PathGate from "@/components/proshnoday/shell/path-gate";
 import SiteHeader from "@/components/site-header";
 import SiteFooter from "@/components/site-footer";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import InstallPrompt from "@/components/InstallPrompt";
-import { SessionProvider } from "next-auth/react"; // 🎯 নতুন যুক্ত করা হলো
+import { SessionProvider } from "next-auth/react";
 
-// 🎯 ১. আদর্শলিপিতে শুধুমাত্র বাংলা ইউনিকোড রেঞ্জ
+// প্রশ্নোদয়: সাইটের মূল ঠিকানা (Vercel-এ SITE_URL সেট থাকলে সেটি, না হলে এই ডিফল্ট)
+const SITE_URL = process.env.SITE_URL ?? "https://question-maker-com-g6ec.vercel.app";
+
+// 🎯 ১. আদর্শলিপিতে শুধুমাত্র বাংলা ইউনিকোড রেঞ্জ (প্রশ্নপত্র ছাপার জন্য)
 const bn = localFont({
   src: "./fonts/AdorshoLipi.ttf",
   variable: "--font-bn",
@@ -37,14 +42,13 @@ const en = Tinos({
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getSite();
   return {
-    metadataBase: new URL(process.env.SITE_URL ?? "https://saifulsir.com"),
+    metadataBase: new URL(SITE_URL),
     title: {
-      default: "SaifulSir.com | সাইফুল স্যার - শিক্ষা ও পরীক্ষার পূর্ণাঙ্গ প্রস্তুতি",
-      template: "%s | SaifulSir.com",
+      default: `${site.siteName} | ${site.tagline}`,
+      template: `%s | ${site.siteName}`,
     },
     description: site.metaDescription,
     alternates: { types: { "application/rss+xml": "/feed.xml" } },
-    icons: { apple: "/ceo-apple-touch-icon.png" },
   };
 }
 
@@ -64,10 +68,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const wa = site.social.find((s) => s.name === "WhatsApp")?.url;
 
   return (
-    <html lang="bn" className={`${bn.variable} ${en.variable}`} suppressHydrationWarning>
+    <html
+      lang="bn"
+      className={`${bn.variable} ${en.variable} ${qkHead.variable} ${qkBody.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        
+
         {/* 🎯 গুগল ব্র্যান্ড স্কিমা */}
         <script
           type="application/ld+json"
@@ -75,53 +83,64 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "WebSite",
-              "name": "SaifulSir",
-              "alternateName": ["SaifulSir.com", "Saiful Sir", "সাইফুল স্যার"],
-              "url": "https://saifulsir.com",
+              "name": site.siteName,
+              "url": SITE_URL,
               "potentialAction": {
                 "@type": "SearchAction",
-                "target": "https://saifulsir.com/search?q={search_term_string}",
+                "target": `${SITE_URL}/search?q={search_term_string}`,
                 "query-input": "required name=search_term_string"
               }
             }),
           }}
         />
 
-        {/* 🎯 KaTeX গাণিতিক ফর্মুলার অফিসিয়াল স্টাইলশিট */}
+        {/* 🎯 KaTeX গাণিতিক ফর্মুলার অফিসিয়াল স্টাইলশিট */}
         <link
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
           crossOrigin="anonymous"
         />
       </head>
-      
+
       <body
         className="pb-16 md:pb-0"
         style={{
           fontFamily: 'var(--font-en), "Times New Roman", var(--font-bn), serif',
         }}
       >
-        {/* 🎯 SessionProvider দিয়ে পুরো অ্যাপকে মুড়ে দেওয়া হলো */}
         <SessionProvider>
-          <SiteHeader user={u ? { name: u.name, role: u.role } : null} logout={logout} notice={n?.text ?? "স্বাগতম SaifulSir.com এ"} />
+          {/* হোমপেজ (/) ও ড্যাশবোর্ডে এই অংশ লুকায়, কারণ ওই পেজের নিজস্ব হেডার ও মেনু আছে */}
+          <PathGate>
+            <SiteHeader
+              user={u ? { name: u.name, role: u.role } : null}
+              logout={logout}
+              notice={n?.text ?? `স্বাগতম ${site.siteName}-এ`}
+            />
+          </PathGate>
 
           <main>{children}</main>
 
-          <SiteFooter />
+          <PathGate>
+            <SiteFooter />
+          </PathGate>
 
           {/* মোবাইলের নিচের স্মার্ট অ্যাপ বার */}
-          <MobileBottomNav user={u ? { name: u.name, role: u.role } : null} />
+          <PathGate>
+            <MobileBottomNav user={u ? { name: u.name, role: u.role } : null} />
+          </PathGate>
 
           {wa && (
-            <a
-              href={wa}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="WhatsApp"
-              className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg md:bottom-6 hover:scale-105 transition-transform"
-            >
-              <MessageCircle size={26} />
-            </a>
+            <PathGate>
+              <a
+                href={wa}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="WhatsApp"
+                className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg md:bottom-6 hover:scale-105 transition-transform"
+              >
+                <MessageCircle size={26} />
+              </a>
+            </PathGate>
           )}
 
           <InstallPrompt />
@@ -131,3 +150,5 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     </html>
   );
 }
+
+// ===== ফাইল শেষ =====
