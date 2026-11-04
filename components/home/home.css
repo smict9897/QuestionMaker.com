@@ -1,0 +1,215 @@
+/* ===== প্রশ্নোদয় হোমপেজের স্টাইল (সব ক্লাস qk- দিয়ে শুরু) ===== */
+
+.qk-home{
+  --night:#0d0926; --night2:#1a1247;
+  --violet:#7c3aed; --violet2:#a78bfa;
+  --pink:#f43f8e; --amber:#ffb020;
+  --cyan:#19c6e6; --mint:#12d6a0;
+  --ink:#16112e; --muted:#645f82;
+  --bg:#faf8ff; --line:#ebe6fb; --white:#fff;
+  --grad:linear-gradient(135deg,#7c3aed,#f43f8e);
+  --hf:var(--qk-head),"Anek Bangla",system-ui,sans-serif;
+  --bf:var(--qk-body),"Hind Siliguri",system-ui,sans-serif;
+  font-family:var(--bf);
+  color:var(--ink);
+  background:var(--bg);
+  line-height:1.65;
+  font-size:16px;
+  -webkit-text-size-adjust:100%;
+  overflow-x:clip;
+  scroll-behavior:smooth;
+}
+:where(.qk-home) *{box-sizing:border-box;margin:0;padding:0}
+:where(.qk-home) :is(h1,h2,h3,h4){font-family:var(--hf);line-height:1.25;color:var(--ink)}
+@media(max-width:767px){
+  .qk-home{margin-bottom:-4rem}
+}
+
+.qk-wrap{max-width:1160px;margin:0 auto;padding:0 20px}
+.qk-i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* হেডার */
+.qk-header{position:sticky;top:0;z-index:60;background:rgba(13,9,38,.82);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.08)}
+.qk-bar{display:flex;align-items:center;justify-content:space-between;height:66px;gap:12px}
+.qk-logo{display:flex;align-items:center;gap:10px}
+.qk-mark{width:40px;height:40px;border-radius:12px;background:var(--grad);color:#fff;display:grid;place-items:center;box-shadow:0 8px 22px -6px rgba(244,63,142,.7);flex:none}
+.qk-logo b{font-family:var(--hf);font-size:20px;display:block;line-height:1.1;color:#fff;font-weight:700}
+.qk-logo small{font-size:12px;color:#a9a3d1;display:block;line-height:1.2}
+.qk-links{display:none;gap:28px;font-weight:500;color:#c4bfe6}
+.qk-links a:hover{color:#fff}
+.qk-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 24px;border-radius:12px;font-weight:600;font-size:16px;border:1px solid transparent;cursor:pointer;font-family:inherit;transition:.18s}
+.qk-btn-g{background:var(--grad);color:#fff;box-shadow:0 12px 28px -10px rgba(244,63,142,.75)}
+.qk-btn-g:hover{transform:translateY(-2px);box-shadow:0 16px 32px -10px rgba(244,63,142,.9)}
+.qk-btn-glass{background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.25)}
+.qk-btn-glass:hover{background:rgba(255,255,255,.16)}
+.qk-btn-w{background:#fff;color:var(--violet)}
+.qk-btn-w:hover{transform:translateY(-2px)}
+.qk-btn-sm{padding:9px 16px;font-size:15px}
+.qk-hide-sm{display:none}
+.qk-head-r{display:flex;align-items:center;gap:10px}
+.qk-burger{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:10px;width:42px;height:42px;display:grid;place-items:center;cursor:pointer;color:#fff}
+.qk-mobnav{display:none;border-top:1px solid rgba(255,255,255,.1);padding:8px 20px 16px;background:var(--night)}
+.qk-mobnav.qk-open{display:block}
+.qk-mobnav a{display:block;padding:12px 0;font-weight:500;color:#d8d4f3;border-bottom:1px solid rgba(255,255,255,.08)}
+
+/* হিরো */
+.qk-hero{position:relative;overflow:hidden;color:#fff;padding:44px 0 70px;background:
+  radial-gradient(640px 380px at 88% 8%,rgba(244,63,142,.30),transparent 65%),
+  radial-gradient(620px 420px at 6% 0%,rgba(124,58,237,.50),transparent 65%),
+  radial-gradient(520px 320px at 50% 115%,rgba(25,198,230,.20),transparent 70%),
+  var(--night)}
+.qk-hero:before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.14) 1px,transparent 1px);background-size:26px 26px;-webkit-mask-image:linear-gradient(to bottom,#000,transparent 85%);mask-image:linear-gradient(to bottom,#000,transparent 85%);pointer-events:none}
+.qk-hero .qk-wrap{position:relative}
+.qk-hero-grid{display:grid;gap:44px;align-items:center}
+.qk-pill{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:6px 14px 6px 6px;font-size:14px;color:#e9e5ff;font-weight:500}
+.qk-pill em{font-style:normal;background:linear-gradient(135deg,var(--amber),var(--pink));color:#2a0b22;font-size:12px;padding:2px 10px;border-radius:999px;font-weight:700}
+.qk-hero h1{font-size:clamp(34px,8.6vw,60px);font-weight:800;margin:18px 0 14px;letter-spacing:-.6px;color:#fff}
+.qk-grad{background:linear-gradient(90deg,#b79bff,#ff7eb6,#ffc857);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.qk-lead{font-size:18px;color:#c9c4ea;max-width:540px}
+.qk-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
+.qk-cta .qk-btn{flex:1 1 190px}
+.qk-types{display:flex;flex-wrap:wrap;gap:8px;margin-top:26px}
+.qk-types span{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:10px;padding:6px 12px;font-size:14px;font-weight:500;color:#eae7ff}
+.qk-types i{width:8px;height:8px;border-radius:50%;display:block}
+
+/* নিজে নিজে লেখা প্রশ্নপত্র */
+.qk-stage{position:relative;max-width:540px;margin:0 auto;width:100%}
+.qk-stage:before{content:"";position:absolute;inset:8% -6% -4%;background:var(--grad);filter:blur(60px);opacity:.38;border-radius:40px;z-index:0}
+.qk-glass{position:relative;z-index:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:22px;padding:10px;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 40px 80px -30px rgba(0,0,0,.6)}
+.qk-tbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 4px 10px}
+.qk-tbar span{font-size:12.5px;color:#e9e5ff;background:rgba(255,255,255,.1);border-radius:8px;padding:3px 10px;font-weight:500}
+.qk-tbar .qk-live{margin-left:auto;display:flex;align-items:center;gap:7px;background:rgba(18,214,160,.16);color:#7af0cf}
+.qk-dot{width:8px;height:8px;border-radius:50%;background:var(--mint);animation:qk-pulse 1.2s infinite}
+@keyframes qk-pulse{0%{box-shadow:0 0 0 0 rgba(18,214,160,.7)}100%{box-shadow:0 0 0 9px rgba(18,214,160,0)}}
+.qk-sheet{position:relative;background:#fff;border-radius:10px;height:clamp(420px,118vw,520px);overflow:hidden;color:#1d1b2b;font-size:12.5px;line-height:1.6}
+.qk-sheet:after{content:"";position:absolute;left:0;right:0;bottom:0;height:34px;background:linear-gradient(transparent,#fff);pointer-events:none}
+.qk-sheet-in{padding:18px 18px 40px;transition:transform .25s ease,opacity .45s ease}
+.qk-b{margin:0}
+.qk-ph1{font-family:var(--hf);font-size:1.45em;font-weight:700;text-align:center}
+.qk-ph2{text-align:center;font-weight:600}
+.qk-ph3{text-align:center;border-bottom:1.5px solid #222;padding-bottom:7px;margin-bottom:7px}
+.qk-row{display:flex;justify-content:space-between;gap:10px;font-weight:600}
+.qk-sec{display:flex;justify-content:space-between;gap:10px;margin-top:10px;font-family:var(--hf);font-weight:700;color:#4c1fb8}
+.qk-q{margin-top:4px}
+.qk-opts{display:grid;grid-template-columns:1fr 1fr;padding-left:14px;color:#444}
+.qk-stim{font-style:italic;color:#444;margin-top:4px}
+.qk-sub{padding-left:10px;margin-top:2px}
+.qk-caret{display:inline-block;width:2px;height:1.05em;background:var(--violet);vertical-align:-2px;margin-left:1px;animation:qk-bl .8s steps(1) infinite}
+@keyframes qk-bl{50%{opacity:0}}
+.qk-chip{position:absolute;z-index:3;background:#fff;color:var(--ink);border-radius:12px;padding:8px 14px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;box-shadow:0 16px 30px -12px rgba(0,0,0,.45)}
+.qk-chip-d{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;color:#fff}
+.qk-chip-a{top:-16px;left:14px}
+.qk-chip-a .qk-chip-d{background:var(--grad)}
+.qk-chip-b{bottom:-16px;right:14px}
+.qk-chip-b .qk-chip-d{background:linear-gradient(135deg,var(--cyan),var(--violet))}
+
+/* সাধারণ সেকশন */
+.qk-section{padding:66px 0}
+.qk-sec-head{text-align:center;max-width:660px;margin:0 auto 40px}
+.qk-eyebrow{display:inline-block;color:var(--violet);background:#f0e9ff;font-weight:600;font-size:14px;padding:4px 14px;border-radius:999px}
+.qk-sec-head h2{font-size:clamp(26px,5.6vw,40px);font-weight:800;margin:12px 0 10px;letter-spacing:-.3px}
+.qk-sec-head p{color:var(--muted)}
+.qk-grid{display:grid;gap:16px}
+.qk-card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:24px;transition:.2s;position:relative}
+.qk-card:hover{transform:translateY(-4px);box-shadow:0 26px 44px -26px rgba(124,58,237,.55);border-color:#d9ccfb}
+.qk-ic{width:50px;height:50px;border-radius:15px;display:grid;place-items:center;margin-bottom:16px;color:#fff;flex:none}
+.qk-ic-v{background:linear-gradient(135deg,#7c3aed,#a78bfa);box-shadow:0 10px 20px -8px rgba(124,58,237,.6)}
+.qk-ic-p{background:linear-gradient(135deg,#f43f8e,#ff8fb8);box-shadow:0 10px 20px -8px rgba(244,63,142,.6)}
+.qk-ic-a{background:linear-gradient(135deg,#ff9f1a,#ffd166);box-shadow:0 10px 20px -8px rgba(255,159,26,.6)}
+.qk-ic-c{background:linear-gradient(135deg,#19c6e6,#5b8cff);box-shadow:0 10px 20px -8px rgba(25,198,230,.6)}
+.qk-ic-m{background:linear-gradient(135deg,#12d6a0,#7be8c8);box-shadow:0 10px 20px -8px rgba(18,214,160,.6)}
+.qk-card h3{font-size:19px;margin-bottom:6px}
+.qk-card p{color:var(--muted);font-size:15.5px}
+
+.qk-steps-bg{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.qk-num{font-family:var(--hf);font-size:46px;font-weight:800;line-height:1;margin-bottom:10px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.qk-step:nth-child(2) .qk-num{background:linear-gradient(135deg,#19c6e6,#7c3aed);-webkit-background-clip:text;background-clip:text}
+.qk-step:nth-child(3) .qk-num{background:linear-gradient(135deg,#ff9f1a,#f43f8e);-webkit-background-clip:text;background-clip:text}
+.qk-step:nth-child(4) .qk-num{background:linear-gradient(135deg,#12d6a0,#19c6e6);-webkit-background-clip:text;background-clip:text}
+
+/* শিক্ষক / শিক্ষার্থী */
+.qk-role{border-radius:26px;padding:30px 26px;color:#fff;position:relative;overflow:hidden}
+.qk-role:after{content:"";position:absolute;right:-50px;top:-50px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.14)}
+.qk-role-t{background:linear-gradient(135deg,#4c1fb8,#7c3aed 55%,#b36bff)}
+.qk-role-s{background:linear-gradient(135deg,#f43f8e,#ff7a59 60%,#ffb020)}
+.qk-tagr{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;padding:5px 14px;border-radius:999px;background:rgba(255,255,255,.2);margin-bottom:14px;position:relative;z-index:1}
+.qk-role h3{color:#fff;font-size:25px;margin-bottom:14px;position:relative;z-index:1}
+.qk-role ul{list-style:none;display:grid;gap:11px;position:relative;z-index:1}
+.qk-role li{display:flex;gap:10px;font-size:15.5px;color:rgba(255,255,255,.94)}
+.qk-role li svg{margin-top:3px}
+
+/* শ্রেণি */
+.qk-classes{grid-template-columns:repeat(2,1fr);gap:12px}
+.qk-cls{border-radius:18px;padding:18px 16px;display:flex;align-items:center;gap:12px;font-weight:600;transition:.2s;border:1px solid transparent}
+.qk-cls:hover{transform:translateY(-3px);box-shadow:0 18px 30px -20px rgba(22,17,46,.5)}
+.qk-cls small{display:block;font-weight:400;color:var(--muted);font-size:13px;line-height:1.3}
+.qk-cls .qk-ic{margin:0;width:40px;height:40px;border-radius:12px}
+.qk-cls:nth-child(5n+1){background:#f1ebff}
+.qk-cls:nth-child(5n+2){background:#ffe9f3}
+.qk-cls:nth-child(5n+3){background:#fff3dc}
+.qk-cls:nth-child(5n+4){background:#e0f8fd}
+.qk-cls:nth-child(5n+5){background:#dcf8ee}
+
+/* CTA ব্যান্ড */
+.qk-band{background:linear-gradient(135deg,#1a1247,#4c1fb8 55%,#c026a3);color:#fff;border-radius:30px;padding:42px 26px;position:relative;overflow:hidden}
+.qk-band:before{content:"";position:absolute;left:-80px;bottom:-100px;width:300px;height:300px;border-radius:50%;background:rgba(255,176,32,.28);filter:blur(30px)}
+.qk-band:after{content:"";position:absolute;right:-60px;top:-80px;width:260px;height:260px;border-radius:50%;background:rgba(25,198,230,.25);filter:blur(30px)}
+.qk-band h2{color:#fff;font-size:clamp(26px,5.6vw,40px);font-weight:800;margin-bottom:10px;position:relative;z-index:1}
+.qk-band p{color:#e2dcff;max-width:560px;position:relative;z-index:1}
+.qk-band .qk-cta{position:relative;z-index:1}
+
+/* ব্লগ */
+.qk-post{padding:0;overflow:hidden;display:block}
+.qk-th{height:140px;display:grid;place-items:center;color:#fff}
+.qk-th svg{width:42px;height:42px}
+.qk-post:nth-child(3n+1) .qk-th{background:linear-gradient(135deg,#7c3aed,#19c6e6)}
+.qk-post:nth-child(3n+2) .qk-th{background:linear-gradient(135deg,#f43f8e,#ffb020)}
+.qk-post:nth-child(3n+3) .qk-th{background:linear-gradient(135deg,#12d6a0,#5b8cff)}
+.qk-bd{padding:18px 20px 22px}
+.qk-tag{display:inline-block;font-size:12.5px;background:#f0e9ff;color:var(--violet);padding:2px 10px;border-radius:999px;font-weight:600;margin-bottom:8px}
+.qk-post h3{font-size:18px;margin-bottom:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.qk-more{text-align:center;margin-top:24px}
+
+/* প্রশ্নোত্তর */
+.qk-faq{max-width:780px;margin:0 auto;display:grid;gap:12px}
+.qk-faq details{background:#fff;border:1px solid var(--line);border-radius:16px;padding:0 20px}
+.qk-faq details[open]{border-color:#d9ccfb;box-shadow:0 16px 30px -22px rgba(124,58,237,.5)}
+.qk-faq summary{cursor:pointer;list-style:none;padding:18px 0;font-weight:600;font-family:var(--hf);font-size:17px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.qk-faq summary::-webkit-details-marker{display:none}
+.qk-faq summary:after{content:"+";font-size:26px;color:var(--pink);font-weight:500;line-height:1}
+.qk-faq details[open] summary:after{content:"−"}
+.qk-faq details p{color:var(--muted);padding-bottom:18px}
+
+/* ফুটার */
+.qk-footer{background:var(--night);color:#a9a3d1;padding:52px 0 24px}
+.qk-fgrid{display:grid;gap:30px}
+.qk-footer h4{color:#fff;font-size:17px;margin-bottom:10px;font-weight:700}
+.qk-footer a{display:block;padding:4px 0}
+.qk-footer a:hover{color:#fff}
+.qk-footer a.qk-logo{display:flex}
+.qk-copy{border-top:1px solid rgba(255,255,255,.1);margin-top:30px;padding-top:18px;font-size:14px;color:#8883b0}
+
+@media(min-width:640px){
+  .qk-classes{grid-template-columns:repeat(3,1fr)}
+  .qk-g2{grid-template-columns:repeat(2,1fr)}
+  .qk-g3{grid-template-columns:repeat(2,1fr)}
+  .qk-g4{grid-template-columns:repeat(2,1fr)}
+  .qk-cta .qk-btn{flex:0 0 auto}
+  .qk-sheet{font-size:13px}
+  .qk-hide-sm{display:inline-flex}
+}
+@media(min-width:900px){
+  .qk-links{display:flex}
+  .qk-burger,.qk-mobnav{display:none!important}
+  .qk-hero{padding:80px 0 100px}
+  .qk-hero-grid{grid-template-columns:1fr 1fr}
+  .qk-g3{grid-template-columns:repeat(3,1fr)}
+  .qk-g4{grid-template-columns:repeat(4,1fr)}
+  .qk-classes{grid-template-columns:repeat(5,1fr)}
+  .qk-fgrid{grid-template-columns:1.5fr 1fr 1fr 1fr}
+  .qk-band{padding:56px 54px}
+  .qk-section{padding:90px 0}
+  .qk-role{padding:38px 34px}
+}
+
+/* ===== ফাইল শেষ ===== */
