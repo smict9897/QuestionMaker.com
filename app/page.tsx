@@ -1,283 +1,349 @@
+// প্রশ্নোদয় — নতুন হোমপেজ (সার্ভার কম্পোনেন্ট)
+import type { Metadata } from "next";
 import Link from "next/link";
-import type { LucideIcon } from "lucide-react";
-import { 
-  Atom, Award, Backpack, Book, BookOpen, Calculator, 
-  ClipboardList, Compass, Crop, FileText, FlaskConical, 
-  GraduationCap, Landmark, Library, Lightbulb, 
-  Presentation, Rocket, Search, ShieldCheck, Stethoscope, Target, Trophy 
-} from "lucide-react";
+
+import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { getSite } from "@/lib/site";
-import RecentArticles from "@/components/RecentArticles";
-import PromoBookPopup from "@/components/PromoBookPopup";
-import HomeFeatureCards from "@/components/home-feature-cards";
-import { getPromoSettings } from "@/app/actions/promo";
+import "@/components/home/home.css";
+import HomeHeader from "@/components/home/home-header";
+import HeroTyping from "@/components/home/hero-typing";
+import HomeFooter from "@/components/proshnoday/home/home-footer";
 
 export const dynamic = "force-dynamic";
 
-type Item = { en: string; bn: string; icon: LucideIcon; tint: string; href?: string; slug?: string };
-const q = (s: string) => `/search?q=${encodeURIComponent(s)}`;
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getSite();
+  return {
+    title: { absolute: `${site.siteName} — অনলাইনে প্রশ্নপত্র তৈরি করুন` },
+    description: site.metaDescription,
+  };
+}
 
-const primary: Item[] = [
-  { en: "Class 1", bn: "১ম শ্রেণি", icon: Book, tint: "bg-emerald-100 text-emerald-600", href: q("Class 1"), slug: "class-1" },
-  { en: "Class 2", bn: "২য় শ্রেণি", icon: Backpack, tint: "bg-sky-100 text-sky-600", href: q("Class 2"), slug: "class-2" },
-  { en: "Class 3", bn: "৩য় শ্রেণি", icon: BookOpen, tint: "bg-amber-100 text-amber-600", href: q("Class 3"), slug: "class-3" },
-  { en: "Class 4", bn: "৪র্থ শ্রেণি", icon: Lightbulb, tint: "bg-rose-100 text-rose-600", href: q("Class 4"), slug: "class-4" },
-  { en: "Class 5", bn: "৫ম শ্রেণি", icon: GraduationCap, tint: "bg-violet-100 text-violet-600", href: q("Class 5"), slug: "class-5" },
-  { en: "Class 5 বৃত্তি", bn: "৫ম শ্রেণির বৃত্তি", icon: Award, tint: "bg-yellow-100 text-yellow-700", href: q("Class 5 বৃত্তি"), slug: "class-5-scholarship" },
-];
+/* ছোট আইকন সহায়ক (ভেতরে শুধু SVG পাথ) */
+const P = {
+  book: ["M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z", "M4 19.5V21h16"],
+  check: ["M20 6 9 17l-5-5"],
+  file: ["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z", "M14 2v6h6M8 13h8M8 17h8"],
+  sliders: ["M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"],
+  bolt: ["M13 2 3 14h9l-1 8 10-12h-9z"],
+  pen: ["M12 20h9", "M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"],
+  spark: ["M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"],
+  layers: ["m12 2 10 5-10 5L2 7z", "m2 17 10 5 10-5M2 12l10 5 10-5"],
+  print: [
+    "M6 9V2h12v7",
+    "M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2",
+    "M6 14h12v8H6z",
+  ],
+} as const;
 
-const secondary: Item[] = [
-  { en: "Class 6", bn: "৬ষ্ঠ শ্রেণি", icon: GraduationCap, tint: "bg-blue-100 text-blue-600", href: q("Class 6"), slug: "class-6" },
-  { en: "Class 7", bn: "৭ম শ্রেণি", icon: Atom, tint: "bg-cyan-100 text-cyan-600", href: q("Class 7"), slug: "class-7" },
-  { en: "Class 8", bn: "৮ম শ্রেণি", icon: Compass, tint: "bg-emerald-100 text-emerald-600", href: q("Class 8"), slug: "class-8" },
-  { en: "Class 9-10", bn: "এসএসসি", icon: FileText, tint: "bg-amber-100 text-amber-600", href: q("Class 9-10"), slug: "class-9-10" },
-  { en: "HSC Books", bn: "এইচএসসি", icon: FlaskConical, tint: "bg-violet-100 text-violet-600", href: q("HSC"), slug: "hsc" },
-  { en: "Class 8 বৃত্তি", bn: "৮ম শ্রেণির বৃত্তি", icon: Trophy, tint: "bg-indigo-100 text-indigo-600", href: q("Class 8 বৃত্তি"), slug: "class-8-scholarship" },
-];
-
-const compete: Item[] = [
-  { en: "Guide Books", bn: "সহায়িকা বই", icon: Library, tint: "bg-slate-100 text-slate-600", href: "/library" },
-  { en: "NTRCA", bn: "নিবন্ধন", icon: Presentation, tint: "bg-emerald-100 text-emerald-600", href: "/ntrca" },
-  { en: "BCS", bn: "পড়াশোনা", icon: ShieldCheck, tint: "bg-amber-100 text-amber-600", href: q("BCS") },
-  { en: "NU Studies", bn: "জাতীয় বিশ্ববিদ্যালয়", icon: Landmark, tint: "bg-indigo-100 text-indigo-600", href: q("NU") },
-  { en: "Admission", bn: "ভর্তি গাইড", icon: Rocket, tint: "bg-rose-100 text-rose-600", href: "/admission" },
-  { en: "Medical Guide", bn: "মেডিকেল গাইড", icon: Stethoscope, tint: "bg-red-100 text-red-600", href: q("Medical") },
-];
-
-const tools: Item[] = [
-  { en: "ছবি ও স্বাক্ষর রিসাইজার", bn: "চাকরির আবেদনের জন্য", icon: Crop, tint: "bg-sky-100 text-sky-600", href: "/tools/photo-resizer" },
-  { en: "NU CGPA", bn: "রেজাল্ট প্ল্যানার", icon: Calculator, tint: "bg-indigo-100 text-indigo-600", href: "/tools/nu-cgpa" },
-  { en: "জিপিএ ক্যালকুলেটর", bn: "৪র্থ বিষয় সহ", icon: Calculator, tint: "bg-emerald-100 text-emerald-600", href: "/tools/gpa" },
-  { en: "কভার পেজ মেকার", bn: "অ্যাসাইনমেন্ট", icon: ClipboardList, tint: "bg-violet-100 text-violet-600", href: "/tools/cover-page" },
-  { en: "ভর্তি যোগ্যতা", bn: "বাছাই ক্যালকুলেটর", icon: Target, tint: "bg-amber-100 text-amber-600" },
-];
-
-function Head({ children }: { children: React.ReactNode }) {
+function Ico({ n, size }: { n: keyof typeof P; size?: number }) {
   return (
-    <div className="relative my-6 flex items-center justify-center">
-      <span className="absolute inset-x-0 top-1/2 h-px bg-slate-200" />
-      <h2 className="relative rounded-full border border-slate-200 bg-white px-5 py-1.5 font-bold text-royal shadow-sm">{children}</h2>
-    </div>
+    <svg
+      className="qk-i"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      style={size ? { width: size, height: size } : undefined}
+    >
+      {P[n].map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
   );
 }
 
-function Card({ it }: { it: Item }) {
-  const Icon = it.icon;
-  const cls = "flex items-center gap-2.5 sm:gap-3 rounded-2xl border border-slate-200 bg-white p-2.5 sm:p-3 shadow-sm";
-  const inner = (
-    <>
-      <span className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl ${it.tint}`}>
-        <Icon size={20} className="sm:hidden" />
-        <Icon size={22} className="hidden sm:block" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-xs sm:text-base font-semibold truncate">{it.en}</span>
-        <span className="block text-[11px] sm:text-sm text-slate-500 truncate">{it.bn}</span>
-      </span>
-      {!it.href && <span className="ml-auto inline-block shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500 sm:text-xs">শীঘ্রই</span>}
-    </>
-  );
-  return it.href ? <Link href={it.href} className={`${cls} transition hover:border-royal hover:shadow`}>{inner}</Link> : <div className={`${cls} opacity-70`}>{inner}</div>;
-}
+const features: { n: keyof typeof P; c: string; t: string; d: string }[] = [
+  { n: "book", c: "v", t: "অধ্যায়ভিত্তিক প্রশ্ন", d: "শ্রেণি, বিষয় ও অধ্যায় বেছে নিন। শুধু প্রয়োজনীয় অংশ থেকেই প্রশ্ন আসবে।" },
+  { n: "layers", c: "p", t: "তিন ধরনের প্রশ্ন", d: "MCQ, সৃজনশীল ও সংক্ষিপ্ত। বোর্ডের নিয়মে নম্বর ও অংশ ভাগ করা।" },
+  { n: "sliders", c: "a", t: "নিজের মতো সাজান", d: "প্রতিষ্ঠানের নাম, পেজ সাইজ, কলাম ও ফন্ট ঠিক করে নিন।" },
+  { n: "print", c: "c", t: "প্রিন্ট ও PDF", d: "A4 সাইজে পরিপাটি লেআউট। এক ক্লিকে প্রিন্ট বা ডাউনলোড।" },
+  { n: "spark", c: "v", t: "AI-র সাহায্যে প্রশ্ন", d: "নতুন প্রশ্ন তৈরি হয় AI দিয়ে, যাচাইয়ের পরই ভান্ডারে যোগ হয়।" },
+  { n: "bolt", c: "m", t: "কুইজ দিয়ে যাচাই", d: "শিক্ষার্থীরা অনলাইনে কুইজ দিয়ে নিজেকে যাচাই করতে পারবে।" },
+];
 
-const Grid = ({ items }: { items: Item[] }) => <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3">{items.map((it) => <Card key={it.en} it={it} />)}</div>;
-const fmt = (d: Date) => d.toLocaleDateString("en-GB", { dateStyle: "medium" });
+const steps: [string, string, string][] = [
+  ["০১", "শ্রেণি ও বিষয়", "আপনার শ্রেণি, বিষয় ও অধ্যায় বাছুন।"],
+  ["০২", "প্রশ্নের ধরন", "কত MCQ, কত সৃজনশীল, কত নম্বর ঠিক করুন।"],
+  ["০৩", "সাজান ও দেখুন", "হেডার, ফন্ট ও পেজ ঠিক করে প্রিভিউ দেখুন।"],
+  ["০৪", "প্রিন্ট বা PDF", "পছন্দ হলেই ডাউনলোড বা প্রিন্ট করুন।"],
+];
 
-// র‍্যাংক ব্যাজের রং: ১ম সোনালি, ২য় রুপালি, ৩য় ব্রোঞ্জ, বাকিগুলো নীল
-const rankStyle = (i: number) =>
-  i === 0
-    ? "bg-amber-400 text-amber-950 ring-2 ring-amber-200"
-    : i === 1
-      ? "bg-slate-300 text-slate-800 ring-2 ring-slate-100"
-      : i === 2
-        ? "bg-orange-400 text-orange-950 ring-2 ring-orange-200"
-        : "bg-royal text-white";
+const classes: [label: string, small?: string][] = [
+  ["১ম শ্রেণি"],
+  ["২য় শ্রেণি"],
+  ["৩য় শ্রেণি"],
+  ["৪র্থ শ্রেণি"],
+  ["৫ম শ্রেণি"],
+  ["৬ষ্ঠ শ্রেণি"],
+  ["৭ম শ্রেণি"],
+  ["৮ম শ্রেণি"],
+  ["৯ম–১০ম", "SSC"],
+  ["১১শ–১২শ", "HSC"],
+];
+const tints = ["v", "p", "a", "c", "m"];
+const thumbs: (keyof typeof P)[] = ["file", "book", "spark"];
+
+const faqs: [string, string][] = [
+  ["প্রশ্নপত্র কি প্রিন্ট করা যাবে?", "হ্যাঁ। A4 সাইজে প্রিন্ট-রেডি লেআউটে সরাসরি প্রিন্ট বা PDF করা যাবে।"],
+  ["কোন ধরনের প্রশ্ন পাওয়া যাবে?", "MCQ, সৃজনশীল ও সংক্ষিপ্ত প্রশ্ন। সব প্রশ্ন শ্রেণি, বিষয় ও অধ্যায় অনুযায়ী সাজানো।"],
+  ["নিজের প্রতিষ্ঠানের নাম বসানো যাবে?", "হ্যাঁ। হেডারে প্রতিষ্ঠানের নাম, পরীক্ষার নাম, সময় ও পূর্ণমান নিজের মতো লেখা যাবে।"],
+  [
+    "শিক্ষার্থীরা কি ব্যবহার করতে পারবে?",
+    "শিক্ষার্থীরা কুইজ দিতে, লাইভ মডেল টেস্টে অংশ নিতে ও ব্লগ পড়তে পারবে। প্রশ্নপত্র বানানো মূলত শিক্ষকদের জন্য।",
+  ],
+];
 
 export default async function Home() {
-  const [posts, topPosts, quotes, cats, site, promo] = await Promise.all([
-    db.post.findMany({
-      where: {
-        published: true,
-        NOT: {
-          category: { slug: "news" },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 4,
-    }).catch(() => []),
-
-    // 🔥 সবচেয়ে বেশি পঠিত ৫টা লেখা (ভিউ সমান হলে নতুন লেখা আগে)
-    db.post.findMany({
-      where: {
-        published: true,
-        NOT: {
-          category: { slug: "news" },
-        },
-      },
-      orderBy: [{ views: "desc" }, { createdAt: "desc" }],
-      take: 5,
-      include: { category: true },
-    }).catch(() => []),
-
-    db.testimonial.findMany({ orderBy: { createdAt: "desc" }, take: 3 }).catch(() => []),
-    db.category.findMany({ select: { slug: true } }).catch(() => []),
-    getSite().catch(() => null),
-    getPromoSettings(),
+  const [site, session, posts] = await Promise.all([
+    getSite(),
+    auth().catch(() => null),
+    db.post
+      .findMany({
+        where: { published: true, NOT: { category: { slug: "news" } } },
+        orderBy: { createdAt: "desc" },
+        take: 3,
+        include: { category: true },
+      })
+      .catch(() => []),
   ]);
 
-  const heroTitle = site?.heroTitle ?? "SaifulSir.com — শিক্ষার সবকিছু একসাথে";
-  const heroSubtitle = site?.heroSubtitle ?? "নোট, প্রশ্ন, মডেল টেস্ট ও চাকরির প্রস্তুতি এক জায়গায়।";
-
-  const slugSet = new Set(cats.map((c) => c.slug));
-  const resolve = (items: Item[]) => items.map((it) => (it.slug && slugSet.has(it.slug) ? { ...it, href: `/category/${it.slug}` } : it));
+  const loggedIn = !!session?.user;
 
   return (
-    <main className="pb-10">
-      {/* 🚀 Hero Section */}
-      <section className="bg-gradient-to-b from-blue-50 to-paper px-4 pb-6 pt-10 text-center">
-        <div className="mx-auto max-w-4xl">
-          <p className="mx-auto inline-block rounded-full bg-emerald-100 px-4 py-1.5 text-sm font-semibold text-emerald-800">
-            SaifulSir.com | শিক্ষার সবকিছু একসাথে
-          </p>
-          <h1 className="mt-4 text-3xl font-bold leading-tight sm:text-5xl">{heroTitle}</h1>
-          <p className="mt-3 text-slate-600 text-sm sm:text-base">{heroSubtitle}</p>
-          
-          {/* সার্চ বার */}
-          <form action="/search" className="mx-auto mt-6 flex max-w-2xl items-center gap-2 rounded-full border border-slate-300 bg-white p-1.5 shadow-sm">
-            <input name="q" placeholder="বই বা বিষয়ের নাম লিখুন..." aria-label="Search" className="min-w-0 flex-1 bg-transparent px-4 py-2.5 text-sm outline-none" />
-            <button className="flex items-center gap-2 rounded-full bg-royal px-5 py-2.5 font-semibold text-white"><Search size={18} />খুঁজুন</button>
-          </form>
-        </div>
+    <div className="qk-home">
+      <HomeHeader siteName={site.siteName} tagline={site.tagline} loggedIn={loggedIn} />
 
-        {/* ✨ আমাদের সব সুবিধা — সার্চ বারের নিচে, রিসেন্ট আর্টিকেলের আগে */}
-        <div className="-mx-4 mt-6">
-          <HomeFeatureCards aiHref="/quiz#ai" />
-        </div>
-
-        <div className="mx-auto mt-6 max-w-4xl">
-          {/* 🎯 আপনার রিসেন্ট আর্টিকেল */}
-          <RecentArticles posts={posts} />
-        </div>
-      </section>
-
-      <div className="mx-auto max-w-6xl px-4">
-        {/* প্রশ্নপত্র তৈরি করার ব্যানার */}
-        <Link
-          href="/question-builder"
-          className="mt-6 flex items-center gap-4 rounded-2xl border border-royal/30 bg-white p-4 sm:p-5 shadow-sm transition hover:border-royal hover:shadow-md"
-        >
-          <span className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-royal text-white">
-            <ClipboardList size={26} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-base sm:text-lg font-bold">বিনামূল্যে প্রশ্নপত্র তৈরি করুন</span>
-            <span className="block text-xs sm:text-sm text-slate-600">প্রশ্নব্যাংক থেকে প্রশ্ন বেছে প্রিন্ট করার মতো প্রশ্নপত্র বানান।</span>
-          </span>
-          <span className="hidden shrink-0 rounded-full bg-royal px-4 py-2 text-sm font-semibold text-white sm:block">শুরু করুন</span>
-        </Link>
-
-        {/* পূর্বের হুবহু কার্ড ক্যাটাগরি */}
-        <Head>প্রাথমিক স্তর</Head>
-        <Grid items={resolve(primary)} />
-
-        <Head>মাধ্যমিক স্তর</Head>
-        <Grid items={resolve(secondary)} />
-
-        <Head>প্রতিযোগিতামূলক পরীক্ষা</Head>
-        <Grid items={compete} />
-
-        <Head>শিক্ষার্থী সেবা ও প্রয়োজনীয় অনলাইন টুলস</Head>
-        <Grid items={tools} />
-
-        {/* 🔥 ট্রেন্ডিং পোস্ট (সবচেয়ে বেশি পঠিত ৫টা লেখা) */}
-        <div className="mt-12">
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="flex items-center gap-2 text-lg font-bold sm:text-xl">
-                <span className="h-3 w-3 shrink-0 rounded-full bg-emerald-500" />
-                TREND POSTS (সর্বাধিক পঠিত)
-              </h2>
-              <Link href="/blog" className="shrink-0 text-xs font-semibold text-royal hover:underline sm:text-sm">
-                সব লেখা দেখুন →
-              </Link>
+      <main>
+        {/* হিরো */}
+        <div className="qk-hero">
+          <div className="qk-wrap qk-hero-grid">
+            <div>
+              <span className="qk-pill">
+                <em>নতুন</em>AI দিয়ে প্রশ্ন তৈরি ও যাচাই
+              </span>
+              <h1>
+                মিনিটেই তৈরি হোক আপনার <span className="qk-grad">নিখুঁত প্রশ্নপত্র</span>
+              </h1>
+              <p className="qk-lead">
+                শ্রেণি, বিষয় ও অধ্যায় বাছুন। MCQ, সৃজনশীল ও সংক্ষিপ্ত প্রশ্ন নিজের মতো সাজিয়ে প্রিন্ট বা PDF করুন।
+                হেডার, ফন্ট আর পেজ সবই আপনার নিয়ন্ত্রণে।
+              </p>
+              <div className="qk-cta">
+                <Link href="/question-builder" className="qk-btn qk-btn-g">
+                  <Ico n="pen" />
+                  প্রশ্নপত্র তৈরি করুন
+                </Link>
+                <a href="#how" className="qk-btn qk-btn-glass">
+                  কীভাবে কাজ করে
+                </a>
+              </div>
+              <div className="qk-types">
+                <span><i style={{ background: "#a78bfa" }} />MCQ</span>
+                <span><i style={{ background: "#ff7eb6" }} />সৃজনশীল</span>
+                <span><i style={{ background: "#ffc857" }} />সংক্ষিপ্ত</span>
+                <span><i style={{ background: "#5eead0" }} />কুইজ</span>
+              </div>
             </div>
 
-            {topPosts.length === 0 && (
-              <p className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
-                লেখা প্রকাশ হলে সবচেয়ে বেশি পঠিতগুলো এখানে দেখা যাবে।
-              </p>
-            )}
-
-            <ol className="mt-4 divide-y divide-slate-100">
-              {topPosts.map((p, i) => (
-                <li key={p.id}>
-                  <Link
-                    href={`/blog/${p.slug ?? p.id}`}
-                    className="group flex items-start gap-3 py-3.5 first:pt-1 last:pb-1"
-                  >
-                    <span
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-extrabold transition-transform group-hover:scale-105 ${rankStyle(i)}`}
-                    >
-                      {i + 1}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="inline-block rounded bg-emerald-700 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
-                        {p.category?.name ?? "Blog"}
-                      </span>
-                      <span className="mt-1 block text-sm font-semibold leading-snug text-slate-800 transition-colors group-hover:text-royal line-clamp-2 sm:text-base">
-                        {p.title}
-                      </span>
-                      <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                        <span>{fmt(p.createdAt)}</span>
-                        {p.views > 0 && (
-                          <span className="inline-flex items-center gap-1 font-semibold text-slate-600">
-                            👁 {p.views.toLocaleString("en-US")} বার পঠিত
-                          </span>
-                        )}
-                      </span>
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ol>
-          </section>
+            <HeroTyping />
+          </div>
         </div>
 
-        {/* স্টুডেন্ট রিভিউ */}
-        {quotes.length > 0 && (
-          <section className="mt-14">
-            <h2 className="text-2xl font-bold">What students say</h2>
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
-              {quotes.map((t) => (
-                <figure key={t.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <blockquote>{t.quote}</blockquote>
-                  <figcaption className="mt-3 text-sm text-slate-600">{t.name}{t.role && `, ${t.role}`}</figcaption>
-                </figure>
+        {/* ফিচার */}
+        <section id="features" className="qk-section">
+          <div className="qk-wrap">
+            <div className="qk-sec-head">
+              <span className="qk-eyebrow">কেন {site.siteName}</span>
+              <h2>সময় বাঁচান, প্রশ্নের মান ধরে রাখুন</h2>
+              <p>প্রশ্ন খোঁজা, সাজানো আর প্রিন্টের কাজ এক জায়গায়।</p>
+            </div>
+            <div className="qk-grid qk-g3">
+              {features.map((f) => (
+                <div key={f.t} className="qk-card">
+                  <div className={`qk-ic qk-ic-${f.c}`}>
+                    <Ico n={f.n} />
+                  </div>
+                  <h3>{f.t}</h3>
+                  <p>{f.d}</p>
+                </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ধাপ */}
+        <section id="how" className="qk-section qk-steps-bg">
+          <div className="qk-wrap">
+            <div className="qk-sec-head">
+              <span className="qk-eyebrow">কীভাবে কাজ করে</span>
+              <h2>চার ধাপে সম্পূর্ণ প্রশ্নপত্র</h2>
+            </div>
+            <div className="qk-grid qk-g4">
+              {steps.map(([num, t, d]) => (
+                <div key={num} className="qk-card qk-step">
+                  <div className="qk-num">{num}</div>
+                  <h3>{t}</h3>
+                  <p>{d}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* শিক্ষক / শিক্ষার্থী */}
+        <section id="roles" className="qk-section">
+          <div className="qk-wrap">
+            <div className="qk-sec-head">
+              <span className="qk-eyebrow">দুই রকম অভিজ্ঞতা</span>
+              <h2>শিক্ষক ও শিক্ষার্থী, দুজনের জন্য আলাদা</h2>
+              <p>যে যার প্রয়োজন অনুযায়ী পরিষ্কার ড্যাশবোর্ড পাবেন।</p>
+            </div>
+            <div className="qk-grid qk-g2">
+              <div className="qk-role qk-role-t">
+                <span className="qk-tagr">
+                  <Ico n="pen" size={16} />
+                  শিক্ষক
+                </span>
+                <h3>প্রশ্নপত্র বানান, সাজান, প্রিন্ট করুন</h3>
+                <ul>
+                  {[
+                    "সব ধরনের প্রশ্ন দিয়ে প্রশ্নপত্র তৈরি",
+                    "নিজের প্রতিষ্ঠানের হেডার ও ফন্ট",
+                    "আগের বানানো প্রশ্নপত্র আবার খোলা",
+                  ].map((x) => (
+                    <li key={x}>
+                      <Ico n="check" size={18} />
+                      {x}
+                    </li>
+                  ))}
+                </ul>
+                <div style={{ marginTop: 20, position: "relative", zIndex: 1 }}>
+                  <Link href="/question-builder" className="qk-btn qk-btn-w qk-btn-sm">
+                    প্রশ্নপত্র তৈরি করুন
+                  </Link>
+                </div>
+              </div>
+
+              <div className="qk-role qk-role-s">
+                <span className="qk-tagr">
+                  <Ico n="bolt" size={16} />
+                  শিক্ষার্থী
+                </span>
+                <h3>লাইভ টেস্ট দিন, কুইজে যাচাই করুন</h3>
+                <ul>
+                  {[
+                    "লাইভ মডেল টেস্টে অংশ নিয়ে ফলাফল ও লিডারবোর্ড",
+                    "বিষয় ও অধ্যায় বেছে কুইজ, সঙ্গে সঙ্গে ব্যাখ্যা",
+                    "ব্লগ ও আর্টিকেল পড়ে প্রস্তুতি",
+                  ].map((x) => (
+                    <li key={x}>
+                      <Ico n="check" size={18} />
+                      {x}
+                    </li>
+                  ))}
+                </ul>
+                <div style={{ marginTop: 20, position: "relative", zIndex: 1 }}>
+                  <Link href="/model-test" className="qk-btn qk-btn-w qk-btn-sm">
+                    লাইভ মডেল টেস্ট দেখুন
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* শ্রেণি */}
+        <section id="classes" className="qk-section" style={{ paddingTop: 0 }}>
+          <div className="qk-wrap">
+            <div className="qk-sec-head">
+              <span className="qk-eyebrow">শ্রেণি</span>
+              <h2>আপনার শ্রেণি বেছে শুরু করুন</h2>
+            </div>
+            <div className="qk-grid qk-classes">
+              {classes.map(([label, small], i) => (
+                <Link key={label} href="/question-builder" className="qk-cls">
+                  <span className={`qk-ic qk-ic-${tints[i % tints.length]}`}>
+                    <Ico n="book" />
+                  </span>
+                  <span>
+                    {label}
+                    {small ? <small>{small}</small> : null}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="qk-section" style={{ paddingTop: 0 }}>
+          <div className="qk-wrap">
+            <div className="qk-band">
+              <h2>এখনই প্রথম প্রশ্নপত্রটি বানিয়ে ফেলুন</h2>
+              <p>কয়েকটা ক্লিকেই প্রশ্নপত্র তৈরি। শিক্ষার্থীরা চাইলে একই বিষয়ে কুইজও দিতে পারবে।</p>
+              <div className="qk-cta">
+                <Link href="/question-builder" className="qk-btn qk-btn-w">
+                  প্রশ্নপত্র তৈরি করুন
+                </Link>
+                <Link href="/quiz" className="qk-btn qk-btn-glass">
+                  কুইজ দেখুন
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ব্লগ (লেখা না থাকলে পুরো সেকশন লুকানো) */}
+        {posts.length > 0 && (
+          <section id="blog" className="qk-section qk-steps-bg">
+            <div className="qk-wrap">
+              <div className="qk-sec-head">
+                <span className="qk-eyebrow">ব্লগ ও আর্টিকেল</span>
+                <h2>পড়াশোনার কাজের লেখা</h2>
+              </div>
+              <div className="qk-grid qk-g3">
+                {posts.map((p, i) => (
+                  <Link key={p.id} href={`/blog/${p.slug ?? p.id}`} className="qk-card qk-post">
+                    <div className="qk-th">
+                      <Ico n={thumbs[i % thumbs.length]} size={42} />
+                    </div>
+                    <div className="qk-bd">
+                      <span className="qk-tag">{p.category?.name ?? "ব্লগ"}</span>
+                      <h3>{p.title}</h3>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              <div className="qk-more">
+                <Link href="/blog" className="qk-btn qk-btn-g qk-btn-sm">
+                  সব লেখা দেখুন
+                </Link>
+              </div>
             </div>
           </section>
         )}
 
-        {/* বটম ব্যানার */}
-        <section className="mt-14 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl bg-navy-800 p-8 text-white">
-            <h2 className="text-2xl font-bold">Practice with AI</h2>
-            <p className="mt-1 text-slate-300">টপিক বেছে নিন, বাংলা ব্যাখ্যাসহ নতুন কুইজ পান।</p>
-            <Link href="/quiz" className="mt-4 inline-block rounded-xl bg-royal px-5 py-3 font-semibold">কুইজ শুরু করুন</Link>
-          </div>
-          <div className="rounded-2xl bg-hire p-8 text-white">
-            <h2 className="text-2xl font-bold">ওয়েব ডেভেলপার দরকার?</h2>
-            <p className="mt-1">আপনার প্রজেক্টের জন্য Saiful Islam কে হায়ার করুন।</p>
-            <Link href="/hire" className="mt-4 inline-block rounded-xl bg-white px-5 py-3 font-semibold text-slate-900">পোর্টফোলিও দেখুন</Link>
+        {/* প্রশ্নোত্তর */}
+        <section id="faq" className="qk-section">
+          <div className="qk-wrap">
+            <div className="qk-sec-head">
+              <span className="qk-eyebrow">প্রশ্নোত্তর</span>
+              <h2>সাধারণ কিছু জিজ্ঞাসা</h2>
+            </div>
+            <div className="qk-faq">
+              {faqs.map(([qs, an]) => (
+                <details key={qs}>
+                  <summary>{qs}</summary>
+                  <p>{an}</p>
+                </details>
+              ))}
+            </div>
           </div>
         </section>
-      </div>
+      </main>
 
-      {/* 🎯 হোমপেজে স্বয়ংক্রিয় প্রমোশনাল পপ-আপ মডাল */}
-      <PromoBookPopup promo={promo} />
-
-    </main>
+      <HomeFooter />
+    </div>
   );
 }
 
