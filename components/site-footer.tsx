@@ -1,57 +1,45 @@
 import Image from "next/image";
 import Link from "next/link";
 import { 
-  BookOpen, Briefcase, Calculator, ClipboardList, Code2, Crop, 
-  FileText, GraduationCap, Info, Library, ListChecks, Mail, 
-  Newspaper, PenSquare, Phone, PlayCircle, ShieldAlert, ShieldCheck, 
-  Sparkles, UserCheck,Building2, type LucideIcon 
+  Mail, Phone, FileText, PenTool, 
+  Users, LayoutDashboard, Trophy, LogIn, 
+  Home, Sparkles, ShieldCheck, HelpCircle, Library
 } from "lucide-react";
 
 import { db } from "@/lib/db";
 import { getSite } from "@/lib/site";
 
-type Item = [label: string, href: string, icon: LucideIcon, color: string];
-
-const tint: Record<string, string> = {
-  YouTube: "bg-red-600", Facebook: "bg-blue-600", Instagram: "bg-pink-600", 
-  LinkedIn: "bg-blue-700", GitHub: "bg-slate-700", Telegram: "bg-sky-500", WhatsApp: "bg-emerald-600",
-};
+type Item = [label: string, href: string, icon: any];
 
 const groups: { title: string; items: Item[] }[] = [
   { 
-    title: "শিক্ষার্থী সেবা ও টুলস", 
+    title: "প্রশ্নোদয়", 
     items: [
-      ["AI কুইজ প্র্যাকটিস", "/quiz", Sparkles, "bg-amber-500/10 text-amber-400"],
-      ["মডেল টেস্ট ও লিডারবোর্ড", "/tests", ListChecks, "bg-blue-500/10 text-blue-400"],
-      ["জিপিএ ক্যালকুলেটর", "/tools/gpa", Calculator, "bg-emerald-500/10 text-emerald-400"],
-      ["NU CGPA ও রেজাল্ট প্ল্যানার", "/tools/nu-cgpa", GraduationCap, "bg-indigo-500/10 text-indigo-300"],
-      ["কভার পেজ মেকার", "/tools/cover-page", ClipboardList, "bg-violet-500/10 text-violet-400"],
-      ["ছবি ও স্বাক্ষর রিসাইজার", "/tools/photo-resizer", Crop, "bg-sky-500/10 text-sky-400"],
+      ["হোম", "/", Home],
+      ["প্রশ্নপত্র তৈরি", "/question-builder", PenTool],
+      ["কুইজ", "/quiz", Sparkles],
+      ["ব্লগ", "/blog", FileText],
+      ["প্যাকেজ", "/packages", Library],
     ] 
   },
   { 
-    title: "জনপ্রিয় বিভাগসমূহ", 
+    title: "শিক্ষক ও শিক্ষার্থী", 
     items: [
-      ["একাডেমিক নোট (৬-১২)", "/academic", BookOpen, "bg-sky-500/10 text-sky-400"],
-      ["বিশ্ববিদ্যালয় ভর্তি", "/admission", GraduationCap, "bg-amber-500/10 text-amber-400"],
-      ["শিক্ষক নিবন্ধন (NTRCA)", "/ntrca", PenSquare, "bg-rose-500/10 text-rose-400"],
-      ["ই-বুক লাইব্রেরি", "/library", Library, "bg-emerald-500/10 text-emerald-400"],
-      ["জব সার্কুলার", "/jobs", Briefcase, "bg-emerald-500/10 text-emerald-300"],
-      ["ভিডিও লেসন", "/videos", PlayCircle, "bg-red-500/10 text-red-400"],
-      ["ব্লগ", "/blog", Newspaper, "bg-violet-500/10 text-violet-400"],
+      ["ড্যাশবোর্ড", "/dashboard", LayoutDashboard],
+      ["লাইভ মডেল টেস্ট", "/model-test", Sparkles],
+      ["লিডারবোর্ড", "/model-test/leaderboard", Trophy],
+      ["লগইন", "/login", LogIn],
     ] 
   },
   { 
     title: "নীতিমালা ও সহায়তা", 
     items: [
-      ["about-us", "/about-us", Info, "bg-indigo-500/10 text-indigo-400"],
-      ["Contact Us", "/contact-us", Mail, "bg-emerald-500/10 text-emerald-400"],
-      ["Privacy Policy", "/privacy", ShieldCheck, "bg-sky-500/10 text-sky-400"],
-      ["Terms Conditions", "/terms", FileText, "bg-slate-500/10 text-slate-300"],
-      ["Disclaimer", "/disclaimer", ShieldAlert, "bg-amber-500/10 text-amber-400"],
-      ["DMCA Policy", "/dmca", UserCheck, "bg-rose-500/10 text-rose-400"],
-      ["Hire Me (Developer)", "/hire", Code2, "bg-orange-500/10 text-orange-400"],
-       ["S.N.P High School & College", "/s-n-p", Building2, "bg-blue-500/10 text-blue-400"],
+      ["আমাদের সম্পর্কে", "/about-us", Users],
+      ["যোগাযোগ", "/contact-us", Mail],
+      ["গোপনীয়তা নীতি", "/privacy", ShieldCheck],
+      ["ব্যবহারের শর্ত", "/terms", FileText],
+      ["দাবিত্যাগ", "/disclaimer", HelpCircle],
+      ["DMCA নীতি", "/dmca", FileText],
     ] 
   },
 ];
@@ -66,98 +54,116 @@ export default async function SiteFooter() {
   const links = site.social ? site.social.filter((s) => s.url) : [];
 
   return (
-    <footer className="mt-20 bg-navy-900 pb-24 text-sm text-slate-300 md:pb-0 border-t border-white/10">
-      <div className="mx-auto max-w-7xl px-4 py-12">
+    <footer className="mt-20 bg-[#0d0926] pb-24 text-sm text-slate-300 md:pb-0 border-t border-white/10">
+      <div className="mx-auto max-w-7xl px-4 py-14">
         {/* Top Info Section */}
-        <div className="mb-10 pb-8 border-b border-white/10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="max-w-xl">
-            <Link href="/" aria-label="SaifulSir.com home" className="inline-block rounded-xl bg-white px-3 py-2">
-              <Image src="/logo.png" alt="SaifulSir.com" width={689} height={245} className="h-10 w-auto" />
+        <div className="mb-12 pb-10 border-b border-white/10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
+          <div className="max-w-md">
+            <Link href="/" aria-label="প্রশ্নোদয় হোম" className="flex items-center gap-3 group">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#f43f8e] shadow-lg shadow-fuchsia-500/20 group-hover:scale-105 transition-transform">
+                <PenTool size={20} className="text-white" />
+              </div>
+              <div>
+                <span className="block font-extrabold text-xl text-white tracking-tight">প্রশ্নোদয়</span>
+                <span className="block text-[10px] text-violet-400 font-semibold mt-0.5">অনলাইনে প্রশ্নপত্র তৈরি করুন</span>
+              </div>
             </Link>
-            <p className="mt-3 text-slate-400 leading-relaxed text-sm">{footerText}</p>
+            <p className="mt-4 text-slate-400 leading-relaxed text-sm">
+              {footerText || "অনলাইনে প্রশ্নপত্র তৈরি, কুইজ ও লাইভ মডেল টেস্টের এক ঠিকানা।"}
+            </p>
           </div>
 
           {links.length > 0 && (
-            <div className="flex flex-wrap gap-2.5">
+            <div className="flex flex-wrap gap-3">
               {links.map(({ name, icon: Icon, url }) => (
                 <a key={name} href={url} target="_blank" rel="noopener noreferrer" aria-label={name} title={name}
-                  className={`flex h-10 w-10 items-center justify-center rounded-xl text-white transition hover:scale-105 ${tint[name] ?? "bg-slate-700"}`}>
-                  <Icon size={20} />
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-slate-300 border border-white/10 transition hover:scale-105 hover:bg-white/10 hover:text-white">
+                  <Icon size={18} />
                 </a>
               ))}
             </div>
           )}
         </div>
 
-        {/* Card Grid Sections */}
-        <div className="grid gap-10 lg:grid-cols-3">
-          {groups.map((g, gi) => (
+        {/* Links Grid Sections */}
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+          {groups.map((g) => (
             <div key={g.title}>
-              <div className="mb-4">
+              <div className="mb-5">
                 <h2 className="text-base font-bold text-white tracking-wide">{g.title}</h2>
-                <span className="mt-1 block h-1 w-10 rounded-full bg-royal" />
+                <span className="mt-2 block h-1 w-8 rounded-full bg-gradient-to-r from-violet-500 to-pink-500" />
               </div>
 
-              {/* Cards in Mobile 2-column or 1-column layout */}
-              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-                {g.items.map(([label, href, Icon, colorStyle]) => (
-                  <Link 
-                    key={href} 
-                    href={href} 
-                    className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 p-2.5 transition hover:bg-white/10 hover:border-white/20"
-                  >
-                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${colorStyle}`}>
-                      <Icon size={18} />
-                    </span>
-                    <span className="text-xs font-medium text-slate-200 truncate">{label}</span>
-                  </Link>
+              <ul className="space-y-3">
+                {g.items.map(([label, href, Icon]) => (
+                  <li key={href}>
+                    <Link 
+                      href={href} 
+                      className="group flex items-center gap-3 text-slate-400 hover:text-white transition-colors"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 border border-white/5 group-hover:bg-violet-500/20 group-hover:border-violet-500/30 group-hover:text-violet-300 transition-all">
+                        <Icon size={15} />
+                      </span>
+                      <span className="font-medium">{label}</span>
+                    </Link>
+                  </li>
+                ))}
+                
+                {/* Custom Pages from DB (if any) */}
+                {g.title === "নীতিমালা ও সহায়তা" && Array.isArray(pages) && pages.map((pg) => (
+                  <li key={pg.slug}>
+                    <Link 
+                      href={`/p/${pg.slug}`} 
+                      className="group flex items-center gap-3 text-slate-400 hover:text-white transition-colors"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 border border-white/5 group-hover:bg-violet-500/20 group-hover:border-violet-500/30 group-hover:text-violet-300 transition-all">
+                        <FileText size={15} />
+                      </span>
+                      <span className="font-medium truncate">{pg.title}</span>
+                    </Link>
+                  </li>
                 ))}
 
-                {gi === 2 && Array.isArray(pages) && pages.map((pg) => (
-                  <Link 
-                    key={pg.slug} 
-                    href={`/p/${pg.slug}`} 
-                    className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 p-2.5 transition hover:bg-white/10 hover:border-white/20"
-                  >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-500/10 text-slate-300">
-                      <FileText size={18} />
-                    </span>
-                    <span className="text-xs font-medium text-slate-200 truncate">{pg.title}</span>
-                  </Link>
-                ))}
-
-                {gi === 2 && contact?.phone && (
-                  <a 
-                    href={`tel:${contact.phone}`} 
-                    className="col-span-2 flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 p-2.5 transition hover:bg-white/10 hover:border-white/20"
-                  >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
-                      <Phone size={18} />
-                    </span>
-                    <span className="text-xs font-medium text-slate-200 truncate">{contact.phone}</span>
-                  </a>
+                {/* Contact Info */}
+                {g.title === "নীতিমালা ও সহায়তা" && contact?.phone && (
+                  <li>
+                    <a 
+                      href={`tel:${contact.phone}`} 
+                      className="group flex items-center gap-3 text-slate-400 hover:text-white transition-colors"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-all">
+                        <Phone size={15} />
+                      </span>
+                      <span className="font-medium">{contact.phone}</span>
+                    </a>
+                  </li>
                 )}
 
-                {gi === 2 && contact?.email && (
-                  <a 
-                    href={`mailto:${contact.email}`} 
-                    className="col-span-2 flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 p-2.5 transition hover:bg-white/10 hover:border-white/20"
-                  >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-400">
-                      <Mail size={18} />
-                    </span>
-                    <span className="text-xs font-medium text-slate-200 truncate">{contact.email}</span>
-                  </a>
+                {g.title === "নীতিমালা ও সহায়তা" && contact?.email && (
+                  <li>
+                    <a 
+                      href={`mailto:${contact.email}`} 
+                      className="group flex items-center gap-3 text-slate-400 hover:text-white transition-colors"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 group-hover:bg-sky-500/20 transition-all">
+                        <Mail size={15} />
+                      </span>
+                      <span className="font-medium">{contact.email}</span>
+                    </a>
+                  </li>
                 )}
-              </div>
+              </ul>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="border-t border-white/10 py-4 text-center text-xs text-slate-400">
-        © {new Date().getFullYear()} SaifulSir.com
+      {/* Copyright */}
+      <div className="border-t border-white/10 py-6 text-center text-xs text-slate-500">
+        © {new Date().getFullYear()} প্রশ্নোদয়। সর্বস্বত্ব সংরক্ষিত।
       </div>
     </footer>
   );
 }
+
+// ===== ফাইল শেষ =====
