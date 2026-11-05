@@ -1,11 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ArrowRight, BookOpen, Home, LayoutDashboard, LogIn, LogOut,
-  Menu, X, ChevronDown, Sparkles, FileText, Trophy, Package, User
+  ArrowRight, LogIn, LogOut, Menu, X, ChevronDown, 
+  Sparkles, PenTool, Package, User, LayoutDashboard
 } from "lucide-react";
 import ThemeToggle from "@/components/theme-toggle";
 
@@ -42,7 +41,7 @@ function Announcement({ text }: { text: string }) {
     <div className="flex items-center gap-2 bg-gradient-to-r from-violet-700 via-fuchsia-700 to-pink-600 px-3 py-2 text-sm text-white">
       <span aria-hidden="true">🔔</span>
       <p className="min-w-0 flex-1 truncate">{text}</p>
-      <Link href="/blog" className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-900">
+      <Link href="/blog" className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-900 transition-transform hover:scale-105">
         এখনই দেখুন<ArrowRight size={14} />
       </Link>
       <button onClick={close} aria-label="Close notice" className="shrink-0 rounded p-1 hover:bg-white/10"><X size={18} /></button>
@@ -68,85 +67,84 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
     return () => { document.removeEventListener("keydown", esc); document.body.style.overflow = prev; };
   }, [open]);
 
-  const btn = "inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors";
-  const outline = `${btn} border border-violet-200 bg-white text-[#0d0926] hover:bg-violet-50 dark:bg-[#1a1247] dark:border-violet-900/60 dark:text-violet-50`;
-  const solid = `${btn} bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-500 text-white shadow-md shadow-fuchsia-500/25 hover:opacity-95 active:scale-[.98]`;
+  const btnBase = "inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold transition-all duration-200 active:scale-95";
+  const btnOutline = `${btnBase} border border-violet-200 bg-white/50 text-[#16112e] hover:bg-violet-50 hover:border-violet-300 backdrop-blur-sm dark:bg-white/5 dark:border-white/10 dark:text-white dark:hover:bg-white/10`;
+  const btnSolid = `${btnBase} bg-gradient-to-r from-[#7c3aed] to-[#f43f8e] text-white shadow-lg shadow-fuchsia-500/30 hover:shadow-fuchsia-500/50`;
 
   const actions = (
     <>
       {isAdmin && (
-        <Link href="/admin" className={outline}>
+        <Link href="/admin" className={btnOutline}>
           <LayoutDashboard size={16} />অ্যাডমিন
         </Link>
       )}
       {user ? (
         <form action={logout}>
-          <button className={`${outline} w-full`}><LogOut size={16} />লগআউট</button>
+          <button className={`${btnOutline} w-full`}><LogOut size={16} />লগআউট</button>
         </form>
       ) : (
-        <Link href="/login" className={outline}><LogIn size={16} />লগইন</Link>
+        <Link href="/login" className={btnOutline}><LogIn size={16} />লগইন</Link>
       )}
-      <Link href="/question-builder" className={solid}><Sparkles size={16} />শুরু করুন</Link>
+      <Link href="/question-builder" className={btnSolid}><Sparkles size={16} />শুরু করুন</Link>
     </>
   );
 
   return (
     <>
       <Announcement text={notice} />
-      <header className="sticky top-0 z-40 border-b border-violet-100/70 bg-white/90 backdrop-blur dark:bg-[#0d0926]/90 dark:border-violet-900/40">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-2.5 sm:px-4">
+      {/* Glassmorphism Sticky Header */}
+      <header className="sticky top-0 z-40 border-b border-white/20 bg-white/80 backdrop-blur-xl dark:bg-[#0d0926]/80 dark:border-white/10 shadow-sm">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-3 sm:px-6">
+          
+          {/* Brand Logo Area */}
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setOpen(true)}
               aria-label="Open menu"
-              className="shrink-0 rounded-lg p-2 text-[#0d0926] hover:bg-violet-50 xl:hidden dark:text-violet-100 dark:hover:bg-violet-900/40"
+              className="shrink-0 rounded-lg p-2 text-[#16112e] hover:bg-violet-50 xl:hidden dark:text-white dark:hover:bg-white/10"
             >
               <Menu size={22} />
             </button>
 
-            <Link href="/" aria-label="প্রশ্নোদয় হোম" className="flex items-center gap-2 group shrink-0">
-              <Image
-                src="/logo.png"
-                alt="প্রশ্নোদয় লোগো"
-                width={44}
-                height={44}
-                priority
-                unoptimized
-                className="h-8 sm:h-9 w-auto object-contain shrink-0 group-hover:scale-105 transition-transform"
-              />
+            <Link href="/" aria-label="প্রশ্নোদয় হোম" className="flex items-center gap-2.5 group shrink-0">
+              {/* হোমপেজের মতো গ্লাসমরফিক লোগো আইকন */}
+              <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#f43f8e] shadow-md shadow-fuchsia-500/20 group-hover:scale-105 transition-transform">
+                <PenTool size={18} className="text-white sm:w-5 sm:h-5" />
+              </div>
               <div className="flex flex-col justify-center">
-                <span className="font-black text-sm sm:text-lg tracking-tight leading-none select-none">
-                  <span className="bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-500 bg-clip-text text-transparent">প্রশ্নোদয়</span>
+                <span className="font-extrabold text-base sm:text-lg tracking-tight leading-none text-[#16112e] dark:text-white">
+                  প্রশ্নোদয়
                 </span>
-                <span className="text-[8px] sm:text-[9px] font-bold text-violet-500 dark:text-violet-300 tracking-tight mt-0.5">
+                <span className="text-[10px] sm:text-xs font-semibold text-violet-500 dark:text-violet-300 mt-0.5">
                   অনলাইনে প্রশ্নপত্র তৈরি করুন
                 </span>
               </div>
             </Link>
           </div>
 
-          <nav aria-label="Main" className="hidden flex-1 items-center justify-center gap-1 whitespace-nowrap xl:flex px-4">
+          {/* Desktop Navigation */}
+          <nav aria-label="Main" className="hidden flex-1 items-center justify-center gap-2 whitespace-nowrap xl:flex px-4">
             {navTree.map((item) => (
               <div key={item.href} className="relative group">
                 <Link
                   href={item.href}
                   aria-current={on(item.href) ? "page" : undefined}
-                  className={`flex items-center gap-1 rounded-md px-2.5 py-2 text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-all ${
                     on(item.href)
-                      ? "bg-violet-50 text-violet-700 font-bold dark:bg-violet-900/40 dark:text-violet-100"
-                      : "text-slate-700 hover:bg-violet-50 dark:text-violet-200 dark:hover:bg-violet-900/40"
+                      ? "bg-violet-50 text-[#7c3aed] dark:bg-violet-900/30 dark:text-violet-300"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-[#16112e] dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
                   }`}
                 >
                   {item.label}
-                  {item.children && <ChevronDown size={14} className="text-violet-500 transition-transform group-hover:rotate-180" />}
+                  {item.children && <ChevronDown size={14} className={`transition-transform group-hover:rotate-180 ${on(item.href) ? "text-[#7c3aed]" : "text-slate-400"}`} />}
                 </Link>
                 {item.children && (
-                  <div className="absolute left-0 top-full hidden w-56 rounded-xl border border-violet-100 bg-white p-2 shadow-lg group-hover:block dark:bg-[#1a1247] dark:border-violet-900/50">
+                  <div className="absolute left-0 top-full mt-1 hidden w-56 rounded-xl border border-slate-100 bg-white/95 backdrop-blur-xl p-2 shadow-xl group-hover:block dark:bg-[#1a1247] dark:border-white/10">
                     {item.children.map((sub) => (
                       <Link
                         key={sub.href}
                         href={sub.href}
-                        className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-violet-50 hover:text-violet-700 dark:text-violet-200 dark:hover:bg-violet-900/40"
+                        className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-violet-50 hover:text-[#7c3aed] dark:text-slate-300 dark:hover:bg-violet-900/40 dark:hover:text-white transition-colors"
                       >
                         {sub.label}
                       </Link>
@@ -157,12 +155,13 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
             ))}
           </nav>
 
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Right Side Actions */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <Link
               href="/packages"
-              className="hidden sm:inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 text-white px-2.5 py-1.5 text-xs font-black shadow-md shadow-orange-500/25 active:scale-95 transition-all border border-amber-400/40"
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-700 px-3 py-1.5 text-xs font-bold hover:bg-amber-200 transition-colors border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700/50"
             >
-              <Package size={14} className="text-amber-100" />
+              <Package size={14} />
               <span>প্যাকেজ</span>
             </Link>
             <ThemeToggle />
@@ -178,58 +177,64 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
       >
         <div
           onClick={() => setOpen(false)}
-          className={`absolute inset-0 bg-black/50 transition-opacity ${open ? "opacity-100" : "opacity-0"}`}
+          className={`absolute inset-0 bg-[#0d0926]/60 backdrop-blur-sm transition-opacity ${open ? "opacity-100" : "opacity-0"}`}
         />
         <aside
           className={`absolute right-0 top-0 h-full w-80 max-w-[85vw] overflow-y-auto bg-white shadow-2xl transition-transform dark:bg-[#0d0926] ${
             open ? "translate-x-0" : "translate-x-full"
           }`}
         >
-          <div className="flex items-center justify-between border-b border-violet-100 px-4 py-3 dark:border-violet-900/50">
-            <span className="font-bold text-violet-700 dark:text-violet-200">মেনু</span>
-            <button onClick={() => setOpen(false)} aria-label="Close menu" className="rounded-lg p-2 hover:bg-violet-50 dark:hover:bg-violet-900/40">
+          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-4 dark:border-white/10">
+            <span className="font-bold text-lg text-[#16112e] dark:text-white">মেনু</span>
+            <button onClick={() => setOpen(false)} aria-label="Close menu" className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-white/10">
               <X size={20} />
             </button>
           </div>
-          <div className="p-2">
+          <div className="p-3">
             {user && (
-              <div className="mb-2 flex items-center gap-2 rounded-xl bg-violet-50 p-3 dark:bg-violet-900/40">
-                <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-violet-600 to-pink-500 text-white font-bold">
-                  <User size={16} />
+              <div className="mb-4 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-violet-50 to-fuchsia-50 p-3 border border-violet-100 dark:from-violet-900/20 dark:to-fuchsia-900/20 dark:border-white/5">
+                <div className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-[#7c3aed] to-[#f43f8e] text-white font-bold shadow-md">
+                  <User size={18} />
                 </div>
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-bold">{user.name ?? "ব্যবহারকারী"}</div>
-                  <div className="text-xs text-violet-500 dark:text-violet-300">{isAdmin ? "অ্যাডমিন" : user.role === "STUDENT" ? "শিক্ষার্থী" : "শিক্ষক"}</div>
+                  <div className="truncate text-sm font-bold text-[#16112e] dark:text-white">{user.name ?? "ব্যবহারকারী"}</div>
+                  <div className="text-xs font-medium text-[#7c3aed] dark:text-violet-300">
+                    {isAdmin ? "অ্যাডমিন" : user.role === "STUDENT" ? "শিক্ষার্থী" : "শিক্ষক"}
+                  </div>
                 </div>
               </div>
             )}
-            {navTree.map((item) =>
-              item.children ? (
-                <div key={item.href} className="mt-1">
-                  <div className="px-3 pt-2 text-xs font-bold uppercase tracking-wide text-violet-500 dark:text-violet-300">{item.label}</div>
-                  {item.children.map((sub) => (
-                    <Link
-                      key={sub.href}
-                      href={sub.href}
-                      onClick={() => setOpen(false)}
-                      className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-violet-50 dark:text-violet-200 dark:hover:bg-violet-900/40"
-                    >
-                      {sub.label}
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-violet-50 dark:text-violet-200 dark:hover:bg-violet-900/40"
-                >
-                  {item.label}
-                </Link>
-              )
-            )}
-            <div className="mt-3 grid gap-2 border-t border-violet-100 pt-3 dark:border-violet-900/50">
+            
+            <div className="space-y-1">
+              {navTree.map((item) =>
+                item.children ? (
+                  <div key={item.href} className="mt-2">
+                    <div className="px-3 pb-1 pt-2 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">{item.label}</div>
+                    {item.children.map((sub) => (
+                      <Link
+                        key={sub.href}
+                        href={sub.href}
+                        onClick={() => setOpen(false)}
+                        className="block rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-violet-50 hover:text-[#7c3aed] dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
+                      >
+                        {sub.label}
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-violet-50 hover:text-[#7c3aed] dark:text-slate-200 dark:hover:bg-white/5 dark:hover:text-white"
+                  >
+                    {item.label}
+                  </Link>
+                )
+              )}
+            </div>
+
+            <div className="mt-6 grid gap-3 border-t border-slate-100 pt-5 dark:border-white/10">
               {actions}
             </div>
           </div>
