@@ -35,14 +35,23 @@ function detectType(
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const ids: string[] = Array.isArray(body.ids)
-    ? body.ids.filter((x: unknown) => typeof x === "string").slice(0, 200)
+    ? [
+        ...new Set<string>(
+          body.ids.filter((x: unknown) => typeof x === "string"),
+        ),
+      ]
     : [];
+  if (ids.length > 300)
+    return NextResponse.json(
+      { error: "একবারে সর্বোচ্চ ৩০০টি প্রশ্ন নির্বাচন করুন।" },
+      { status: 400 },
+    );
   if (!ids.length) return NextResponse.json({ items: [] });
 
   const user = (await auth())?.user;
-  const rows = await db.question
-    .findMany({ where: { id: { in: ids }, ...visibleQuestions(user?.id) } })
-    .catch(() => []);
+  const rows = await db.question.findMany({
+    where: { id: { in: ids }, ...visibleQuestions(user?.id) },
+  });
   const map = new Map(rows.map((r) => [r.id, r]));
 
   const items = ids.flatMap((id) => {
