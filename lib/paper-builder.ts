@@ -1,3 +1,4 @@
+import { formatPaperFractions } from "@/lib/paper-math";
 import { z } from "zod";
 import { paperHeaderSchema } from "@/lib/paper-header";
 export type PaperItem = {
@@ -255,9 +256,14 @@ export function paginate(
 export function preparePaperMath(text: string) {
   const latin = (value: string) =>
     value.replace(/[০-৯]/g, (digit) => String("০১২৩৪৫৬৭৮৯".indexOf(digit)));
-  return text
-    .replace(/\$[^$]+\$/g, latin)
-    .replace(/[০-৯]+\s*\/\s*[০-৯]+/g, latin);
+  return formatPaperFractions(
+    text
+      .replace(/\$[^$]+\$/g, latin)
+      .replace(
+        /[০-৯]+\s*\/\s*(?:[০-৯]+|[A-Za-z](?:\^[০-৯0-9]+|[⁰¹²³⁴⁵⁶⁷⁸⁹]+)?)/g,
+        latin,
+      ),
+  );
 }
 
 export function paperDimensions(s: PaperSettings): [number, number] {

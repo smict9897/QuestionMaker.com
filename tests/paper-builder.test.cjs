@@ -16,7 +16,11 @@ headerMod._compile(
   "paper-header.js",
 );
 mod.require = (name) =>
-  name === "@/lib/paper-header" ? headerMod.exports : require(name);
+  name === "@/lib/paper-math"
+    ? require("./helpers/paper-math.cjs")
+    : name === "@/lib/paper-header"
+      ? headerMod.exports
+      : require(name);
 mod._compile(
   ts.transpileModule(fs.readFileSync("lib/paper-builder.ts", "utf8"), {
     compilerOptions: {
@@ -139,7 +143,8 @@ test("settings panel exposes a labelled watermark input only when enabled", () =
   const React = require("react");
   const { renderToStaticMarkup } = require("react-dom/server");
   const panel = new Module("paper-settings");
-  panel.require = name => name === "./layout-controls" ? { default: () => null } : require(name);
+  panel.require = (name) =>
+    name === "./layout-controls" ? { default: () => null } : require(name);
   panel._compile(
     ts.transpileModule(
       fs.readFileSync("components/paper-builder/settings.tsx", "utf8"),
@@ -178,21 +183,30 @@ test("settings panel exposes a labelled watermark input only when enabled", () =
   assert(html.includes('value="আমার বিদ্যালয়"'));
 });
 
-
 test("continuation pages reclaim header space in every column", () => {
   assert.deepEqual(paginate(Array(10).fill(40), 50, 2, 120), [
     [[0], [1]],
-    [[2, 3, 4], [5, 6, 7]],
+    [
+      [2, 3, 4],
+      [5, 6, 7],
+    ],
     [[8, 9], []],
   ]);
 });
 test("single-column continuation pages use full available height", () => {
   assert.deepEqual(paginate([40, 40, 40, 40], 50, 1, 120), [
-    [[0]], [[1, 2, 3]],
+    [[0]],
+    [[1, 2, 3]],
   ]);
 });
 test("paper header renders only on first page while remaining measurable", () => {
-  const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../components/paper-builder/preview.tsx"), "utf8");
+  const source = require("node:fs").readFileSync(
+    require("node:path").join(
+      __dirname,
+      "../components/paper-builder/preview.tsx",
+    ),
+    "utf8",
+  );
   assert.match(source, /\{page === 0 && header\}/);
   assert.match(source, /data-measure-header>\{header\}/);
 });
