@@ -71,6 +71,9 @@ function api(user, rows = []) {
       return created;
     },
     actions: load("app/actions/qb-papers.ts", {
+      "@/lib/paper-generation": {
+        visibleQuestions: () => ({ approved: true }),
+      },
       "@/auth": { auth: async () => ({ user }) },
       "next/cache": { revalidatePath: () => {} },
       "@/lib/db": {

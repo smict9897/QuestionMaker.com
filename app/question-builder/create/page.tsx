@@ -1,3 +1,5 @@
+import { auth } from "@/auth";
+import { visibleQuestions } from "@/lib/paper-generation";
 import ChapterSelector from "@/components/chapter-selector";
 import "@/components/chapter-selector.css";
 import { normalizeTopics, appendFilterParams } from "@/lib/chapter-filter";
@@ -58,6 +60,7 @@ export default async function CreatePage({
   searchParams: Promise<SP>;
 }) {
   const sp = await searchParams;
+  const user = (await auth())?.user;
   const category = sp.category ?? "";
   const subject = sp.subject ?? "";
   const selectedTopics = normalizeTopics(sp.topic);
@@ -67,7 +70,7 @@ export default async function CreatePage({
   const cats = categoryAliases(category);
 
   const where = {
-    approved: true,
+    ...visibleQuestions(user?.id),
     ...(category ? { category: { in: cats } } : {}),
     ...(subject ? { subject } : {}),
     ...(selectedTopics.length ? { topic: { in: selectedTopics } } : {}),
@@ -84,7 +87,7 @@ export default async function CreatePage({
     db.question.count({ where }),
     db.question.findMany({
       where: {
-        approved: true,
+        ...visibleQuestions(user?.id),
         ...(category ? { category: { in: cats } } : {}),
         ...(subject ? { subject } : {}),
       },
@@ -135,7 +138,11 @@ export default async function CreatePage({
       category: r.category,
       subject: r.subject,
       topic: r.topic,
-      source: r.source,
+      source: r.source.startsWith("AI_PENDING:")
+        ? r.approved
+          ? "AI"
+          : "AI — অনুমোদনের অপেক্ষায়"
+        : r.source,
       type: itemType, // 🎯 এখানে টাইপটি পাস করা হলো
       stimulus: opts.stimulus || "",
       subQuestions: itemType === "CQ" ? opts : undefined,

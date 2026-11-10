@@ -1,3 +1,5 @@
+import { auth } from "@/auth";
+import { visibleQuestions } from "@/lib/paper-generation";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
@@ -14,7 +16,11 @@ function asObj(v: unknown): AnyObj {
 }
 
 // প্রশ্নের ধরন বের করা (create/page.tsx-এর নিয়মের সাথে মিলিয়ে)
-function detectType(text: string, options: AnyObj, correct: string): "MCQ" | "CQ" | "SHORT" {
+function detectType(
+  text: string,
+  options: AnyObj,
+  correct: string,
+): "MCQ" | "CQ" | "SHORT" {
   if (correct && correct.trim()) return "MCQ";
   const hasCq =
     !!options.stimulus ||
@@ -33,8 +39,9 @@ export async function POST(req: Request) {
     : [];
   if (!ids.length) return NextResponse.json({ items: [] });
 
+  const user = (await auth())?.user;
   const rows = await db.question
-    .findMany({ where: { id: { in: ids }, approved: true } })
+    .findMany({ where: { id: { in: ids }, ...visibleQuestions(user?.id) } })
     .catch(() => []);
   const map = new Map(rows.map((r) => [r.id, r]));
 
@@ -55,7 +62,11 @@ export async function POST(req: Request) {
       category: r.category,
       subject: r.subject,
       topic: r.topic,
-      source: r.source,
+      source: r.source.startsWith("AI_PENDING:")
+        ? r.approved
+          ? "AI"
+          : "AI — অনুমোদনের অপেক্ষায়"
+        : r.source,
       type,
     };
 
@@ -65,7 +76,8 @@ export async function POST(req: Request) {
       const kh = str(sub.kh) || str(sub["খ"]);
       const g = str(sub.g) || str(sub["গ"]);
       const gh = str(sub.gh) || str(sub["ঘ"]);
-      const stimulus = str(options.stimulus) || str(options["উদ্দীপক"]) || r.text;
+      const stimulus =
+        str(options.stimulus) || str(options["উদ্দীপক"]) || r.text;
       const hasSub = !!(k || kh || g || gh);
       const answers = asObj(options.ans ?? options.answers);
 
