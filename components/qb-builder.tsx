@@ -11,7 +11,7 @@ import PaperPreview, {
 import {
   defaults,
   restoreSettings,
-  dimensions,
+  paperDimensions,
   duplicateIds,
   questionType,
   shuffled,
@@ -35,6 +35,52 @@ export default function QbBuilder() {
     [storageError, setStorageError] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(1);
+  const [actionMessage, setActionMessage] = useState("");
+  const [exchanging, setExchanging] = useState(false);
+  async function questionAction(
+    id: string,
+    action: "remove" | "reset" | "exchange",
+  ) {
+    setActionMessage("");
+    if (action === "reset") {
+      const edits = { ...s.edits };
+      delete edits[id];
+      update({ ...s, edits });
+      return;
+    }
+    if (action === "remove") {
+      if (!window.confirm("এই প্রশ্নপত্র থেকে প্রশ্নটি সরাবেন?")) return;
+      update({ ...s, excludedIds: [...s.excludedIds, id] });
+      return;
+    }
+    if (exchanging) return;
+    setExchanging(true);
+    try {
+      const res = await fetch("/api/qb/replacement", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, exclude: items.map((q) => q.id) }),
+      });
+      const result = await res.json();
+      if (!res.ok || !result.items?.[0])
+        throw Error(result.error || "বিকল্প পাওয়া যায়নি।");
+      const replacement = result.items[0] as PaperItem;
+      const next = items.map((q) => (q.id === id ? replacement : q));
+      localStorage.setItem(
+        "qb:selected",
+        JSON.stringify(next.map((q) => q.id)),
+      );
+      update({ ...s });
+      setItems(next);
+      setActionMessage("একই অধ্যায় ও ধরনের বিকল্প প্রশ্ন বসানো হয়েছে।");
+    } catch (e) {
+      setActionMessage(
+        e instanceof Error ? e.message : "প্রশ্ন বদলানো যায়নি।",
+      );
+    } finally {
+      setExchanging(false);
+    }
+  }
   const close = useCallback(() => setOpen(false), []);
   useEffect(() => {
     const controller = new AbortController();
@@ -81,7 +127,52 @@ export default function QbBuilder() {
       setStorageError(true);
     }
   }, [s, ready]);
+  const history = useRef<{
+    past: { settings: PaperSettings; items: PaperItem[] }[];
+    future: { settings: PaperSettings; items: PaperItem[] }[];
+  }>({ past: [], future: [] });
+  const liveItems = useRef(items);
+  liveItems.current = items;
+  const liveSettings = useRef(s);
+  liveSettings.current = s;
+  const [, setHistoryTick] = useState(0);
+  useEffect(() => {
+    if (ready && !loading && items.length) {
+      try {
+        localStorage.setItem(
+          "qb:selected",
+          JSON.stringify(items.map((q) => q.id)),
+        );
+      } catch {
+        setStorageError(true);
+      }
+    }
+  }, [items, ready, loading]);
+  const undo = () => {
+    const prev = history.current.past.pop();
+    if (!prev) return;
+    history.current.future.push({ settings: s, items });
+    setSettings(prev.settings);
+    setItems(prev.items);
+    setHistoryTick((v) => v + 1);
+  };
+  const redo = () => {
+    const next = history.current.future.pop();
+    if (!next) return;
+    history.current.past.push({ settings: s, items });
+    setSettings(next.settings);
+    setItems(next.items);
+    setHistoryTick((v) => v + 1);
+  };
   const update = useCallback((next: PaperSettings) => {
+    history.current.past.push({
+      settings: liveSettings.current,
+      items: liveItems.current,
+    });
+    if (history.current.past.length > 60) history.current.past.shift();
+    history.current.future = [];
+    liveSettings.current = next;
+    setHistoryTick((v) => v + 1);
     setSettings(next);
     try {
       localStorage.setItem("qb:settings", JSON.stringify(next));
@@ -91,8 +182,11 @@ export default function QbBuilder() {
     }
   }, []);
   const data = useMemo(
-    () => items.map((q) => ({ ...q, ...s.edits[q.id] })),
-    [items, s.edits],
+    () =>
+      items
+        .filter((q) => !s.excludedIds.includes(q.id))
+        .map((q) => ({ ...q, ...s.edits[q.id] })),
+    [items, s.edits, s.excludedIds],
   );
   const counts = useMemo(
     () => ({
@@ -178,7 +272,7 @@ export default function QbBuilder() {
             ),
         },
   };
-  const [pw, ph] = dimensions[s.cfg.paper];
+  const [pw, ph] = paperDimensions(s);
   const style = `@page { size: ${pw}mm ${ph}mm; margin: 0; }`;
   useEffect(() => {
     const el = previewRef.current;
@@ -245,6 +339,7 @@ export default function QbBuilder() {
         return (
           <PaperPreview
             key={`${setName}-${type}-${group}`}
+            onQuestionAction={edit ? questionAction : undefined}
             previewScale={previewScale}
             s={enriched}
             questions={views}
@@ -348,8 +443,72 @@ export default function QbBuilder() {
           onClose={close}
           counts={counts}
           onPrint={print}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={history.current.past.length > 0}
+          canRedo={history.current.future.length > 0}
         />
         <div className="min-w-0">
+          <div
+            data-noprint
+            className="studio-toolbar mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-2"
+          >
+            <span className="text-xs font-bold">সম্পূর্ণ প্রশ্নপত্র:</span>
+            {(
+              [
+                ["bold", "B"],
+                ["italic", "I"],
+                ["underline", "U"],
+                ["strike", "S"],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                aria-label={`${key} প্রশ্নপত্র`}
+                aria-pressed={s.cfg[key]}
+                className="studio-choice"
+                onClick={() =>
+                  update({ ...s, cfg: { ...s.cfg, [key]: !s.cfg[key] } })
+                }
+              >
+                {label}
+              </button>
+            ))}
+            <label className="text-xs">
+              রং{" "}
+              <input
+                aria-label="প্রশ্নের রং"
+                type="color"
+                value={s.cfg.ink}
+                onChange={(e) =>
+                  update({ ...s, cfg: { ...s.cfg, ink: e.target.value } })
+                }
+              />
+            </label>
+            <button
+              className="studio-choice"
+              disabled={!history.current.past.length}
+              onClick={undo}
+            >
+              ↶
+            </button>
+            <button
+              className="studio-choice"
+              disabled={!history.current.future.length}
+              onClick={redo}
+            >
+              ↷
+            </button>
+          </div>
+          {(actionMessage || exchanging) && (
+            <p
+              data-noprint
+              role="status"
+              className="mb-3 rounded-xl bg-blue-50 p-3 text-sm"
+            >
+              {exchanging ? "বিকল্প প্রশ্ন খোঁজা হচ্ছে…" : actionMessage}
+            </p>
+          )}
           <HeaderManager settings={s} update={update} />
           <details
             data-noprint
@@ -623,6 +782,36 @@ export default function QbBuilder() {
             ref={previewRef}
             id="paper"
           >
+            {s.show.answerSheet && (
+              <div
+                className="paper-page-viewport"
+                style={{ zoom: previewScale }}
+              >
+                <div
+                  className="paper-sheet"
+                  style={{
+                    width: `${pw}mm`,
+                    minHeight: `${ph}mm`,
+                    padding: `${s.cfg.marginTop}px ${s.cfg.marginRight}px ${s.cfg.marginBottom}px ${s.cfg.marginLeft}px`,
+                  }}
+                >
+                  <h2 className="mb-5 text-center text-xl font-bold">
+                    উত্তরপত্র
+                  </h2>
+                  <p>
+                    নাম: ..................................... রোল:
+                    ..................
+                  </p>
+                  <div
+                    style={{
+                      height: `${Math.max(100, (ph * 96) / 25.4 - s.cfg.marginTop - s.cfg.marginBottom - 100)}px`,
+                      backgroundImage:
+                        "repeating-linear-gradient(transparent,transparent 29px,#ccc 29px,#ccc 30px)",
+                    }}
+                  />
+                </div>
+              </div>
+            )}
             {(s.show.autoSet ? ["ক", "খ"] : [s.setName]).map((name) => (
               <div key={name}>{sections(name)}</div>
             ))}

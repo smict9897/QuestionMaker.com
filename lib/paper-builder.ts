@@ -37,6 +37,14 @@ export const settingsSchema = z.object({
       tags: bool(),
       marks: bool(),
       omr: bool(),
+      pageNumbers: bool(true),
+      logo: bool(),
+      brandHeader: bool(),
+      brandFooter: bool(),
+      standardCheck: bool(),
+      instructor: bool(),
+      answerSheet: bool(),
+      rightStart: bool(),
       divider: bool(true),
       subjCode: bool(),
       obtained: bool(),
@@ -50,6 +58,10 @@ export const settingsSchema = z.object({
     .default({}),
   info: z
     .object({
+      logo: text(),
+      brandHeader: text(),
+      brandFooter: text(),
+      instructor: text(),
       inst: text(),
       address: text(),
       exam: text(),
@@ -67,6 +79,32 @@ export const settingsSchema = z.object({
   cfg: z
     .object({
       format: z.enum(["q", "qa", "ans", "sug"]).catch("q").default("q"),
+      orientation: z
+        .enum(["portrait", "landscape"])
+        .catch("portrait")
+        .default("portrait"),
+      marginTop: number(45, 0, 150),
+      marginBottom: number(45, 0, 150),
+      marginLeft: number(45, 0, 150),
+      marginRight: number(45, 0, 150),
+      columnGap: number(20, 0, 80),
+      cqStyle: z
+        .enum(["circle", "paren", "dot", "close"])
+        .catch("paren")
+        .default("paren"),
+      bold: bool(),
+      italic: bool(),
+      underline: bool(),
+      strike: bool(),
+      ink: z
+        .string()
+        .regex(/^#[0-9a-fA-F]{6}$/)
+        .catch("#111111")
+        .default("#111111"),
+      cqColumns: number(1, 1, 3),
+      expectedMCQ: number(0, 0, 300),
+      expectedCQ: number(0, 0, 300),
+      expectedSHORT: number(0, 0, 300),
       cols: number(2, 1, 3),
       optCols: number(2, 1, 4),
       style: z
@@ -93,6 +131,7 @@ export const settingsSchema = z.object({
       mcqAnswer: number(0, 0, 300),
     })
     .default({}),
+  excludedIds: z.array(z.string()).max(300).catch([]).default([]),
   edits: z
     .record(
       z.object({
@@ -190,7 +229,10 @@ export function paginate(
   let col = 0,
     used = 0;
   heights.forEach((height, index) => {
-    if (page[col].length && used + height > (pages.length === 0 ? available : continuationAvailable)) {
+    if (
+      page[col].length &&
+      used + height > (pages.length === 0 ? available : continuationAvailable)
+    ) {
       col++;
       used = 0;
     }
@@ -214,4 +256,21 @@ export function preparePaperMath(text: string) {
   return text
     .replace(/\$[^$]+\$/g, latin)
     .replace(/[০-৯]+\s*\/\s*[০-৯]+/g, latin);
+}
+
+export function paperDimensions(s: PaperSettings): [number, number] {
+  const [w, h] = dimensions[s.cfg.paper];
+  return s.cfg.orientation === "landscape" ? [h, w] : [w, h];
+}
+export function optionLabel(
+  value: string,
+  style: PaperSettings["cfg"]["style"],
+) {
+  return style === "paren"
+    ? `(${value})`
+    : style === "close"
+      ? `${value})`
+      : style === "dot"
+        ? `${value}.`
+        : `◯${value}`;
 }

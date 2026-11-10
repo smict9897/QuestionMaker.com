@@ -6,7 +6,8 @@ import MathText from "@/components/MathText";
 import {
   bn,
   preparePaperMath,
-  dimensions,
+  paperDimensions,
+  optionLabel,
   labels,
   paginate,
   safeImage,
@@ -36,9 +37,14 @@ export default function PaperPreview({
   duplicate,
   onImageSize,
   title,
+  onQuestionAction,
   previewScale = 1,
   mode = "questions",
 }: {
+  onQuestionAction?: (
+    id: string,
+    action: "remove" | "reset" | "exchange",
+  ) => void;
   s: PaperSettings;
   questions: PreviewQuestion[];
   type: string;
@@ -52,7 +58,7 @@ export default function PaperPreview({
   const [pages, setPages] = useState<number[][][]>([]);
   const [oversized, setOversized] = useState(false);
   const measure = useRef<HTMLDivElement>(null);
-  const [width, height] = dimensions[s.cfg.paper];
+  const [width, height] = paperDimensions(s);
   const cols =
     mode === "omr"
       ? 3
@@ -60,7 +66,7 @@ export default function PaperPreview({
         ? 4
         : type === "MCQ"
           ? s.cfg.cols
-          : 1;
+          : s.cfg.cqColumns;
   const numberToAnswer = Math.min(
     questions.length,
     (type === "MCQ"
@@ -116,7 +122,7 @@ export default function PaperPreview({
       )}
     </div>
   );
-  const header = s.header.enabled ? (
+  const paperHeader = s.header.enabled ? (
     <div className="paper-heading">
       <HeaderPreview
         header={currentHeader(s)}
@@ -146,6 +152,26 @@ export default function PaperPreview({
     </div>
   ) : (
     legacyHeader
+  );
+  const header = (
+    <>
+      {s.show.logo && safeImage(s.info.logo) && (
+        <img
+          src={safeImage(s.info.logo)!}
+          alt="প্রতিষ্ঠানের লোগো"
+          className="mx-auto mb-2 h-16 w-16 object-contain"
+        />
+      )}
+      {s.show.brandHeader && (
+        <p className="mb-2 border-b pb-1 text-center font-bold">
+          {s.info.brandHeader}
+        </p>
+      )}
+      {s.show.instructor && (
+        <p className="mb-2 text-center">{s.info.instructor}</p>
+      )}
+      {paperHeader}
+    </>
   );
   function question(v: PreviewQuestion, index: number) {
     const { q, opts, ci } = v;
@@ -184,6 +210,28 @@ export default function PaperPreview({
         className={`paper-question ${s.show.duplicates && duplicate.has(q.id) ? "paper-duplicate" : ""}`}
         style={{ paddingBottom: "0.7em", breakInside: "avoid" }}
       >
+        {onQuestionAction && (
+          <div
+            data-noprint
+            className="mb-2 flex gap-2 rounded bg-slate-100 p-1 text-xs text-slate-700"
+          >
+            {(
+              [
+                ["remove", "মুছুন"],
+                ["reset", "মূল লেখা"],
+                ["exchange", "Exchange"],
+              ] as const
+            ).map(([action, label]) => (
+              <button
+                key={action}
+                onClick={() => onQuestionAction(q.id, action)}
+                className="rounded border bg-white px-2 py-1"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex items-start gap-1.5">
           <b className="shrink-0">{bn(String(index + 1).padStart(2, "0"))}।</b>
           <div className="min-w-0 flex-1">
@@ -282,7 +330,7 @@ export default function PaperPreview({
               <div className="mt-2 space-y-1">
                 {Object.entries(q.subQuestions).map(([key, text], i) => (
                   <p key={key}>
-                    <b>({labels.bn[i]}) </b>
+                    <b>{optionLabel(labels.bn[i], s.cfg.cqStyle)} </b>
                     <PaperMathText text={text} />
                     <span className="float-right">{bn(i + 1)}</span>
                   </p>
@@ -322,14 +370,35 @@ export default function PaperPreview({
           root
             .querySelector<HTMLElement>("[data-measure-header]")
             ?.getBoundingClientRect().height || 0;
-        const continuationAvailable = ((height - 24) * 96) / 25.4 - 28;
+        const continuationAvailable =
+          (height * 96) / 25.4 -
+          s.cfg.marginTop -
+          s.cfg.marginBottom -
+          28 -
+          (s.show.brandFooter ? 30 : 0);
         const available = continuationAvailable - h;
         const blocks = Array.from(
           root.querySelectorAll<HTMLElement>("[data-measure-question]"),
         ).map((el) => el.getBoundingClientRect().height);
         setOversized(blocks.some((v) => v > continuationAvailable));
+        const reserved =
+          s.show.rightStart && cols > 1
+            ? Array(cols - 1).fill(Math.max(50, available))
+            : [];
+        const paginated = paginate(
+          [...reserved, ...blocks],
+          Math.max(50, available),
+          cols,
+          Math.max(50, continuationAvailable),
+        );
         setPages(
-          paginate(blocks, Math.max(50, available), cols, Math.max(50, continuationAvailable)),
+          paginated.map((page) =>
+            page.map((column) =>
+              column
+                .filter((i) => i >= reserved.length)
+                .map((i) => i - reserved.length),
+            ),
+          ),
         );
       });
     };
@@ -348,7 +417,14 @@ export default function PaperPreview({
   const style = {
     width: `${width}mm`,
     minHeight: `${height}mm`,
-    padding: "12mm",
+    padding: `${s.cfg.marginTop}px ${s.cfg.marginRight}px ${s.cfg.marginBottom}px ${s.cfg.marginLeft}px`,
+    color: s.cfg.ink,
+    fontWeight: s.cfg.bold ? 700 : 400,
+    fontStyle: s.cfg.italic ? "italic" : "normal",
+    textDecoration:
+      [s.cfg.underline ? "underline" : "", s.cfg.strike ? "line-through" : ""]
+        .filter(Boolean)
+        .join(" ") || "none",
     fontFamily: families[s.cfg.font],
     fontSize: `${s.cfg.fontSize}pt`,
     lineHeight: 1.45,
@@ -373,7 +449,7 @@ export default function PaperPreview({
         <div data-measure-header>{header}</div>
         <div
           style={{
-            width: `calc((100% - ${(cols - 1) * 20}px) / ${cols} - 11px)`,
+            width: `calc((100% - ${(cols - 1) * s.cfg.columnGap}px) / ${cols} - 11px)`,
           }}
         >
           {questions.map((v, i) => (
@@ -412,7 +488,7 @@ export default function PaperPreview({
                   style={{
                     display: "grid",
                     gridTemplateColumns: `repeat(${cols},minmax(0,1fr))`,
-                    gap: 20,
+                    gap: s.cfg.columnGap,
                   }}
                 >
                   {columns.map((indexes, col) => (
@@ -434,9 +510,16 @@ export default function PaperPreview({
                     </div>
                   ))}
                 </div>
-                <p className="mt-3 text-center text-[0.7em]">
-                  {bn(page + 1)} / {bn(pages.length)}
-                </p>
+                {s.show.brandFooter && (
+                  <p className="mt-3 border-t pt-1 text-center text-[0.75em]">
+                    {s.info.brandFooter}
+                  </p>
+                )}
+                {s.show.pageNumbers && (
+                  <p className="mt-3 text-center text-[0.7em]">
+                    {bn(page + 1)} / {bn(pages.length)}
+                  </p>
+                )}
               </div>
             </div>
           </div>

@@ -13,13 +13,36 @@ export default function QbSavePaper() {
     setMsg("");
     let ids: string[] = [];
     let settings: unknown = null;
-    try { ids = JSON.parse(localStorage.getItem("qb:selected") || "[]"); } catch {}
-    try { settings = JSON.parse(localStorage.getItem("qb:settings") || "null"); } catch {}
-    if (!name.trim()) { setMsg("প্রশ্নপত্রের একটা নাম দিন"); return; }
-    if (!ids.length) { setMsg("কোনো প্রশ্ন নির্বাচন করা নেই"); return; }
+    try {
+      ids = JSON.parse(localStorage.getItem("qb:selected") || "[]");
+    } catch {}
+    try {
+      settings = JSON.parse(localStorage.getItem("qb:settings") || "null");
+    } catch {}
+    if (
+      settings &&
+      typeof settings === "object" &&
+      "excludedIds" in settings &&
+      Array.isArray(settings.excludedIds)
+    ) {
+      ids = ids.filter(
+        (id) => !(settings.excludedIds as unknown[]).includes(id),
+      );
+    }
+    if (!name.trim()) {
+      setMsg("প্রশ্নপত্রের একটা নাম দিন");
+      return;
+    }
+    if (!ids.length) {
+      setMsg("কোনো প্রশ্ন নির্বাচন করা নেই");
+      return;
+    }
     start(async () => {
       const r = await savePaper({ name, ids, settings });
-      if (r.ok) { setMsg("সেভ হয়েছে ✓"); setName(""); } else setMsg(r.error);
+      if (r.ok) {
+        setMsg("সেভ হয়েছে ✓");
+        setName("");
+      } else setMsg(r.error);
     });
   }
 
@@ -27,6 +50,8 @@ export default function QbSavePaper() {
     <div className="rounded-xl border bg-white p-3 text-sm">
       <div className="flex gap-2">
         <input
+          id="paper-save-name"
+          aria-label="সেভ করার প্রশ্নপত্রের নাম"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="প্রশ্নপত্রের নাম (যেমন: গণিত ক্লাস টেস্ট ১)"
@@ -42,7 +67,10 @@ export default function QbSavePaper() {
       </div>
       <div className="mt-2 flex items-center justify-between">
         <span className="text-xs text-slate-600">{msg}</span>
-        <Link href="/question-builder/saved" className="text-xs font-semibold text-blue-600">
+        <Link
+          href="/question-builder/saved"
+          className="text-xs font-semibold text-blue-600"
+        >
           সেভ করা প্রশ্নপত্র দেখুন →
         </Link>
       </div>
