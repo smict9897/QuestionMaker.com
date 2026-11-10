@@ -145,7 +145,7 @@ test("provider validates output and rejects truncation without exposing provider
             }),
           ),
       }),
-    /incomplete/,
+    /INCOMPLETE/,
   );
   await assert.rejects(
     () =>
@@ -154,6 +154,78 @@ test("provider validates output and rejects truncation without exposing provider
         fetcher: async () =>
           new Response("private provider error", { status: 500 }),
       }),
-    /request failed/,
+    /PROVIDER/,
+  );
+});
+test("server assembles exact supplied seen text without model repetition", () => {
+  const { assembleEnglishProviderOutput: assemble } = load("generation");
+  const s = {
+    ...selection,
+    mode: "selected",
+    itemIds: ["mcq"],
+    writing: {},
+    sources: {
+      "seen-1": { text: "Exact supplied source.", reference: "Unit 1" },
+    },
+  };
+  const o = {
+    passages: [],
+    tasks: [
+      {
+        id: "mcq",
+        instruction: "Choose.",
+        passageKey: "seen-1",
+        subitems: Array.from({ length: 7 }, (_, i) => ({
+          text: `Question ${i}`,
+          options: ["a", "b", "c", "d"],
+        })),
+      },
+    ],
+  };
+  assert.equal(
+    assemble(s, o).output.passages[0].text,
+    "Exact supplied source.",
+  );
+  o.passages.push({ key: "seen-1", text: "Rewritten source" });
+  assert.throws(() => assemble(s, o));
+});
+test("provider returns safe status codes, invalid-output code and real abort timeout", async () => {
+  for (const [status, code] of [
+    [401, "AUTHENTICATION"],
+    [402, "BALANCE"],
+    [429, "RATE_LIMIT"],
+    [500, "PROVIDER"],
+  ])
+    await assert.rejects(
+      () =>
+        requestEnglishPaper(selection, {
+          apiKey: "test-only",
+          fetcher: async () => new Response("private detail", { status }),
+        }),
+      (e) => e.code === code && !e.message.includes("private detail"),
+    );
+  await assert.rejects(
+    () =>
+      requestEnglishPaper(selection, {
+        apiKey: "test-only",
+        fetcher: async () => new Response("not json"),
+      }),
+    (e) => e.code === "INVALID_OUTPUT",
+  );
+  await assert.rejects(
+    () =>
+      requestEnglishPaper(selection, {
+        apiKey: "test-only",
+        timeoutMs: 5,
+        fetcher: async (_, options) =>
+          new Promise((_, reject) =>
+            options.signal.addEventListener(
+              "abort",
+              () => reject(new Error("aborted")),
+              { once: true },
+            ),
+          ),
+      }),
+    (e) => e.code === "TIMEOUT",
   );
 });

@@ -1,4 +1,8 @@
 "use server";
+import {
+  EnglishProviderError,
+  englishProviderMessage,
+} from "@/lib/english/provider-error";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { createHash, randomUUID } from "crypto";
@@ -110,7 +114,14 @@ export async function generateEnglishPaper(raw: unknown) {
     stage = "storage";
     await db.setting.create({ data: { key, value: JSON.stringify(draft) } });
     return { ok: true as const, key };
-  } catch {
+  } catch (error) {
+    if (error instanceof EnglishProviderError)
+      return {
+        ok: false as const,
+        stage: "generation",
+        code: error.code,
+        error: `${englishProviderMessage(error.code)} [${error.code}] আবার চেষ্টা করলে দৈনিক সীমা থেকে আরেকবার গণনা হবে।`,
+      };
     return {
       ok: false as const,
       stage,
@@ -162,18 +173,30 @@ export async function saveEnglishPaper(key: string, raw: unknown) {
     return { ok: false, error: "অনুমতি নেই।" };
   try {
     const draft = validateEnglishDraft(raw);
+    const row = await db.setting.findUnique({ where: { key } });
+    if (!row) return { ok: false, error: "Draft পাওয়া যায়নি।" };
+    const stored = validateEnglishDraft(JSON.parse(row.value));
+    if (stored.updatedAt !== draft.updatedAt)
+      return {
+        ok: false,
+        error:
+          "অন্য tab/session থেকে draft বদলেছে। এই tab-এর লেখা কপি করে রাখুন; তারপর reload করে আবার সম্পাদনা করুন।",
+        conflict: true,
+      };
+    const updatedAt = new Date(
+      Math.max(Date.now(), Date.parse(stored.updatedAt) + 1),
+    ).toISOString();
     const changed = await db.setting.updateMany({
-      where: { key },
-      data: {
-        value: JSON.stringify({
-          ...draft,
-          updatedAt: new Date().toISOString(),
-        }),
-      },
+      where: { key, value: row.value },
+      data: { value: JSON.stringify({ ...draft, updatedAt }) },
     });
     return changed.count
-      ? { ok: true }
-      : { ok: false, error: "Draft পাওয়া যায়নি।" };
+      ? { ok: true, updatedAt }
+      : {
+          ok: false,
+          error: "একই সময়ে draft বদলেছে। লেখা কপি করে রেখে reload করুন।",
+          conflict: true,
+        };
   } catch {
     return {
       ok: false,
