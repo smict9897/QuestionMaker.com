@@ -75,9 +75,9 @@ test("autofit uses real measured question heights and bounded font reductions", 
     "components/paper-builder/preview.tsx",
     "utf8",
   );
-  assert.match(source, /fittedFont > 10/);
+  assert.match(source, /fittedFont > 7/);
   assert.match(source, /blocks.reduce/);
-  assert.match(source, /Math.max\(10, v - 1\)/);
+  assert.match(source, /Math.max\(7, v - 1\)/);
   assert.match(source, /data-measure-footer/);
 });
 test("booklet imposition orders front/back sides and pads missing pages", () => {
@@ -96,4 +96,9 @@ test("booklet imposition orders front/back sides and pads missing pages", () => 
     [3, 4],
   ]);
   assert.deepEqual(lib.bookletOrder(0), []);
+});
+
+test("manual font sizes 7 through 28 survive restore; below minimum falls back safely", () => {
+  for (const fontSize of [7,8,9,10,14,28]) assert.equal(lib.restoreSettings({cfg:{fontSize}}).cfg.fontSize,fontSize);
+  assert.equal(lib.restoreSettings({cfg:{fontSize:6}}).cfg.fontSize,14);
 });

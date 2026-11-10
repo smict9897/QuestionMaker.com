@@ -390,11 +390,11 @@ export default function PaperPreview({
         if (
           s.cfg.autoFit &&
           mode === "questions" &&
-          fittedFont > 10 &&
+          fittedFont > 7 &&
           blocks.reduce((sum, v) => sum + v, 0) >
             Math.max(50, available) * (s.show.rightStart ? 1 : cols)
         ) {
-          setFittedFont((v) => Math.max(10, v - 1));
+          setFittedFont((v) => Math.max(7, v - 1));
           return;
         }
         setOversized(blocks.some((v) => v > continuationAvailable));
@@ -486,7 +486,7 @@ export default function PaperPreview({
       </div>
       {s.cfg.autoFit && mode === "questions" && (
         <p data-noprint role="status" className="mb-2 text-xs text-emerald-700">
-          Auto-fit: {fittedFont}pt — প্রয়োজনে সর্বনিম্ন ১০pt; না ধরলে পরের
+          Auto-fit: {fittedFont}pt — প্রয়োজনে সর্বনিম্ন ৭pt; না ধরলে পরের
           পাতায় যাবে।
         </p>
       )}

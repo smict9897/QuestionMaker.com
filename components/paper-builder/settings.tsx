@@ -410,7 +410,7 @@ export default function PaperSettingsPanel({
                 aria-label="ফন্ট ছোট করুন"
                 className="rounded-xl border px-4"
                 onClick={() =>
-                  cfg("fontSize", Math.max(10, s.cfg.fontSize - 1))
+                  cfg("fontSize", Math.max(7, s.cfg.fontSize - 1))
                 }
               >
                 −
@@ -418,14 +418,14 @@ export default function PaperSettingsPanel({
               <input
                 aria-label="ফন্ট সাইজ"
                 type="number"
-                min={10}
+                min={7}
                 max={28}
                 className={`${field} text-center`}
                 value={s.cfg.fontSize}
                 onChange={(e) =>
                   cfg(
                     "fontSize",
-                    Math.max(10, Math.min(28, +e.target.value || 14)),
+                    Math.max(7, Math.min(28, +e.target.value || 14)),
                   )
                 }
               />
