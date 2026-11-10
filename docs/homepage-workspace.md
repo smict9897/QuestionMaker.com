@@ -21,3 +21,8 @@ The `/` homepage uses the supplied reference screenshots as a visual model: whit
 - 57 regression/security tests passed, including category aliases, aggregation/no fabricated data, stats rendering/error handling and existing route/package wiring.
 - Local Chromium desktop/mobile checks: selection dependencies, Next enabled after subject selection, guide navigation, mobile sidebar opening/link dismissal, no horizontal overflow or client page errors. Tested fallback data states because local environment has no production DB access. Live package/auth purchase flows were not tested.
 - Browser artifacts kept outside the repository under `/home/user/home-browser`.
+
+## Multi-chapter selection
+The homepage chapter control now uses individual checkboxes. Select two, three or more chapters; “সকল অধ্যায়” clears the selection and includes all chapters. The selected count and question total update together. Class/subject changes clear stale selections. Native GET submission uses repeated `topic` parameters; the question picker accepts both old single-topic links and repeated topics, queries membership with Prisma `in`, and preserves all topics in search and pagination. The picker also offers the same checkbox control, scoped to the selected class and subject. No DB migration needed.
+
+Verification: 61 regression/security tests, typecheck and production build passed locally. Tests cover checked inputs, old links, Unicode/comma-containing chapter names, repeated pagination parameters and the actual server page's question/count queries using a mocked database. Production DB and mobile browser were not exercised for this follow-up.
