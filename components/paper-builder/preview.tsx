@@ -575,7 +575,14 @@ export default function PaperPreview({
         {sections ? (
           sections.map((section, index) => (
             <div data-flow-section={index} key={index}>
-              <div data-flow-heading>{sectionHeading(section)}</div>
+              <div
+                data-flow-heading
+                style={{
+                  width: `calc((100% - ${(sectionColumns(section) - 1) * s.cfg.columnGap}px) / ${sectionColumns(section)} - 11px)`,
+                }}
+              >
+                {sectionHeading(section)}
+              </div>
               <div
                 style={{
                   width: `calc((100% - ${(sectionColumns(section) - 1) * s.cfg.columnGap}px) / ${sectionColumns(section)} - 11px)`,
@@ -637,53 +644,56 @@ export default function PaperPreview({
               )}
               <div className="relative z-[1]">
                 {page === 0 && header}
-                {segments.map((segment, segmentIndex) => {
-                  const section = sections[segment.section];
-                  return (
-                    <div data-paper-section={section.type} key={segmentIndex}>
-                      {segment.heading &&
-                        sectionHeading(
-                          section,
-                          sections.findIndex(
-                            (part) => part.type === section.type,
-                          ) === segment.section &&
-                            setName === (s.show.autoSet ? "ক" : s.setName)
-                            ? `paper-section-${section.type}`
-                            : undefined,
-                        )}
+                <div
+                  className="paper-flow-body"
+                  style={{
+                    position: "relative",
+                    height: Math.max(
+                      ...segments.map(
+                        (segment) => segment.top + segment.height,
+                      ),
+                    ),
+                  }}
+                >
+                  {segments.map((segment, segmentIndex) => {
+                    const section = sections[segment.section];
+                    return (
                       <div
+                        data-paper-section={section.type}
+                        data-flow-lane={segment.lane}
+                        key={segmentIndex}
                         style={{
-                          display: "grid",
-                          gridTemplateColumns: `repeat(${sectionColumns(section)},minmax(0,1fr))`,
-                          gap: s.cfg.columnGap,
+                          position: "absolute",
+                          top: segment.top,
+                          left: `calc(${segment.lane} * (100% + ${s.cfg.columnGap}px) / ${segment.laneCount})`,
+                          width: `calc((100% - ${(segment.laneCount - 1) * s.cfg.columnGap}px) / ${segment.laneCount})`,
+                          boxSizing: "border-box",
+                          borderLeft:
+                            s.show.divider && segment.lane > 0
+                              ? "1px solid #888"
+                              : undefined,
+                          paddingLeft: segment.lane > 0 ? 10 : 0,
                         }}
                       >
-                        {segment.columns.map((indexes, col) => (
-                          <div
-                            key={col}
-                            style={{
-                              borderLeft:
-                                s.show.divider && col > 0
-                                  ? "1px solid #888"
-                                  : undefined,
-                              paddingLeft: col > 0 ? 10 : 0,
-                            }}
-                          >
-                            {indexes.map((i) => (
-                              <div key={section.questions[i].q.id}>
-                                {question(
-                                  section.questions[i],
-                                  i,
-                                  section.type,
-                                )}
-                              </div>
-                            ))}
+                        {segment.heading &&
+                          sectionHeading(
+                            section,
+                            sections.findIndex(
+                              (part) => part.type === section.type,
+                            ) === segment.section &&
+                              setName === (s.show.autoSet ? "ক" : s.setName)
+                              ? `paper-section-${section.type}`
+                              : undefined,
+                          )}
+                        {segment.columns.flat().map((i) => (
+                          <div key={section.questions[i].q.id}>
+                            {question(section.questions[i], i, section.type)}
                           </div>
                         ))}
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
                 {s.show.brandFooter && (
                   <p className="mt-3 border-t pt-1 text-center text-[0.75em]">
                     <RichPaperText text={s.info.brandFooter} />

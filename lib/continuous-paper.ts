@@ -8,57 +8,62 @@ export type FlowSegment = {
   section: number;
   heading: boolean;
   columns: number[][];
+  lane: number;
+  laneCount: number;
+  top: number;
+  height: number;
 };
-/** Fill each section's left column first, sharing the remaining sheet with the next section. */
+/** One reading cursor across section boundaries, not a fresh grid per section. */
 export function paginateContinuous(
   sections: FlowSection[],
   first: number,
   continuation: number,
 ): FlowSegment[][] {
   const pages: FlowSegment[][] = [[]];
-  let remaining = Math.max(1, first);
-  const next = () => {
+  let capacity = Math.max(1, first),
+    lanes = 1,
+    lane = 0,
+    base = 0,
+    used = [0];
+  const nextPage = () => {
     pages.push([]);
-    remaining = Math.max(1, continuation);
+    capacity = Math.max(1, continuation);
+    lane = 0;
+    base = 0;
+    used = Array(lanes).fill(0);
   };
-  sections.forEach((section, index) => {
-    let cursor = 0;
-    while (cursor < section.heights.length) {
-      const heading = cursor === 0;
-      const headingHeight = heading ? section.heading : 0;
-      // Keep the heading with its first question, unless the question itself exceeds a sheet.
-      if (
-        pages.at(-1)!.length &&
-        remaining < headingHeight + section.heights[cursor]
-      )
-        next();
-      const budget = Math.max(1, remaining - headingHeight);
-      const columns: number[][] = Array.from(
-        { length: section.columns },
-        () => [],
-      );
-      const used = Array(section.columns).fill(0);
-      const firstColumn =
-        heading && section.startRight && section.columns > 1 ? 1 : 0;
-      if (firstColumn) used[0] = budget;
-      for (
-        let col = firstColumn;
-        col < section.columns && cursor < section.heights.length;
-        col++
-      ) {
-        while (cursor < section.heights.length) {
-          const height = section.heights[cursor];
-          if (used[col] + height > budget && columns[col].length) break;
-          if (height > budget && col > 0) break;
-          columns[col].push(cursor++);
-          used[col] += height;
-          if (used[col] >= budget) break;
-        }
-      }
-      pages.at(-1)!.push({ section: index, heading, columns });
-      remaining -= headingHeight + Math.max(...used);
-      if (cursor < section.heights.length) next();
+  sections.forEach((section, sectionIndex) => {
+    if (!section.heights.length) return;
+    if (section.columns !== lanes) {
+      // A full-width / multi-column transition is a deliberate width boundary.
+      base = Math.max(base, ...used);
+      lanes = section.columns;
+      lane = 0;
+      used = Array(lanes).fill(base);
     }
+    if (section.startRight && lanes > 1 && lane === 0) lane = 1;
+    section.heights.forEach((height, index) => {
+      const heading = index === 0;
+      const block = height + (heading ? section.heading : 0);
+      if (used[lane] + block > capacity && used[lane] > base) {
+        lane++;
+        if (lane === lanes) nextPage();
+      }
+      // A width transition may have left no room in any lane.
+      if (used[lane] + block > capacity && base > 0) nextPage();
+      pages
+        .at(-1)!
+        .push({
+          section: sectionIndex,
+          heading,
+          columns: [[index]],
+          lane,
+          laneCount: lanes,
+          top: used[lane],
+          height: block,
+        });
+      used[lane] += block;
+    });
   });
   return pages.filter((page) => page.length);
 }
