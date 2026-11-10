@@ -19,6 +19,10 @@ export default function QbPicker({
   const [activeTab, setActiveTab] = useState<"MCQ" | "SHORT" | "CQ">("MCQ");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const typeOf = (q: any) =>
+    q.type || (q.correct ? "MCQ" : q.subQuestions ? "CQ" : "SHORT");
+  const tabCount = (type: string) =>
+    items.filter((q) => typeOf(q) === type).length;
 
   // 🎯 ট্যাব এবং সার্চ অনুযায়ী প্রশ্ন ফিল্টার
   const filteredQuestions = items.filter((q) => {
@@ -100,6 +104,10 @@ export default function QbPicker({
 
   return (
     <div className="w-full mt-4">
+      <p className="mb-3 text-xs text-slate-500">
+        প্রশ্নগুলো ধরন অনুযায়ী আলাদা ট্যাবে আছে। বন্ধনীর সংখ্যা এই পাতার
+        প্রশ্নসংখ্যা।
+      </p>
       <div className="space-y-4">
         {/* সার্চ বার */}
         <div className="flex gap-2">
@@ -130,7 +138,7 @@ export default function QbPicker({
                 : "bg-white border text-slate-700 hover:bg-slate-50"
             }`}
           >
-            বহুনির্বাচনি
+            বহুনির্বাচনি ({tabCount("MCQ")})
           </button>
           <button
             onClick={() => {
@@ -142,7 +150,7 @@ export default function QbPicker({
                 : "bg-white border text-slate-700 hover:bg-slate-50"
             }`}
           >
-            সংক্ষিপ্ত
+            সংক্ষিপ্ত ({tabCount("SHORT")})
           </button>
           <button
             onClick={() => {
@@ -154,7 +162,7 @@ export default function QbPicker({
                 : "bg-white border text-slate-700 hover:bg-slate-50"
             }`}
           >
-            সৃজনশীল
+            সৃজনশীল ({tabCount("CQ")})
           </button>
         </div>
 

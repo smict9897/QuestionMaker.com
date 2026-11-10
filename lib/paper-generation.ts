@@ -56,3 +56,9 @@ export const generatedSchema = z.object({
     .min(1)
     .max(6),
 });
+
+export const PREPARATION_TARGET = 30;
+export const MAX_PREPARATION_BATCHES = 12;
+export const DAILY_PREPARATION_BATCHES = 60;
+export const questionFingerprint = (text: string) =>
+  text.normalize("NFKC").replace(/\s+/g, " ").trim().toLocaleLowerCase();
