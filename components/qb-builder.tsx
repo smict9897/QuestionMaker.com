@@ -1,4 +1,5 @@
 "use client";
+import RichTextField from "@/components/paper-builder/rich-text-field";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Download, Settings2, Shuffle, Plus, AlertCircle } from "lucide-react";
@@ -12,6 +13,7 @@ import {
   defaults,
   restoreSettings,
   paperDimensions,
+  bookletOrder,
   duplicateIds,
   questionType,
   shuffled,
@@ -23,7 +25,13 @@ import "katex/dist/katex.min.css";
 import "./paper-builder/paper.css";
 const input =
   "w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500";
-export default function QbBuilder() {
+export default function QbBuilder({
+  supportHref = "/contact-us",
+  tutorialHref,
+}: {
+  supportHref?: string;
+  tutorialHref?: string;
+}) {
   const [items, setItems] = useState<PaperItem[]>([]),
     [s, setSettings] = useState<PaperSettings>(defaults),
     [loading, setLoading] = useState(true),
@@ -35,6 +43,8 @@ export default function QbBuilder() {
     [storageError, setStorageError] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(1);
+  const [newDivision, setNewDivision] = useState("");
+  const [divisionQuestion, setDivisionQuestion] = useState("");
   const [actionMessage, setActionMessage] = useState("");
   const [exchanging, setExchanging] = useState(false);
   async function questionAction(
@@ -247,6 +257,51 @@ export default function QbBuilder() {
       ).map((img) => img.decode().catch(() => {})),
     );
     await new Promise((resolve) => setTimeout(resolve, 150));
+    if (!s.cfg.booklet) {
+      window.print();
+      return;
+    }
+    const sheets = Array.from(
+      document.querySelectorAll<HTMLElement>("#paper .paper-sheet"),
+    );
+    if (!sheets.length) return;
+    const output = document.createElement("div");
+    output.className = "booklet-output";
+    const [w, h] = paperDimensions(s),
+      sw = Math.max(w, h),
+      sh = Math.min(w, h),
+      scale = Math.min(sw / 2 / w, sh / h);
+    for (const side of bookletOrder(sheets.length)) {
+      const row = document.createElement("div");
+      row.className = "booklet-imposed";
+      row.style.cssText = `width:${sw}mm;height:${sh}mm;display:flex;overflow:hidden;`;
+      for (const index of side) {
+        const cell = document.createElement("div");
+        cell.style.cssText = `width:${sw / 2}mm;height:${sh}mm;overflow:hidden;display:flex;justify-content:center;align-items:center;`;
+        if (index !== null) {
+          const clone = sheets[index].cloneNode(true) as HTMLElement;
+          clone
+            .querySelectorAll("[data-noprint]")
+            .forEach((node) => node.remove());
+          clone.style.zoom = String(scale);
+          clone.style.flexShrink = "0";
+          cell.append(clone);
+        }
+        row.append(cell);
+      }
+      output.append(row);
+    }
+    const printStyle = document.createElement("style");
+    printStyle.textContent = `@media print { @page {size:${sw}mm ${sh}mm;margin:0} body.booklet-print main,body.booklet-print header,body.booklet-print footer,body.booklet-print nav,body.booklet-print [data-noprint]{display:none!important} body.booklet-print .booklet-output{display:block!important} .booklet-imposed{break-after:page!important}.booklet-imposed:last-child{break-after:auto!important}.booklet-imposed .paper-sheet{break-after:auto!important;page-break-after:auto!important;} }`;
+    const cleanup = () => {
+      output.remove();
+      printStyle.remove();
+      document.body.classList.remove("booklet-print");
+      window.removeEventListener("afterprint", cleanup);
+    };
+    document.body.append(output, printStyle);
+    document.body.classList.add("booklet-print");
+    window.addEventListener("afterprint", cleanup);
     window.print();
   }
   const enriched = {
@@ -442,6 +497,8 @@ export default function QbBuilder() {
           open={open}
           onClose={close}
           counts={counts}
+          supportHref={supportHref}
+          tutorialHref={tutorialHref}
           onPrint={print}
           onUndo={undo}
           onRedo={redo}
@@ -575,7 +632,7 @@ export default function QbBuilder() {
           </details>
           <div data-noprint className="mb-4 flex flex-wrap items-center gap-2">
             <Link
-              href="/question-builder"
+              href="/question-builder?append=1"
               className="inline-flex items-center gap-1 rounded-xl border bg-white px-3 py-2 text-sm"
             >
               <Plus size={16} /> আরও প্রশ্ন যুক্ত করুন
@@ -611,6 +668,132 @@ export default function QbBuilder() {
               </button>
             )}
           </div>
+          {edit && (
+            <section
+              data-noprint
+              className="mb-4 rounded-xl border border-emerald-200 bg-white p-4"
+            >
+              <h3 className="mb-2 font-bold">বিভাগ পরিচালনা (CQ)</h3>
+              <div className="mb-3 flex flex-wrap gap-2">
+                <input
+                  className={input}
+                  aria-label="নতুন বিভাগের নাম"
+                  placeholder="নতুন বিভাগের নাম"
+                  value={newDivision}
+                  onChange={(e) => setNewDivision(e.target.value)}
+                  maxLength={100}
+                />
+                <select
+                  aria-label="বিভাগে যোগ করার প্রশ্ন"
+                  className={input}
+                  value={divisionQuestion}
+                  onChange={(e) => setDivisionQuestion(e.target.value)}
+                >
+                  <option value="">প্রশ্ন বাছুন</option>
+                  {data
+                    .filter((q) => questionType(q) === "CQ")
+                    .map((q) => (
+                      <option key={q.id} value={q.id}>
+                        {q.text.slice(0, 70)}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  className="studio-choice"
+                  disabled={!newDivision.trim() || !divisionQuestion}
+                  onClick={() => {
+                    setNewDivision("");
+                    update({
+                      ...s,
+                      show: { ...s.show, divisions: true },
+                      attachments: {
+                        ...s.attachments,
+                        [divisionQuestion]: {
+                          ...(s.attachments[divisionQuestion] || {
+                            image: "",
+                            division: "",
+                            important: false,
+                          }),
+                          division: newDivision.trim(),
+                        },
+                      },
+                    });
+                  }}
+                >
+                  বিভাগে যোগ / সরান
+                </button>
+              </div>
+              {divisions.map((name) => (
+                <div
+                  key={name}
+                  className="mb-2 flex items-center justify-between gap-2 rounded bg-slate-50 p-2 text-sm"
+                >
+                  <span>{name}</span>
+                  <div className="flex gap-2">
+                    <button
+                      className="studio-choice"
+                      onClick={() => {
+                        const renamed = window
+                          .prompt("বিভাগের নতুন নাম", name)
+                          ?.trim();
+                        if (!renamed) return;
+                        const attachments = { ...s.attachments };
+                        data
+                          .filter(
+                            (q) =>
+                              questionType(q) === "CQ" &&
+                              (s.attachments[q.id]?.division ||
+                                q.topic ||
+                                "সাধারণ বিভাগ") === name,
+                          )
+                          .forEach((q) => {
+                            attachments[q.id] = {
+                              ...(attachments[q.id] || {
+                                image: "",
+                                division: "",
+                                important: false,
+                              }),
+                              division: renamed,
+                            };
+                          });
+                        update({ ...s, attachments });
+                      }}
+                    >
+                      নাম বদল
+                    </button>
+                    <button
+                      className="studio-choice"
+                      onClick={() => {
+                        if (
+                          !window.confirm(
+                            `“${name}” বিভাগের সব প্রশ্ন এই পত্র থেকে সরাবেন?`,
+                          )
+                        )
+                          return;
+                        const ids = data
+                          .filter(
+                            (q) =>
+                              questionType(q) === "CQ" &&
+                              (s.attachments[q.id]?.division ||
+                                q.topic ||
+                                "সাধারণ বিভাগ") === name,
+                          )
+                          .map((q) => q.id);
+                        setDivision("");
+                        update({
+                          ...s,
+                          cfg: { ...s.cfg, divisionFilter: "" },
+                          excludedIds: [...new Set([...s.excludedIds, ...ids])],
+                        });
+                      }}
+                    >
+                      বিভাগ মুছুন
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </section>
+          )}
           {s.show.divisions && (
             <label data-noprint className="mb-4 block text-sm">
               CQ বিভাগ ফিল্টার
@@ -653,23 +836,21 @@ export default function QbBuilder() {
                     <div className="mt-3 space-y-2">
                       <label className="block text-xs">
                         প্রশ্নের লেখা
-                        <textarea
-                          className={input}
+                        <RichTextField
+                          label={`প্রশ্ন ${i + 1}`}
                           value={q.text}
-                          onChange={(e) =>
-                            questionEdit(q, { text: e.target.value })
-                          }
+                          onChange={(text) => questionEdit(q, { text })}
                         />
                       </label>
                       {questionType(q) === "CQ" && (
                         <>
                           <label className="block text-xs">
                             উদ্দীপক
-                            <textarea
-                              className={input}
+                            <RichTextField
+                              label={`উদ্দীপক ${i + 1}`}
                               value={q.stimulus || q.text}
-                              onChange={(e) =>
-                                questionEdit(q, { stimulus: e.target.value })
+                              onChange={(stimulus) =>
+                                questionEdit(q, { stimulus })
                               }
                             />
                           </label>
@@ -677,14 +858,14 @@ export default function QbBuilder() {
                             ([key, val]) => (
                               <label key={key} className="block text-xs">
                                 উপপ্রশ্ন {key}
-                                <textarea
-                                  className={input}
+                                <RichTextField
+                                  label={`উপপ্রশ্ন ${i + 1} ${key}`}
                                   value={val}
-                                  onChange={(e) =>
+                                  onChange={(text) =>
                                     questionEdit(q, {
                                       subQuestions: {
                                         ...q.subQuestions!,
-                                        [key]: e.target.value,
+                                        [key]: text,
                                       },
                                     })
                                   }
@@ -698,15 +879,12 @@ export default function QbBuilder() {
                         Object.entries(q.options || {}).map(([key, val]) => (
                           <label key={key} className="block text-xs">
                             অপশন {key}
-                            <input
-                              className={input}
+                            <RichTextField
+                              label={`অপশন ${i + 1} ${key}`}
                               value={val}
-                              onChange={(e) =>
+                              onChange={(text) =>
                                 questionEdit(q, {
-                                  options: {
-                                    ...q.options,
-                                    [key]: e.target.value,
-                                  },
+                                  options: { ...q.options, [key]: text },
                                 })
                               }
                             />

@@ -78,6 +78,8 @@ export default function PaperSettingsPanel({
   open,
   onClose,
   counts,
+  supportHref,
+  tutorialHref,
   onPrint,
   onUndo,
   onRedo,
@@ -91,6 +93,8 @@ export default function PaperSettingsPanel({
   open: boolean;
   onClose: () => void;
   counts: { MCQ: number; CQ: number; SHORT: number };
+  supportHref?: string;
+  tutorialHref?: string;
   onPrint: () => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -242,6 +246,16 @@ export default function PaperSettingsPanel({
             প্রিন্ট ডায়ালগে Save as PDF বাছুন।
           </p>
         </details>
+        {tutorialHref && (
+          <a
+            href={tutorialHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-3 block rounded-lg border border-red-200 bg-red-50 p-3 text-center text-sm text-red-700"
+          >
+            ভিডিও টিউটোরিয়াল ↗
+          </a>
+        )}
         <div className="mb-4 grid grid-cols-2 gap-2">
           <button
             disabled={!canUndo}
@@ -513,6 +527,14 @@ export default function PaperSettingsPanel({
             </label>
           )}
         </section>
+        <a
+          href={supportHref || "/contact-us"}
+          target={supportHref?.startsWith("https://") ? "_blank" : undefined}
+          rel="noopener noreferrer"
+          className="sticky bottom-0 mt-5 block rounded-2xl bg-emerald-600 p-3 text-center text-sm font-bold text-white shadow-lg"
+        >
+          যেকোনো সমস্যা অথবা প্রশ্ন থাকলে যোগাযোগ করুন
+        </a>
       </aside>
     </>
   );

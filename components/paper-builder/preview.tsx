@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import HeaderPreview from "./header-preview";
 import { currentHeader } from "@/lib/paper-header";
-import MathText from "@/components/MathText";
+import RichPaperText from "./rich-paper-text";
 import {
   bn,
   preparePaperMath,
@@ -11,11 +11,12 @@ import {
   labels,
   paginate,
   safeImage,
+  safeLogo,
   type PaperItem,
   type PaperSettings,
 } from "@/lib/paper-builder";
 function PaperMathText({ text }: { text: string }) {
-  return <MathText text={preparePaperMath(text)} />;
+  return <RichPaperText text={text} />;
 }
 
 export type PreviewQuestion = {
@@ -57,6 +58,8 @@ export default function PaperPreview({
 }) {
   const [pages, setPages] = useState<number[][][]>([]);
   const [oversized, setOversized] = useState(false);
+  const [fittedFont, setFittedFont] = useState(s.cfg.fontSize);
+  useEffect(() => setFittedFont(s.cfg.fontSize), [s, questions]);
   const measure = useRef<HTMLDivElement>(null);
   const [width, height] = paperDimensions(s);
   const cols =
@@ -155,16 +158,16 @@ export default function PaperPreview({
   );
   const header = (
     <>
-      {s.show.logo && safeImage(s.info.logo) && (
+      {s.show.logo && safeLogo(s.info.logo) && (
         <img
-          src={safeImage(s.info.logo)!}
+          src={safeLogo(s.info.logo)!}
           alt="প্রতিষ্ঠানের লোগো"
           className="mx-auto mb-2 h-16 w-16 object-contain"
         />
       )}
       {s.show.brandHeader && (
         <p className="mb-2 border-b pb-1 text-center font-bold">
-          {s.info.brandHeader}
+          <RichPaperText text={s.info.brandHeader} />
         </p>
       )}
       {s.show.instructor && (
@@ -375,11 +378,25 @@ export default function PaperPreview({
           s.cfg.marginTop -
           s.cfg.marginBottom -
           28 -
-          (s.show.brandFooter ? 30 : 0);
+          (s.show.brandFooter
+            ? (root
+                .querySelector<HTMLElement>("[data-measure-footer]")
+                ?.getBoundingClientRect().height || 0) + 12
+            : 0);
         const available = continuationAvailable - h;
         const blocks = Array.from(
           root.querySelectorAll<HTMLElement>("[data-measure-question]"),
         ).map((el) => el.getBoundingClientRect().height);
+        if (
+          s.cfg.autoFit &&
+          mode === "questions" &&
+          fittedFont > 10 &&
+          blocks.reduce((sum, v) => sum + v, 0) >
+            Math.max(50, available) * (s.show.rightStart ? 1 : cols)
+        ) {
+          setFittedFont((v) => Math.max(10, v - 1));
+          return;
+        }
         setOversized(blocks.some((v) => v > continuationAvailable));
         const reserved =
           s.show.rightStart && cols > 1
@@ -413,7 +430,7 @@ export default function PaperPreview({
       observer.disconnect();
       cancelAnimationFrame(frame);
     };
-  }, [s, questions, height, cols, title, mode]);
+  }, [s, questions, height, cols, title, mode, fittedFont]);
   const style = {
     width: `${width}mm`,
     minHeight: `${height}mm`,
@@ -426,7 +443,7 @@ export default function PaperPreview({
         .filter(Boolean)
         .join(" ") || "none",
     fontFamily: families[s.cfg.font],
-    fontSize: `${s.cfg.fontSize}pt`,
+    fontSize: `${s.cfg.autoFit ? fittedFont : s.cfg.fontSize}pt`,
     lineHeight: 1.45,
     textAlign: s.cfg.align,
   } as const;
@@ -447,6 +464,14 @@ export default function PaperPreview({
         }}
       >
         <div data-measure-header>{header}</div>
+        {s.show.brandFooter && (
+          <div
+            data-measure-footer
+            className="border-t pt-1 text-center text-[0.75em]"
+          >
+            <RichPaperText text={s.info.brandFooter} />
+          </div>
+        )}
         <div
           style={{
             width: `calc((100% - ${(cols - 1) * s.cfg.columnGap}px) / ${cols} - 11px)`,
@@ -459,6 +484,12 @@ export default function PaperPreview({
           ))}
         </div>
       </div>
+      {s.cfg.autoFit && mode === "questions" && (
+        <p data-noprint role="status" className="mb-2 text-xs text-emerald-700">
+          Auto-fit: {fittedFont}pt — প্রয়োজনে সর্বনিম্ন ১০pt; না ধরলে পরের
+          পাতায় যাবে।
+        </p>
+      )}
       {oversized && (
         <p
           data-noprint
@@ -512,7 +543,7 @@ export default function PaperPreview({
                 </div>
                 {s.show.brandFooter && (
                   <p className="mt-3 border-t pt-1 text-center text-[0.75em]">
-                    {s.info.brandFooter}
+                    <RichPaperText text={s.info.brandFooter} />
                   </p>
                 )}
                 {s.show.pageNumbers && (

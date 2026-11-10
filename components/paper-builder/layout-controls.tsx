@@ -1,4 +1,6 @@
 "use client";
+import RichTextField from "./rich-text-field";
+import LogoUpload from "./logo-upload";
 import type { PaperSettings } from "@/lib/paper-builder";
 import { Toggle } from "./settings";
 const input =
@@ -16,18 +18,29 @@ export default function LayoutControls({
     k: K,
     v: PaperSettings["cfg"][K],
   ) => update({ ...s, cfg: { ...s.cfg, [k]: v } });
-  const text = (key: keyof PaperSettings["info"], label: string) => (
-    <label className="my-2 block text-xs">
-      {label}
-      <input
-        className={input}
+  const text = (key: keyof PaperSettings["info"], label: string) =>
+    ["brandHeader", "brandFooter"].includes(key) ? (
+      <RichTextField
+        label={label}
         value={s.info[key]}
-        onChange={(e) =>
-          update({ ...s, info: { ...s.info, [key]: e.target.value } })
+        onChange={(value) =>
+          update({ ...s, info: { ...s.info, [key]: value } })
         }
       />
-    </label>
-  );
+    ) : (
+      <label className="my-2 block text-xs">
+        {label}
+        <input
+          className={input}
+          value={
+            key === "logo" && s.info.logo.startsWith("data:") ? "" : s.info[key]
+          }
+          onChange={(e) =>
+            update({ ...s, info: { ...s.info, [key]: e.target.value } })
+          }
+        />
+      </label>
+    );
   return (
     <>
       <section className="studio-section">
@@ -114,7 +127,18 @@ export default function LayoutControls({
           </select>
         </label>
         <Toggle
-          label="বুকলেট / ডান কলাম থেকে শুরু"
+          label="বুকলেট প্রিন্ট — ভাঁজ করার পৃষ্ঠা ক্রম"
+          checked={s.cfg.booklet}
+          onChange={(v) => cfg("booklet", v)}
+        />
+        {s.cfg.booklet && (
+          <p className="text-xs text-slate-500">
+            প্রিন্টে প্রতি পাশে ২ পৃষ্ঠা; ৪-এর গুণিতকে খালি পৃষ্ঠা যোগ হবে। দুই
+            পাশে প্রিন্টে short-edge flip বাছুন। প্রিন্টারের সেটিং পরীক্ষা করুন।
+          </p>
+        )}
+        <Toggle
+          label="ডান কলাম থেকে শুরু"
           checked={s.show.rightStart}
           onChange={(v) => update({ ...s, show: { ...s.show, rightStart: v } })}
         />
@@ -124,6 +148,11 @@ export default function LayoutControls({
           onChange={(v) =>
             update({ ...s, show: { ...s.show, answerSheet: v } })
           }
+        />
+        <Toggle
+          label="Auto-fit — এক পাতায় ধরানোর চেষ্টা"
+          checked={s.cfg.autoFit}
+          onChange={(v) => cfg("autoFit", v)}
         />
         <button
           className="studio-choice mt-3 w-full"
@@ -142,7 +171,7 @@ export default function LayoutControls({
             })
           }
         >
-          পেপারের ভেতরে ফিট — নিরাপদ লেআউট রিসেট
+          মার্জিন ও ফন্ট রিসেট
         </button>
       </section>
       <section className="studio-section">
@@ -210,6 +239,15 @@ export default function LayoutControls({
       </section>
       <section className="studio-section">
         <h3>অতিরিক্ত ব্র্যান্ডিং</h3>
+        <LogoUpload
+          onChange={(logo) =>
+            update({
+              ...s,
+              show: { ...s.show, logo: true },
+              info: { ...s.info, logo },
+            })
+          }
+        />
         {(["logo", "brandHeader", "brandFooter"] as const).map((key, i) => (
           <div key={key}>
             <Toggle
