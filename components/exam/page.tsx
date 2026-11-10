@@ -99,7 +99,7 @@ export default function ExamPage() {
         setQuestions(data.questions);
         setExamReady(true);
       } else {
-        setErrorMsg("প্রশ্ন তৈরি করতে ব্যর্থ হয়েছে। আবার চেষ্টা করুন।");
+        setErrorMsg(data.error || "প্রশ্ন তৈরি করতে ব্যর্থ হয়েছে। আবার চেষ্টা করুন।");
       }
     } catch (err) {
       setErrorMsg("সার্ভারে সমস্যা হয়েছে। ইন্টারনেট কানেকশন চেক করুন।");

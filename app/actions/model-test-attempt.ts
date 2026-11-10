@@ -1,5 +1,7 @@
 "use server";
 
+import { scoreExam } from "@/lib/exam-score";
+import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { hasPremium } from "@/lib/premium";
@@ -22,6 +24,13 @@ export type SubmitAttemptInput = {
 const SUBMIT_GRACE_MINUTES = 5;
 
 export async function submitModelTestAttempt(input: SubmitAttemptInput) {
+  const parsed = z.object({
+    testId: z.string().min(1).max(200), studentName: z.string().max(100),
+    studentClass: z.string().max(100), rollNumber: z.string().max(100),
+    institution: z.string().max(300).optional(), warnings: z.number().int().min(0).max(1000),
+    answers: z.record(z.number().int()).optional(),
+  }).safeParse(input);
+  if (!parsed.success) return { success: false, error: "অবৈধ উত্তর।" };
   const session = await auth();
   const email = session?.user?.email;
 
@@ -80,23 +89,16 @@ export async function submitModelTestAttempt(input: SubmitAttemptInput) {
     }
   }
 
-  // ৪) স্কোর সীমার মধ্যে রাখা
-  const total = Math.max(0, Math.floor(Number(input.total) || 0));
-  const rawScore = Math.floor(Number(input.score) || 0);
-  const score = Math.min(Math.max(rawScore, 0), total);
+  const start = await db.modelTestStart.findUnique({ where: { testId_userId: { testId: test.id, userId: user.id } } });
+  if (!start) return { success: false, error: "আগে পরীক্ষা শুরু করুন।" };
+  const elapsed = Math.max(1, Math.floor((now - start.startedAt.getTime()) / 1000));
+  if (elapsed > (test.minutes + SUBMIT_GRACE_MINUTES) * 60) return { success: false, error: "পরীক্ষার সময় শেষ।" };
+  const { score, total, answers: answersToSave } = scoreExam(test.questions, input.answers);
 
-  // উত্তরগুলো { "0": 2, "1": 0, ... } আকারে সেভ হবে (প্রশ্নের ইনডেক্স → অপশনের ইনডেক্স)
-  const answersToSave: Record<string, number> = {};
-  if (input.answers) {
-    for (const [key, value] of Object.entries(input.answers)) {
-      if (typeof value === "number") {
-        answersToSave[String(key)] = value;
-      }
-    }
-  }
-
-  await db.attempt.create({
-    data: {
+  await db.attempt.upsert({
+    where: { testId_userId: { testId: test.id, userId: user.id } },
+    update: {},
+    create: {
       testId: input.testId,
       userId: user.id,
       userName: input.studentName || user.name || "পরীক্ষার্থী",
@@ -106,7 +108,7 @@ export async function submitModelTestAttempt(input: SubmitAttemptInput) {
       institution: input.institution || null,
       score,
       total,
-      timeSpent: input.timeSpent,
+      timeSpent: elapsed,
       warnings: input.warnings,
       answers: answersToSave,
     },
@@ -119,3 +121,19 @@ export async function submitModelTestAttempt(input: SubmitAttemptInput) {
 }
 
 // ===== ফাইল শেষ =====
+
+export async function startModelTestAttempt(testId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("লগইন প্রয়োজন।");
+  const test = await db.modelTest.findUnique({ where: { id: testId } });
+  const now = new Date();
+  if (!test || test.status !== "PUBLISHED" || now < test.startAt || now > test.endAt) throw new Error("এখন পরীক্ষা শুরু করা যাবে না।");
+  if (test.isPaid && !(await hasPremium(session.user.id))) throw new Error("Premium প্রয়োজন।");
+  const start = await db.modelTestStart.upsert({
+    where: { testId_userId: { testId, userId: session.user.id } }, update: {},
+    create: { testId, userId: session.user.id },
+  });
+  const remaining = test.minutes * 60 - Math.floor((now.getTime() - start.startedAt.getTime()) / 1000);
+  if (remaining <= 0) throw new Error("পরীক্ষার সময় শেষ।");
+  return remaining;
+}

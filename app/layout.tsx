@@ -1,7 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { Tinos } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { MessageCircle } from "lucide-react";
 import { auth, signOut } from "@/auth";
@@ -32,9 +31,11 @@ const bn = localFont({
 });
 
 // 🎯 ২. ইংরেজি ও গণিতের ফন্টের জন্য Tinos (Times New Roman)
-const en = Tinos({
-  subsets: ["latin"],
-  weight: ["400", "700"],
+const en = localFont({
+  src: [
+    { path: "../public/fonts/Tinos-Regular.ttf", weight: "400", style: "normal" },
+    { path: "../public/fonts/Tinos-Bold.ttf", weight: "700", style: "normal" },
+  ],
   variable: "--font-en",
   display: "swap",
 });

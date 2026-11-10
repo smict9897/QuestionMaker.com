@@ -1,17 +1,19 @@
-import { Anek_Bangla, Hind_Siliguri } from "next/font/google";
+import localFont from "next/font/local";
 
-// নতুন হোমপেজ ও ড্যাশবোর্ডের ফন্ট। প্রশ্নপত্র ছাপার ফন্ট (AdorshoLipi, Tinos) আগের মতোই থাকবে।
-export const qkHead = Anek_Bangla({
-  subsets: ["bengali", "latin"],
+// Self-hosted fonts: builds never depend on Google Fonts network availability.
+export const qkHead = localFont({
+  src: "../public/fonts/AnekBangla[wdth,wght].ttf",
+  weight: "100 800",
   display: "swap",
   variable: "--qk-head",
 });
 
-export const qkBody = Hind_Siliguri({
-  subsets: ["bengali", "latin"],
-  weight: ["400", "500", "600"],
+export const qkBody = localFont({
+  src: [
+    { path: "../public/fonts/HindSiliguri-Regular.ttf", weight: "400" },
+    { path: "../public/fonts/HindSiliguri-Medium.ttf", weight: "500" },
+    { path: "../public/fonts/HindSiliguri-SemiBold.ttf", weight: "600" },
+  ],
   display: "swap",
   variable: "--qk-body",
 });
-
-// ===== ফাইল শেষ =====

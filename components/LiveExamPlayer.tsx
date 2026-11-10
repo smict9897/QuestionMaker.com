@@ -41,6 +41,7 @@ interface LiveExamProps {
   isAdmin?: boolean;
   antiCheat?: boolean;
   leaderboardUrl?: string;
+  onStart?: () => Promise<number>;
   onSubmit?: (result: AttemptResult) => Promise<void>;
 }
 
@@ -52,6 +53,7 @@ export default function LiveExamPlayer({
   isAdmin = false,
   antiCheat = false,
   leaderboardUrl,
+  onStart,
   onSubmit,
 }: LiveExamProps) {
   const [isStarted, setIsStarted] = useState(false);
@@ -76,6 +78,9 @@ export default function LiveExamPlayer({
   const [warningCount, setWarningCount] = useState(0);
   const [showCheatWarning, setShowCheatWarning] = useState(false);
   const hasSubmittedRef = useRef(false);
+  const startingRef = useRef(false);
+  const autoSubmitFailedRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
   const lastViolationRef = useRef(0);
 
   // সর্বশেষ উত্তর ও সময় ধরে রাখার জন্য (অটো-সাবমিটে পুরোনো ডেটা যাওয়া ঠেকায়)
@@ -90,13 +95,14 @@ export default function LiveExamPlayer({
 
   useEffect(() => {
     if (!isStarted || viewState !== "EXAM") return;
-    if (timeLeft <= 0) {
+    if (timeLeft <= 0 && !submitting && !autoSubmitFailedRef.current) {
       handleFinalSubmit();
       return;
     }
+    if (submitting || timeLeft <= 0) return;
     const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
     return () => clearInterval(timer);
-  }, [timeLeft, viewState, isStarted]);
+  }, [timeLeft, viewState, isStarted, submitting]);
 
   // 🎯 অ্যান্টি-চিট মনিটরিং: ট্যাব সুইচ, ফুলস্ক্রিন এক্সিট, কপি/রাইট-ক্লিক
   useEffect(() => {
@@ -150,7 +156,7 @@ export default function LiveExamPlayer({
   };
 
   const handleSelectOption = (qIndex: number, optIndex: number) => {
-    if (viewState !== "EXAM") return;
+    if (viewState !== "EXAM" || hasSubmittedRef.current) return;
     setSelectedAnswers((prev) => ({ ...prev, [qIndex]: optIndex }));
   };
 
@@ -161,8 +167,17 @@ export default function LiveExamPlayer({
     }
   }
 
-  const handleStartExam = (e: React.FormEvent) => {
+  const handleStartExam = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (startingRef.current) return;
+    startingRef.current = true;
+    try {
+      if (onStart) setTimeLeft(await onStart());
+    } catch (error) {
+      startingRef.current = false;
+      alert(error instanceof Error ? error.message : "পরীক্ষা শুরু করা যায়নি।");
+      return;
+    }
     setStudentInfo(formData);
     setIsStarted(true);
     if (antiCheat) {
@@ -173,10 +188,11 @@ export default function LiveExamPlayer({
   const handleFinalSubmit = async (finalWarnings?: number) => {
     if (hasSubmittedRef.current) return;
     hasSubmittedRef.current = true;
+    setSubmitting(true);
 
     setShowWarningModal(false);
     setShowCheatWarning(false);
-    setViewState("RESULT");
+    if (!onSubmit) setViewState("RESULT");
 
     // সবসময় সর্বশেষ উত্তর ও সময় ব্যবহার করা হচ্ছে
     const answersNow = selectedAnswersRef.current;
@@ -204,24 +220,15 @@ export default function LiveExamPlayer({
           warnings: warningsUsed,
           answers: answersNow,
         });
-      } else {
-        await fetch("/api/leaderboard", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            examTitle,
-            studentName: studentInfo?.name || "পরীক্ষার্থী",
-            studentClass: studentInfo?.className || "সাধারণ",
-            rollNumber: studentInfo?.roll || "১",
-            institution: studentInfo?.institution || "",
-            score: finalScore,
-            totalMarks: questions.length,
-            timeSpent: Math.max(1, spentNow),
-          }),
-        });
-      }
+      } // Unranked practice results stay in this browser.
+
     } catch (e) {
-      console.error("Submit failed:", e);
+      hasSubmittedRef.current = false;
+      setSubmitting(false);
+      autoSubmitFailedRef.current = true;
+      setViewState("EXAM");
+      alert(e instanceof Error ? e.message : "জমা দেওয়া যায়নি। আবার চেষ্টা করুন।");
+      return;
     }
 
     if (antiCheat && document.fullscreenElement) {
