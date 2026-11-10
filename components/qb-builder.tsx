@@ -1,343 +1,619 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { Printer, Shuffle, Wand2 } from "lucide-react";
-import MathText from "@/components/MathText";
-
-type Item = {
-  id: string; 
-  text: string; 
-  options?: any; 
-  correct?: string;
-  explanation?: string; 
-  category?: string; 
-  subject?: string; 
-  topic?: string; 
-  source?: string;
-  type?: string; 
-  stimulus?: string;
-  subQuestions?: { k: string; kh: string; g: string; gh: string };
-};
-
-const LABELS = {
-  bn: ["ক", "খ", "গ", "ঘ"],
-  abc: ["a", "b", "c", "d"],
-  num: ["১", "২", "৩", "৪"],
-  roman: ["i", "ii", "iii", "iv"],
-} as const;
-type LabelKey = keyof typeof LABELS;
-
-const TOGGLES: [string, string][] = [
-  ["title", "টাইটেল"], ["address", "ঠিকানা"], ["cls", "ক্লাসের নাম"], ["subject", "বিষয়ের নাম"],
-  ["chapter", "অধ্যায়ের নাম"], ["instr", "নির্দেশনা"], ["examinee", "পরীক্ষার্থীর তথ্য"],
-  ["tags", "প্রশ্নের ট্যাগ"], ["marks", "প্রশ্নের মার্ক"], ["omr", "OMR যুক্ত"],
-  ["divider", "কলাম ডিভাইডার"], ["subjCode", "বিষয় কোড"], ["obtained", "প্রাপ্ত নম্বর ঘর"],
-  ["setCode", "সেট কোড"],
-];
-
-const DEF_SHOW: Record<string, boolean> = {
-  title: true, address: false, cls: true, subject: true, chapter: true, instr: true,
-  examinee: false, tags: false, marks: false, omr: false, divider: true,
-  subjCode: false, obtained: false, setCode: true,
-};
-const DEF_INFO = {
-  inst: "", address: "", exam: "", minutes: "", marks: "", code: "",
-  instr: "সঠিক উত্তরের বৃত্তটি বল পয়েন্ট কলম দিয়ে ভরাট করো। কাটাকাটি করা যাবে না।",
-};
-const DEF_CFG = { format: "qa", cols: 2, style: "circle", label: "bn" as LabelKey, optCols: 2, ansKey: false };
-
-const STORE = "qb:selected";
-const SETTINGS = "qb:settings";
-
-function rng(seed: number) {
-  let s = (seed >>> 0) || 1;
-  return () => {
-    s ^= s << 13; s >>>= 0;
-    s ^= s >>> 17;
-    s ^= s << 5; s >>>= 0;
-    return s / 4294967296;
-  };
-}
-function shuffle<T>(arr: T[], seed: number): T[] {
-  if (!seed) return arr;
-  const r = rng(seed);
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(r() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-const printCss = `
-@page { size: A4; margin: 12mm; }
-@media print {
-  header, footer, nav, .fixed, [data-noprint] { display: none !important; }
-  body { background: #fff !important; }
-  .katex { font-size: 1.05em !important; }
-}`;
-
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { Download, Settings2, Shuffle, Plus, AlertCircle } from "lucide-react";
+import PaperSettingsPanel from "@/components/paper-builder/settings";
+import PaperPreview, {
+  type PreviewQuestion,
+} from "@/components/paper-builder/preview";
+import {
+  defaults,
+  restoreSettings,
+  dimensions,
+  duplicateIds,
+  questionType,
+  shuffled,
+  safeImage,
+  type PaperSettings,
+  type PaperItem,
+} from "@/lib/paper-builder";
+import "katex/dist/katex.min.css";
+import "./paper-builder/paper.css";
+const input =
+  "w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500";
 export default function QbBuilder() {
-  const [items, setItems] = useState<Item[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [ready, setReady] = useState(false);
-  const [show, setShow] = useState(DEF_SHOW);
-  const [info, setInfo] = useState(DEF_INFO);
-  const [cfg, setCfg] = useState(DEF_CFG);
-  const [setName, setSetName] = useState<"ক" | "খ">("ক");
-  const [seed, setSeed] = useState(0);
-  const [edit, setEdit] = useState(false);
-
+  const [items, setItems] = useState<PaperItem[]>([]),
+    [s, setSettings] = useState<PaperSettings>(defaults),
+    [loading, setLoading] = useState(true),
+    [ready, setReady] = useState(false),
+    [error, setError] = useState("");
+  const [edit, setEdit] = useState(false),
+    [open, setOpen] = useState(false),
+    [division, setDivision] = useState(""),
+    [storageError, setStorageError] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [previewScale, setPreviewScale] = useState(1);
+  const close = useCallback(() => setOpen(false), []);
   useEffect(() => {
+    const controller = new AbortController();
     try {
-      const raw = localStorage.getItem(SETTINGS);
-      if (raw) {
-        const o = JSON.parse(raw);
-        if (o.show) setShow({ ...DEF_SHOW, ...o.show });
-        if (o.info) setInfo({ ...DEF_INFO, ...o.info });
-        if (o.cfg) setCfg({ ...DEF_CFG, ...o.cfg });
-      }
+      const restored = restoreSettings(
+        JSON.parse(localStorage.getItem("qb:settings") || "{}"),
+      );
+      setSettings(restored);
+      setDivision(restored.cfg.divisionFilter);
     } catch {}
     setReady(true);
-
-    let ids: string[] = [];
-    try { ids = JSON.parse(localStorage.getItem(STORE) || "[]"); } catch {}
-    if (!ids.length) { setLoading(false); return; }
+    let ids: unknown = [];
+    try {
+      ids = JSON.parse(localStorage.getItem("qb:selected") || "[]");
+    } catch {}
+    if (!Array.isArray(ids) || !ids.length) {
+      setLoading(false);
+      return;
+    }
     fetch("/api/qb/questions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids }),
+      signal: controller.signal,
     })
-      .then((r) => r.json())
-      .then((d) => setItems(d.items ?? []))
-      .catch(() => {})
+      .then(async (r) => {
+        if (!r.ok) throw Error();
+        const d = await r.json();
+        setItems(Array.isArray(d.items) ? d.items : []);
+      })
+      .catch((e) => {
+        if (e.name !== "AbortError")
+          setError("প্রশ্ন লোড হয়নি। ইন্টারনেট পরীক্ষা করে আবার চেষ্টা করুন।");
+      })
       .finally(() => setLoading(false));
+    return () => controller.abort();
   }, []);
-
   useEffect(() => {
     if (!ready) return;
-    try { localStorage.setItem(SETTINGS, JSON.stringify({ show, info, cfg })); } catch {}
-  }, [show, info, cfg, ready]);
-
-  // 🎯 ৩ ধরনের প্রশ্ন আলাদা করা
-  const mcqs = useMemo(() => items.filter(q => q.type === "MCQ" || (!q.type && q.options)), [items]);
-  const sqs = useMemo(() => items.filter(q => q.type === "SHORT"), [items]);
-  const cqs = useMemo(() => items.filter(q => q.type === "CQ" || (!q.type && q.stimulus)), [items]);
-
-  const viewMcqs = useMemo(() => {
-    const base = seed ? seed + (setName === "খ" ? 7919 : 0) : setName === "খ" ? 7919 : 0;
-    return shuffle(mcqs, base).map((q, i) => {
-      let entries: [string, string][] = [];
-      if (q.options && typeof q.options === "object") {
-        // 🎯 টাইপ কাস্টিং ঠিক করা হলো
-        entries = (Object.entries(q.options) as [string, string][]).sort(([a], [b]) => a.localeCompare(b));
-      }
-      const opts = shuffle(entries, base ? base + i + 1 : 0);
-      return { q, opts: opts.map(([, v]) => v), ci: opts.findIndex(([k]) => k === q.correct) };
-    });
-  }, [mcqs, seed, setName]);
-
-  const viewSqs = useMemo(() => shuffle(sqs, seed), [sqs, seed]);
-  const viewCqs = useMemo(() => shuffle(cqs, seed), [cqs, seed]);
-
-  const uniq = (f: (q: Item) => string) => Array.from(new Set(items.map(f).filter(Boolean))).join(", ");
-
-  const L = LABELS[cfg.label];
-  const marked = cfg.format === "qa" || cfg.format === "sug";
-  const input = "w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm";
-  const chip = (on: boolean) => `rounded-lg border px-3 py-1.5 text-sm ${on ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-300 bg-white"}`;
-
-  function tag(i: number, correct: boolean) {
-    const l = L[i];
-    if (cfg.style === "circle")
-      return (
-        <span className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-black text-[11px] ${marked && correct ? "bg-black text-white" : ""}`}>
-          {l}
-        </span>
-      );
-    const t = cfg.style === "paren" ? `(${l})` : cfg.style === "close" ? `${l})` : `${l}.`;
-    return <span className={`shrink-0 ${marked && correct ? "font-bold underline" : ""}`}>{t}</span>;
+    try {
+      localStorage.setItem("qb:settings", JSON.stringify(s));
+      setStorageError(false);
+    } catch {
+      setStorageError(true);
+    }
+  }, [s, ready]);
+  const update = useCallback((next: PaperSettings) => {
+    setSettings(next);
+    try {
+      localStorage.setItem("qb:settings", JSON.stringify(next));
+      setStorageError(false);
+    } catch {
+      setStorageError(true);
+    }
+  }, []);
+  const data = useMemo(
+    () => items.map((q) => ({ ...q, ...s.edits[q.id] })),
+    [items, s.edits],
+  );
+  const counts = useMemo(
+    () => ({
+      MCQ: data.filter((q) => questionType(q) === "MCQ").length,
+      CQ: data.filter((q) => questionType(q) === "CQ").length,
+      SHORT: data.filter((q) => questionType(q) === "SHORT").length,
+    }),
+    [data],
+  );
+  const duplicates = useMemo(() => duplicateIds(data), [data]);
+  const divisions = Array.from(
+    new Set(
+      data
+        .filter((q) => questionType(q) === "CQ")
+        .map((q) => s.attachments[q.id]?.division || q.topic || "সাধারণ বিভাগ"),
+    ),
+  );
+  function info(key: keyof PaperSettings["info"], value: string) {
+    update({ ...s, info: { ...s.info, [key]: value } });
   }
-
-  if (loading) return <p className="py-10 text-center">লোড হচ্ছে...</p>;
-  if (!items.length)
+  function attachment(
+    id: string,
+    patch: Partial<PaperSettings["attachments"][string]>,
+  ) {
+    const old = s.attachments[id] || {
+      image: "",
+      division: "",
+      important: false,
+    };
+    update({
+      ...s,
+      attachments: { ...s.attachments, [id]: { ...old, ...patch } },
+    });
+  }
+  function questionEdit(q: PaperItem, patch: Partial<PaperItem>) {
+    update({
+      ...s,
+      edits: {
+        ...s.edits,
+        [q.id]: {
+          ...{
+            text: q.text,
+            options: q.options,
+            stimulus: q.stimulus,
+            subQuestions: q.subQuestions,
+          },
+          ...patch,
+        },
+      },
+    });
+  }
+  async function print() {
+    setOpen(false);
+    await document.fonts.ready;
+    await Promise.all(
+      Array.from(
+        document.querySelectorAll<HTMLImageElement>(".paper-sheet img"),
+      ).map((img) => img.decode().catch(() => {})),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    window.print();
+  }
+  const enriched = {
+    ...s,
+    info: {
+      ...s.info,
+      cls:
+        s.info.cls ||
+        Array.from(new Set(data.map((q) => q.category).filter(Boolean))).join(
+          ", ",
+        ),
+      subject:
+        s.info.subject ||
+        Array.from(new Set(data.map((q) => q.subject).filter(Boolean))).join(
+          ", ",
+        ),
+      chapter:
+        s.info.chapter ||
+        Array.from(new Set(data.map((q) => q.topic).filter(Boolean))).join(
+          ", ",
+        ),
+    },
+  };
+  const [pw, ph] = dimensions[s.cfg.paper];
+  const style = `@page { size: ${pw}mm ${ph}mm; margin: 0; }`;
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() =>
+      setPreviewScale(
+        Math.min(1, Math.max(0.1, (el.clientWidth - 8) / ((pw * 96) / 25.4))),
+      ),
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [pw, loading, items.length]);
+  const field = (
+    key: keyof PaperSettings["info"],
+    label: string,
+    placeholder: string,
+    large = false,
+  ) => (
+    <label key={key} className={large ? "block sm:col-span-2" : "block"}>
+      <span className="mb-1 block text-xs font-medium text-slate-500">
+        {label}
+      </span>
+      <input
+        aria-label={label}
+        className={`${input} ${large ? "text-center !text-xl font-bold" : ""}`}
+        value={s.info[key]}
+        placeholder={placeholder}
+        onChange={(e) => info(key, e.target.value)}
+      />
+    </label>
+  );
+  function sections(setName: string) {
+    const base = s.seed + (setName === "খ" ? 7919 : 0);
+    const types = ["MCQ", "SHORT", "CQ"];
+    return types.flatMap((type) => {
+      const selected = shuffled(
+        data.filter((q) => questionType(q) === type),
+        base,
+      );
+      const groups =
+        type === "CQ" && s.show.divisions
+          ? division
+            ? [division]
+            : divisions
+          : [""];
+      return groups.map((group) => {
+        const qs = selected.filter(
+          (q) =>
+            !group ||
+            (s.attachments[q.id]?.division || q.topic || "সাধারণ বিভাগ") ===
+              group,
+        );
+        if (!qs.length) return null;
+        const views: PreviewQuestion[] = qs.map((q, i) => {
+          const opts = shuffled(
+            Object.entries(q.options || {}).filter(
+              (entry): entry is [string, string] =>
+                typeof entry[1] === "string",
+            ),
+            base ? base + i + 1 : 0,
+          );
+          return { q, opts, ci: opts.findIndex(([key]) => key === q.correct) };
+        });
+        return (
+          <PaperPreview
+            key={`${setName}-${type}-${group}`}
+            previewScale={previewScale}
+            s={enriched}
+            questions={views}
+            type={type}
+            setName={setName}
+            duplicate={duplicates}
+            title={
+              group
+                ? `${group} — সৃজনশীল প্রশ্ন`
+                : type === "MCQ"
+                  ? s.info.section
+                  : type === "CQ"
+                    ? "সৃজনশীল প্রশ্ন"
+                    : "সংক্ষিপ্ত প্রশ্ন"
+            }
+            onImageSize={(id, size) => attachment(id, { size })}
+          />
+        );
+      });
+    });
+  }
+  if (loading)
+    return <p className="py-12 text-center">প্রশ্নপত্র প্রস্তুত হচ্ছে…</p>;
+  if (error)
     return (
-      <div className="py-10 text-center">
-        <p>কোনো প্রশ্ন নির্বাচন করা হয়নি।</p>
-        <Link href="/question-builder" className="mt-3 inline-block rounded-lg bg-blue-600 px-4 py-2 text-white">প্রশ্ন বাছাই করুন</Link>
+      <div role="alert" className="rounded-xl bg-red-50 p-6 text-red-800">
+        {error}
+        <button
+          onClick={() => window.location.reload()}
+          className="ml-3 underline"
+        >
+          আবার চেষ্টা করুন
+        </button>
       </div>
     );
-
-  const showKey = viewMcqs.length > 0 && (cfg.format === "ans" || cfg.ansKey);
-  const keyOnNewPage = cfg.format !== "ans";
-
+  if (!items.length)
+    return (
+      <div className="rounded-2xl border bg-white px-6 py-16 text-center">
+        <h2 className="text-xl font-bold">আপনার প্রশ্নপত্র তৈরি করুন</h2>
+        <p className="my-3 text-slate-500">
+          প্রথমে প্রশ্ন নির্বাচন করুন, তারপর হেডার ও পেজ সাজান।
+        </p>
+        <Link
+          href="/question-builder"
+          className="inline-flex rounded-xl bg-emerald-500 px-5 py-3 font-bold text-white"
+        >
+          + প্রশ্ন বাছাই করুন
+        </Link>
+      </div>
+    );
   return (
-    <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-      <style>{printCss}</style>
-
-      {/* সাইডবার সেটিংস */}
-      <aside data-noprint className="space-y-3 text-sm">
-        <div className="flex flex-wrap gap-2">
-          <button onClick={() => window.print()} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 font-semibold text-white">
-            <Printer size={16} /> প্রিন্ট / PDF
+    <div className="paper-builder-root">
+      <style>{style}</style>
+      <div
+        data-noprint
+        className="mb-5 flex flex-wrap items-center justify-between gap-3"
+      >
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-emerald-600">
+            Question paper studio
+          </p>
+          <h1 className="mt-1 text-2xl font-bold text-slate-900">
+            আপনার প্রশ্নপত্র, আপনার মতো
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {items.length}টি প্রশ্ন · {s.cfg.paper} · প্রিন্ট-রেডি প্রিভিউ
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl border bg-white px-4 py-3 font-semibold lg:hidden"
+          >
+            <Settings2 size={18} /> সেটিংস
           </button>
-          <Link href="/question-builder" className="rounded-lg border px-3 py-2">+ আরও প্রশ্ন যোগ</Link>
+          <button
+            onClick={print}
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 font-bold text-white"
+          >
+            <Download size={18} /> ডাউনলোড
+          </button>
         </div>
-
-        <details open className="rounded-xl border bg-white p-3">
-          <summary className="cursor-pointer font-semibold">বেসিক সেটিংস</summary>
-          <p className="mt-2 text-xs text-slate-500">ফাইল ফরম্যাট</p>
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            {[["qa", "প্রশ্ন ও উত্তর"], ["q", "প্রশ্ন"], ["ans", "উত্তরপত্র"], ["sug", "সাজেশন"]].map(([k, l]) => (
-              <button key={k} className={chip(cfg.format === k)} onClick={() => setCfg({ ...cfg, format: k })}>{l}</button>
-            ))}
-          </div>
-          <label className="mt-3 flex items-center gap-2">
-            <input type="checkbox" checked={cfg.ansKey} onChange={(e) => setCfg({ ...cfg, ansKey: e.target.checked })} /> উত্তরপত্র সাথে দিন (আলাদা পাতায়)
-          </label>
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            {(["ক", "খ"] as const).map((n) => (
-              <button key={n} className={chip(setName === n)} onClick={() => setSetName(n)}>সেট {n}</button>
-            ))}
-            <button className={chip(false) + " flex items-center gap-1"} onClick={() => setSeed(Math.floor(Math.random() * 1e6) + 1)}>
-              <Shuffle size={14} /> এলোমেলো
-            </button>
-            {seed > 0 && <button className={chip(false)} onClick={() => setSeed(0)}>রিসেট</button>}
-          </div>
-        </details>
-
-        <details className="rounded-xl border bg-white p-3">
-          <summary className="cursor-pointer font-semibold">Page Setup</summary>
-          <div className="mt-2 space-y-2">
-            <input className={input} placeholder="প্রতিষ্ঠানের নাম" value={info.inst} onChange={(e) => setInfo({ ...info, inst: e.target.value })} />
-            <input className={input} placeholder="পরীক্ষার নাম (যেমন: এসএসসি - ২০২৬)" value={info.exam} onChange={(e) => setInfo({ ...info, exam: e.target.value })} />
-            <div className="grid grid-cols-2 gap-2">
-              <input className={input} placeholder="সময় (মিনিট)" value={info.minutes} onChange={(e) => setInfo({ ...info, minutes: e.target.value })} />
-              <input className={input} placeholder="পূর্ণমান" value={info.marks} onChange={(e) => setInfo({ ...info, marks: e.target.value })} />
+      </div>
+      {storageError && (
+        <p
+          data-noprint
+          role="alert"
+          className="mb-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800"
+        >
+          ব্রাউজারের স্টোরেজে সেটিংস রাখা যায়নি। সেভ করার আগে স্টোরেজের
+          অনুমতি/খালি জায়গা পরীক্ষা করুন।
+        </p>
+      )}
+      <div className="grid items-start gap-6 lg:grid-cols-[310px_minmax(0,1fr)]">
+        <PaperSettingsPanel
+          settings={s}
+          update={update}
+          edit={edit}
+          setEdit={setEdit}
+          open={open}
+          onClose={close}
+          counts={counts}
+          onPrint={print}
+        />
+        <div className="min-w-0">
+          <section
+            data-noprint
+            className="mb-5 rounded-2xl border border-slate-200 bg-white p-5"
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-bold text-slate-900">Page Setup ও হেডার</h2>
+              <span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
+                স্বয়ংক্রিয় সংরক্ষণ
+              </span>
             </div>
-            <textarea className={input} rows={2} placeholder="নির্দেশনা" value={info.instr} onChange={(e) => setInfo({ ...info, instr: e.target.value })} />
-          </div>
-        </details>
-
-        <details className="rounded-xl border bg-white p-3">
-          <summary className="cursor-pointer font-semibold">কন্টেন্ট ডিসপ্লে</summary>
-          <div className="mt-2 grid gap-1.5">
-            {TOGGLES.map(([k, l]) => (
-              <label key={k} className="flex items-center justify-between">
-                {l}
-                <input type="checkbox" checked={!!show[k]} onChange={(e) => setShow({ ...show, [k]: e.target.checked })} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              {field(
+                "inst",
+                "স্কুল / প্রতিষ্ঠানের নাম",
+                "আপনার প্রতিষ্ঠানের নাম",
+                true,
+              )}
+              {field(
+                "exam",
+                "পরীক্ষা / প্রোগ্রামের নাম",
+                "যেমন: অর্ধবার্ষিক পরীক্ষা",
+              )}
+              {field("cls", "শ্রেণি", "নবম/দশম")}
+              {field("subject", "বিষয়", "গণিত")}
+              {field("chapter", "অধ্যায় / টপিক", "অধ্যায় ১ – বাস্তব সংখ্যা")}
+              {field(
+                "minutes",
+                "সময় (মিনিট বা পূর্ণ বিবরণ)",
+                "যেমন: ৩০ মিনিট / ১ ঘণ্টা ১৫ মিনিট",
+              )}
+              {field("marks", "পূর্ণমান", "১০০")}
+              {field("section", "MCQ অংশের শিরোনাম", "বহুনির্বাচনি অংশ")}
+              {field("code", "বিষয় কোড", "১০৯")}
+              {s.show.address &&
+                field("address", "প্রতিষ্ঠানের ঠিকানা", "আপনার ঠিকানা")}
+              {s.show.watermark && field("watermark", "জলছাপের লেখা", "খসড়া")}
+              <label className="sm:col-span-2">
+                <span className="mb-1 block text-xs text-slate-500">
+                  নির্দেশনা
+                </span>
+                <textarea
+                  className={input}
+                  aria-label="নির্দেশনা"
+                  rows={2}
+                  value={s.info.instr}
+                  onChange={(e) => info("instr", e.target.value)}
+                />
               </label>
-            ))}
-          </div>
-        </details>
-
-        <details className="rounded-xl border bg-white p-3">
-          <summary className="cursor-pointer font-semibold">ফরম্যাটিং</summary>
-          <p className="mt-2 text-xs text-slate-500">MCQ অপশন স্টাইল</p>
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            {[["circle", "গোল"], ["dot", "ক."], ["paren", "(ক)"], ["close", "ক)"]].map(([k, l]) => (
-              <button key={k} className={chip(cfg.style === k)} onClick={() => setCfg({ ...cfg, style: k })}>{l}</button>
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-slate-500">MCQ অপশন কলাম</p>
-          <div className="mt-1 flex gap-1.5">
-            {[1, 2, 3, 4].map((n) => <button key={n} className={chip(cfg.optCols === n)} onClick={() => setCfg({ ...cfg, optCols: n })}>{n}</button>)}
-          </div>
-        </details>
-      </aside>
-
-      {/* মূল প্রশ্নপত্র (প্রিভিউ) */}
-      <section className="overflow-x-auto">
-        <div id="paper" className="mx-auto w-full max-w-[820px] bg-white p-6 text-black shadow print:max-w-none print:p-0 print:shadow-none font-sans">
-          
-          {/* হেডার */}
-          <div className="text-center border-b-2 border-black pb-2 mb-4">
-            {show.title && <h2 className="text-lg font-bold" contentEditable={edit} suppressContentEditableWarning>{info.inst || "প্রতিষ্ঠানের নাম"}</h2>}
-            {info.exam && <p className="text-sm font-semibold">{info.exam}</p>}
-            <div className="flex justify-between text-xs mt-1">
-              <span>{show.cls && uniq((q) => q.category || "")}</span>
-              <span>বিষয়: {uniq((q) => q.subject || "")}</span>
-              <span>সময়: {info.minutes || "..."} মিনিট</span>
-              <span>পূর্ণমান: {info.marks || "..."}</span>
             </div>
+          </section>
+          <div data-noprint className="mb-4 flex flex-wrap items-center gap-2">
+            <Link
+              href="/question-builder"
+              className="inline-flex items-center gap-1 rounded-xl border bg-white px-3 py-2 text-sm"
+            >
+              <Plus size={16} /> আরও প্রশ্ন যুক্ত করুন
+            </Link>
+            {(["ক", "খ"] as const).map((name) => (
+              <button
+                key={name}
+                aria-pressed={s.setName === name}
+                onClick={() => update({ ...s, setName: name })}
+                className={`rounded-xl border px-4 py-2 text-sm ${s.setName === name ? "bg-slate-900 text-white" : "bg-white"}`}
+              >
+                সেট {name}
+              </button>
+            ))}
+            <button
+              onClick={() =>
+                update({ ...s, seed: Math.floor(Math.random() * 999999) + 1 })
+              }
+              className="inline-flex items-center gap-1 rounded-xl border bg-white px-3 py-2 text-sm"
+            >
+              <Shuffle size={15} /> এলোমেলো
+            </button>
+            {s.seed > 0 && (
+              <button
+                onClick={() => update({ ...s, seed: 0 })}
+                className="text-sm underline"
+              >
+                ক্রম রিসেট
+              </button>
+            )}
           </div>
-
-          {show.instr && info.instr && <p className="mb-3 text-[11px] italic">{info.instr}</p>}
-
-          {/* 🎯 ক-বিভাগ: বহুনির্বাচনি (MCQ) */}
-          {cfg.format !== "ans" && viewMcqs.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-center font-bold text-sm border-b border-black inline-block mx-auto mb-2">ক-বিভাগ: বহুনির্বাচনি প্রশ্ন</h3>
-              <div style={{ columnCount: cfg.cols, columnGap: "20px" }}>
-                {viewMcqs.map(({ q, opts, ci }, i) => (
-                  <div key={q.id} style={{ breakInside: "avoid" }} className="mb-3 text-[13px] leading-snug">
-                    <p contentEditable={edit} suppressContentEditableWarning>
-                      <b>{i + 1}.</b> {edit ? q.text : <MathText text={q.text} />}
-                    </p>
-                    {opts.length > 0 && (
-                      <div className="mt-1 grid gap-x-3 gap-y-1" style={{ gridTemplateColumns: `repeat(${cfg.optCols}, minmax(0, 1fr))` }}>
-                        {opts.map((o, k) => (
-                          <p key={k} className="flex items-start gap-1.5">
-                            {tag(k, k === ci)}
-                            <span contentEditable={edit} suppressContentEditableWarning>{edit ? o : <MathText text={o} />}</span>
-                          </p>
+          {s.show.divisions && (
+            <label data-noprint className="mb-4 block text-sm">
+              CQ বিভাগ ফিল্টার
+              <select
+                className={`${input} mt-1`}
+                value={division}
+                onChange={(e) => {
+                  setDivision(e.target.value);
+                  update({
+                    ...s,
+                    cfg: { ...s.cfg, divisionFilter: e.target.value },
+                  });
+                }}
+              >
+                <option value="">সব বিভাগ</option>
+                {divisions.map((d) => (
+                  <option key={d}>{d}</option>
+                ))}
+              </select>
+            </label>
+          )}
+          {edit && (
+            <section
+              data-noprint
+              className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"
+            >
+              <h2 className="font-bold">প্রশ্ন সম্পাদনা ও সংযুক্তি</h2>
+              <p className="mb-3 text-xs text-slate-500">
+                পরিবর্তন এই প্রশ্নপত্রেই থাকবে; মূল প্রশ্নব্যাংক বদলাবে না।
+              </p>
+              <div className="max-h-[500px] space-y-3 overflow-y-auto">
+                {data.map((q, i) => (
+                  <details
+                    key={q.id}
+                    className="rounded-xl border bg-white p-3"
+                  >
+                    <summary className="cursor-pointer text-sm font-semibold">
+                      {i + 1}। {q.text.slice(0, 70)}…
+                    </summary>
+                    <div className="mt-3 space-y-2">
+                      <label className="block text-xs">
+                        প্রশ্নের লেখা
+                        <textarea
+                          className={input}
+                          value={q.text}
+                          onChange={(e) =>
+                            questionEdit(q, { text: e.target.value })
+                          }
+                        />
+                      </label>
+                      {questionType(q) === "CQ" && (
+                        <>
+                          <label className="block text-xs">
+                            উদ্দীপক
+                            <textarea
+                              className={input}
+                              value={q.stimulus || q.text}
+                              onChange={(e) =>
+                                questionEdit(q, { stimulus: e.target.value })
+                              }
+                            />
+                          </label>
+                          {Object.entries(q.subQuestions || {}).map(
+                            ([key, val]) => (
+                              <label key={key} className="block text-xs">
+                                উপপ্রশ্ন {key}
+                                <textarea
+                                  className={input}
+                                  value={val}
+                                  onChange={(e) =>
+                                    questionEdit(q, {
+                                      subQuestions: {
+                                        ...q.subQuestions!,
+                                        [key]: e.target.value,
+                                      },
+                                    })
+                                  }
+                                />
+                              </label>
+                            ),
+                          )}
+                        </>
+                      )}
+                      {questionType(q) === "MCQ" &&
+                        Object.entries(q.options || {}).map(([key, val]) => (
+                          <label key={key} className="block text-xs">
+                            অপশন {key}
+                            <input
+                              className={input}
+                              value={val}
+                              onChange={(e) =>
+                                questionEdit(q, {
+                                  options: {
+                                    ...q.options,
+                                    [key]: e.target.value,
+                                  },
+                                })
+                              }
+                            />
+                          </label>
                         ))}
-                      </div>
-                    )}
-                  </div>
+                      <label className="block text-xs">
+                        ছবির HTTPS URL
+                        <input
+                          className={input}
+                          type="url"
+                          value={s.attachments[q.id]?.image || ""}
+                          onChange={(e) =>
+                            attachment(q.id, { image: e.target.value })
+                          }
+                        />
+                      </label>
+                      {s.attachments[q.id]?.image &&
+                        !safeImage(s.attachments[q.id].image) && (
+                          <p className="text-xs text-red-600">
+                            সঠিক HTTPS ছবির URL দিন।
+                          </p>
+                        )}
+                      {questionType(q) === "CQ" && (
+                        <label className="block text-xs">
+                          বিভাগের নাম
+                          <input
+                            className={input}
+                            value={s.attachments[q.id]?.division || ""}
+                            placeholder={q.topic || "সাধারণ বিভাগ"}
+                            onChange={(e) =>
+                              attachment(q.id, { division: e.target.value })
+                            }
+                          />
+                        </label>
+                      )}
+                      <label className="flex gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={s.attachments[q.id]?.important || false}
+                          onChange={(e) =>
+                            attachment(q.id, { important: e.target.checked })
+                          }
+                        />{" "}
+                        গুরুত্বপূর্ণ প্রশ্ন
+                      </label>
+                      <button
+                        onClick={() => {
+                          const edits = { ...s.edits };
+                          delete edits[q.id];
+                          update({ ...s, edits });
+                        }}
+                        className="text-xs text-emerald-700 underline"
+                      >
+                        প্রশ্নের মূল লেখা ফিরিয়ে আনুন
+                      </button>
+                    </div>
+                  </details>
                 ))}
               </div>
-            </div>
+            </section>
           )}
-
-          {/* 🎯 খ-বিভাগ: সংক্ষিপ্ত প্রশ্ন (SQ) */}
-          {cfg.format !== "ans" && viewSqs.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-center font-bold text-sm border-b border-black inline-block mx-auto mb-2">খ-বিভাগ: সংক্ষিপ্ত প্রশ্ন</h3>
-              <div style={{ columnCount: cfg.cols, columnGap: "20px" }}>
-                {viewSqs.map((q, i) => (
-                  <div key={q.id} style={{ breakInside: "avoid" }} className="mb-2 text-[13px] leading-snug flex gap-1">
-                    <b>{i + 1}.</b> <span contentEditable={edit} suppressContentEditableWarning>{edit ? q.text : <MathText text={q.text} />}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {s.show.duplicates && duplicates.size > 0 && (
+            <p
+              data-noprint
+              className="mb-3 flex items-center gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-800"
+            >
+              <AlertCircle size={16} />
+              {duplicates.size}টি পুনরাবৃত্ত প্রশ্ন চিহ্নিত হয়েছে।
+            </p>
           )}
-
-          {/* 🎯 গ-বিভাগ: সৃজনশীল প্রশ্ন (CQ) */}
-          {cfg.format !== "ans" && viewCqs.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-center font-bold text-sm border-b border-black inline-block mx-auto mb-2">গ-বিভাগ: সৃজনশীল প্রশ্ন</h3>
-              <div className="space-y-4">
-                {viewCqs.map((q, i) => (
-                  <div key={q.id} className="text-[13px] leading-snug border-b border-dashed border-gray-300 pb-2">
-                    <b>{i + 1}.</b> <span contentEditable={edit}><MathText text={q.stimulus || q.text || ""} /></span>
-                    {q.subQuestions && (
-                      <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-1 pl-2">
-                        <p><b>(ক)</b> <MathText text={q.subQuestions.k} /></p>
-                        <p><b>(খ)</b> <MathText text={q.subQuestions.kh} /></p>
-                        <p><b>(গ)</b> <MathText text={q.subQuestions.g} /></p>
-                        <p><b>(ঘ)</b> <MathText text={q.subQuestions.gh} /></p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* উত্তরমালা */}
-          {showKey && (
-            <div className="mt-4 border-t border-black pt-2" style={keyOnNewPage ? { breakBefore: "page", pageBreakBefore: "always" } : undefined}>
-              <p className="text-sm font-bold">উত্তরমালা (ক-বিভাগ): সেট {setName}</p>
-              <div className="mt-1 grid grid-cols-5 gap-x-3 gap-y-0.5 text-xs">
-                {viewMcqs.map((v, i) => v.ci >= 0 && <span key={i}>{i + 1}. {L[v.ci]}</span>)}
-              </div>
-            </div>
-          )}
-
+          <div
+            className={`paper-preview-scroll ${s.cfg.format === "ans" ? "paper-answer-only" : ""}`}
+            ref={previewRef}
+            id="paper"
+          >
+            {(s.show.autoSet ? ["ক", "খ"] : [s.setName]).map((name) => (
+              <div key={name}>{sections(name)}</div>
+            ))}
+          </div>
+          <p
+            data-noprint
+            className="mt-4 text-xs leading-relaxed text-slate-500"
+          >
+            PDF পেতে Print → Save as PDF বেছে নিন। Paper size: {s.cfg.paper},
+            scale: 100%, margins: None, browser headers/footers: Off।
+          </p>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

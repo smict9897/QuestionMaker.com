@@ -10,7 +10,7 @@ export default function QbSavedList({ papers }: { papers: SavedPaper[] }) {
   function open(p: SavedPaper) {
     try {
       localStorage.setItem("qb:selected", JSON.stringify(p.ids));
-      if (p.settings) localStorage.setItem("qb:settings", JSON.stringify(p.settings));
+      localStorage.setItem("qb:settings", JSON.stringify(p.settings ?? {}));
     } catch {}
     router.push("/question-builder/build");
   }
