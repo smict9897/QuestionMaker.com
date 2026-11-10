@@ -257,3 +257,35 @@
 .booklet-output {
   display: none;
 }
+
+/* One shared equals column across every step, including wrapped right-hand text. */
+.paper-answer-part {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4em;
+  margin-bottom: 0.45em;
+}
+.paper-answer-label {
+  flex-shrink: 0;
+}
+.paper-answer-content {
+  min-width: 0;
+  flex: 1;
+}
+.paper-equation-steps {
+  display: grid;
+  grid-template-columns: fit-content(45%) auto minmax(0, 1fr);
+  column-gap: 0.3em;
+  margin-bottom: 0.25em;
+}
+.paper-equation-row {
+  display: contents;
+}
+.paper-equation-left,
+.paper-equation-right {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.paper-equation-equals {
+  align-self: start;
+}
