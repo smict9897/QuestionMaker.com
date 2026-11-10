@@ -109,3 +109,38 @@ test("CQ SQ column control is exposed and defaults to one", () => {
     /cqColumns: number\(1, 1, 3\)/,
   );
 });
+
+test("CQ groups fall back to ALL available groups for stale saved filters", () => {
+  assert.deepEqual(
+    lib.cqDivisionGroups(true, "Old chapter", ["New algebra", "Geometry"]),
+    ["New algebra", "Geometry"],
+  );
+  assert.deepEqual(lib.cqDivisionGroups(true, "", ["New algebra"]), [
+    "New algebra",
+  ]);
+  assert.deepEqual(
+    lib.cqDivisionGroups(true, "New algebra", ["New algebra", "Geometry"]),
+    ["New algebra"],
+  );
+  assert.deepEqual(
+    lib.cqDivisionGroups(false, "Old chapter", ["New algebra"]),
+    [""],
+  );
+  assert.deepEqual(lib.cqDivisionGroups(true, "Old chapter", []), [""]);
+});
+test("fresh paper clears the prior CQ filter but keeps layout/header settings", () => {
+  const old = {
+    cfg: { divisionFilter: "Old chapter", cqColumns: 2, cols: 2 },
+    show: { divisions: true },
+    header: { enabled: true },
+    excludedIds: ["q"],
+    edits: { q: { text: "old" } },
+  };
+  const next = lib.freshPaperSettings(old);
+  assert.equal(next.cfg.divisionFilter, "");
+  assert.equal(next.cfg.cqColumns, 2);
+  assert.deepEqual(next.header, old.header);
+  assert.deepEqual(next.excludedIds, []);
+  assert.deepEqual(next.edits, {});
+  assert.equal(old.cfg.divisionFilter, "Old chapter");
+});

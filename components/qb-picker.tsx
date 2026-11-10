@@ -1,6 +1,9 @@
 "use client";
 
-import { toggleVisibleSelection } from "@/lib/paper-sections";
+import {
+  toggleVisibleSelection,
+  freshPaperSettings,
+} from "@/lib/paper-sections";
 import React, { useState } from "react";
 import { Search, CheckSquare, Square, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -95,9 +98,10 @@ export default function QbPicker({
         const settings = JSON.parse(
           localStorage.getItem("qb:settings") || "{}",
         );
-        settings.excludedIds = [];
-        settings.edits = {};
-        localStorage.setItem("qb:settings", JSON.stringify(settings));
+        localStorage.setItem(
+          "qb:settings",
+          JSON.stringify(freshPaperSettings(settings)),
+        );
       }
       localStorage.setItem("qb:selected", JSON.stringify(ids));
     } catch {
