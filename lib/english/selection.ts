@@ -102,16 +102,41 @@ export function resolveEnglishSelection(raw: unknown) {
   };
 }
 export function englishSubjectRoute(category: string, subject: string) {
-  if (!/english|ইংরেজি/i.test(subject)) return null;
-  const numeric = /^Class\s*(\d+)$|^(\d+)$/i.exec(category);
+  if (!/english|ইংরেজ[িী]/i.test(subject)) return null;
+  const normalized = category
+    .trim()
+    .replace(/[০-৯]/g, (d) => String("০১২৩৪৫৬৭৮৯".indexOf(d)))
+    .replace(/[–—]/g, "-")
+    .toLowerCase();
+  const names: Record<string, number> = {
+    ষষ্ঠ: 6,
+    সপ্তম: 7,
+    অষ্টম: 8,
+    নবম: 9,
+    দশম: 10,
+    একাদশ: 11,
+    দ্বাদশ: 12,
+  };
+  const named = Object.entries(names).find(
+    ([name]) =>
+      normalized === name ||
+      normalized === `${name} শ্রেণি` ||
+      normalized === `${name} শ্রেণী`,
+  );
+  const numeric =
+    /^(?:class\s*|শ্রেণ[িী]\s*)?(\d{1,2})(?:\s*(?:শ্রেণ[িী]))?$/.exec(
+      normalized,
+    );
   const grade = numeric
-    ? Number(numeric[1] || numeric[2])
-    : /HSC|11|12/.test(category)
-      ? 11
-      : /SSC|9|10/.test(category)
+    ? Number(numeric[1])
+    : named
+      ? named[1]
+      : /^(?:class\s*)?9\s*-\s*10$|^ssc$|^এসএসসি$/.test(normalized)
         ? 9
-        : NaN;
+        : /^(?:class\s*)?11\s*-\s*12$|^hsc$|^এইচএসসি$/.test(normalized)
+          ? 11
+          : NaN;
   if (!Number.isInteger(grade) || grade < 6 || grade > 12) return null;
-  const paper = /2|২|grammar/i.test(subject) ? 2 : 1;
+  const paper = /2|২|second|grammar|ব্যাকরণ|\bii\b/i.test(subject) ? 2 : 1;
   return `/question-builder/english?grade=${grade}&paper=${paper}`;
 }

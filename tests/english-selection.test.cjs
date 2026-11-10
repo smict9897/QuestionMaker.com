@@ -114,3 +114,31 @@ test("explicit class 10 and 12 routes retain the selected grade", () => {
     "/question-builder/english?grade=12&paper=2",
   );
 });
+test("English routes support every grade, Bengali digits/names, grouped classes and second-paper labels", () => {
+  for (let grade = 6; grade <= 12; grade++) {
+    for (const category of [
+      String(grade),
+      `Class ${grade}`,
+      `শ্রেণি ${String(grade).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[d])}`,
+    ]) {
+      assert.equal(
+        route(category, "English First Paper"),
+        `/question-builder/english?grade=${grade}&paper=1`,
+      );
+      assert.equal(
+        route(category, "English Second Paper"),
+        `/question-builder/english?grade=${grade}&paper=2`,
+      );
+    }
+  }
+  assert.equal(
+    route("অষ্টম শ্রেণি", "ইংরেজী ২য় পত্র"),
+    "/question-builder/english?grade=8&paper=2",
+  );
+  assert.equal(
+    route("Class 11–12", "English II"),
+    "/question-builder/english?grade=11&paper=2",
+  );
+  assert.equal(route("Class 19", "English"), null);
+  assert.equal(route("Job 12", "English"), null);
+});

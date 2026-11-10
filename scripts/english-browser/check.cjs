@@ -20,7 +20,7 @@ const { chromium } = require("playwright-core"),
     await page.getByLabel("Requested topic (required)").fill("School life");
     await page.getByRole("button", { name: "প্রশ্নপত্র তৈরি করুন" }).click();
     await page.waitForFunction(() =>
-      window.lastRoute?.includes("/english/edit?key=mock"),
+      window.lastRoute?.includes("/build?englishKey=mock"),
     );
     for (const grade of [6, 7, 8, 9, 10, 11, 12])
       for (const paper of [1, 2]) {
@@ -29,6 +29,26 @@ const { chromium } = require("playwright-core"),
         );
         await page.locator("#paper .english-task").first().waitFor();
         await page.setViewportSize({ width: 390, height: 844 });
+        if (grade === 6 && paper === 1) {
+          await page
+            .getByRole("button", { name: "⚙ Page Setup / সেটিংস", exact: true })
+            .click();
+          const panel = page.getByRole("dialog");
+          await panel.getByLabel("ফন্ট সাইজ", { exact: true }).fill("16");
+          await panel
+            .getByRole("button", { name: "মাঝে", exact: true })
+            .click();
+          assert.equal(
+            await page.locator("#paper").evaluate((el) => el.style.fontSize),
+            "16pt",
+          );
+          assert.equal(
+            await page.locator("#paper").evaluate((el) => el.style.textAlign),
+            "center",
+          );
+          await panel.getByRole("button", { name: "সেটিংস বন্ধ করুন" }).click();
+        }
+
         assert.ok(
           await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth + 1,
