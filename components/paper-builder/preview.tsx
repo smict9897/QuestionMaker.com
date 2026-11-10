@@ -322,12 +322,15 @@ export default function PaperPreview({
           root
             .querySelector<HTMLElement>("[data-measure-header]")
             ?.getBoundingClientRect().height || 0;
-        const available = ((height - 24) * 96) / 25.4 - h - 28;
+        const continuationAvailable = ((height - 24) * 96) / 25.4 - 28;
+        const available = continuationAvailable - h;
         const blocks = Array.from(
           root.querySelectorAll<HTMLElement>("[data-measure-question]"),
         ).map((el) => el.getBoundingClientRect().height);
-        setOversized(blocks.some((v) => v > available));
-        setPages(paginate(blocks, Math.max(50, available), cols));
+        setOversized(blocks.some((v) => v > continuationAvailable));
+        setPages(
+          paginate(blocks, Math.max(50, available), cols, Math.max(50, continuationAvailable)),
+        );
       });
     };
     const observer = new ResizeObserver(calculate);
@@ -404,7 +407,7 @@ export default function PaperPreview({
                 </div>
               )}
               <div className="relative z-[1]">
-                {header}
+                {page === 0 && header}
                 <div
                   style={{
                     display: "grid",
