@@ -111,3 +111,35 @@ test("Bengali math numerals normalize without changing prose", () => {
     "প্রশ্ন ০১: 1/2 এবং $3+4$",
   );
 });
+
+test("custom watermark persists when toggled off and back on", () => {
+  const s = defaults();
+  s.show.watermark = true;
+  s.info.watermark = "আমার বিদ্যালয়";
+  const restored = restoreSettings(JSON.parse(JSON.stringify(s)));
+  assert.equal(restored.info.watermark, "আমার বিদ্যালয়");
+  restored.show.watermark = false;
+  const disabled = restoreSettings(JSON.parse(JSON.stringify(restored)));
+  assert.equal(disabled.info.watermark, "আমার বিদ্যালয়");
+});
+
+test("settings panel exposes a labelled watermark input only when enabled", () => {
+  const React = require("react");
+  const { renderToStaticMarkup } = require("react-dom/server");
+  const panel = new Module("paper-settings");
+  panel.require = require;
+  panel._compile(
+    ts.transpileModule(fs.readFileSync("components/paper-builder/settings.tsx", "utf8"), {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
+    }).outputText,
+    "paper-settings.js",
+  );
+  const settings = defaults();
+  const props = { settings, update: () => {}, edit: false, setEdit: () => {}, open: false, onClose: () => {}, counts: { MCQ: 0, CQ: 0, SHORT: 0 }, onPrint: () => {} };
+  assert(!renderToStaticMarkup(React.createElement(panel.exports.default, props)).includes("জলছাপের নাম / লেখা"));
+  settings.show.watermark = true;
+  settings.info.watermark = "আমার বিদ্যালয়";
+  const html = renderToStaticMarkup(React.createElement(panel.exports.default, props));
+  assert(html.includes("জলছাপের নাম / লেখা"));
+  assert(html.includes('value="আমার বিদ্যালয়"'));
+});
