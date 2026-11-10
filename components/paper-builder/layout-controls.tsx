@@ -127,14 +127,15 @@ export default function LayoutControls({
           </select>
         </label>
         <Toggle
-          label="বুকলেট প্রিন্ট — ভাঁজ করার পৃষ্ঠা ক্রম"
+          label="আলাদা বুকলেট প্রিন্ট বাটন দেখান"
           checked={s.cfg.booklet}
           onChange={(v) => cfg("booklet", v)}
         />
         {s.cfg.booklet && (
           <p className="text-xs text-slate-500">
-            প্রিন্টে প্রতি পাশে ২ পৃষ্ঠা; ৪-এর গুণিতকে খালি পৃষ্ঠা যোগ হবে। দুই
-            পাশে প্রিন্টে short-edge flip বাছুন। প্রিন্টারের সেটিং পরীক্ষা করুন।
+            সাধারণ ডাউনলোড পূর্ণ আকারেই থাকবে। বুকলেট বাটনে প্রতি পাশে ২ পৃষ্ঠা;
+            ৪-এর গুণিতকে খালি পৃষ্ঠা যোগ হবে। দুই পাশে প্রিন্টে short-edge flip
+            বাছুন। প্রিন্টারের সেটিং পরীক্ষা করুন।
           </p>
         )}
         <Toggle

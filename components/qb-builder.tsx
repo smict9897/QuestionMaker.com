@@ -259,7 +259,11 @@ export default function QbBuilder({
       },
     });
   }
-  async function print() {
+  const printCleanup = useRef<(() => void) | null>(null);
+  useEffect(() => () => printCleanup.current?.(), []);
+  async function print(mode: "normal" | "booklet" = "normal") {
+    // Never let a cancelled/stale booklet session affect a normal PDF.
+    printCleanup.current?.();
     setOpen(false);
     await document.fonts.ready;
     await Promise.all(
@@ -268,7 +272,7 @@ export default function QbBuilder({
       ).map((img) => img.decode().catch(() => {})),
     );
     await new Promise((resolve) => setTimeout(resolve, 150));
-    if (!s.cfg.booklet) {
+    if (mode === "normal") {
       window.print();
       return;
     }
@@ -309,9 +313,11 @@ export default function QbBuilder({
       printStyle.remove();
       document.body.classList.remove("booklet-print");
       window.removeEventListener("afterprint", cleanup);
+      if (printCleanup.current === cleanup) printCleanup.current = null;
     };
     document.body.append(output, printStyle);
     document.body.classList.add("booklet-print");
+    printCleanup.current = cleanup;
     window.addEventListener("afterprint", cleanup);
     window.print();
   }
@@ -528,7 +534,7 @@ export default function QbBuilder({
             {items.length}টি প্রশ্ন · {s.cfg.paper} · প্রিন্ট-রেডি প্রিভিউ
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setOpen(true)}
             className="inline-flex items-center gap-2 rounded-xl border bg-white px-4 py-3 font-semibold lg:hidden"
@@ -536,11 +542,26 @@ export default function QbBuilder({
             <Settings2 size={18} /> সেটিংস
           </button>
           <button
-            onClick={print}
+            onClick={() => void print("normal")}
             className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 font-bold text-white"
           >
             <Download size={18} /> ডাউনলোড
           </button>
+          {s.cfg.booklet && (
+            <button
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "এটি সাধারণ PDF নয়: প্রতি পাশে ২টি ছোট পৃষ্ঠা ও প্রয়োজনে ফাঁকা পৃষ্ঠা থাকবে। প্রিন্টে Landscape ও short-edge flip বেছে নিন। বুকলেট তৈরি করবেন?",
+                  )
+                )
+                  void print("booklet");
+              }}
+              className="rounded-xl border border-amber-500 bg-amber-50 px-4 py-3 font-bold text-amber-900"
+            >
+              বুকলেট প্রিন্ট (২ পৃষ্ঠা/পাশ)
+            </button>
+          )}
         </div>
       </div>
       {storageError && (
@@ -564,7 +585,7 @@ export default function QbBuilder({
           counts={counts}
           supportHref={supportHref}
           tutorialHref={tutorialHref}
-          onPrint={print}
+          onPrint={() => void print("normal")}
           onUndo={undo}
           onRedo={redo}
           canUndo={history.current.past.length > 0}

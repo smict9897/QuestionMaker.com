@@ -423,6 +423,10 @@ export default function PaperPreview({
     const calculate = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
+        // Print CSS hides the measurement tree. Never repaginate from zero heights
+        // while the native print dialog is opening (especially at mobile widths).
+        if (window.matchMedia("print").matches || !root.getClientRects().length)
+          return;
         const h =
           root
             .querySelector<HTMLElement>("[data-measure-header]")
