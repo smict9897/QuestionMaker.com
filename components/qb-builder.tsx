@@ -1,4 +1,5 @@
 "use client";
+import { PAPER_SECTION_ORDER, paperSectionTitle } from "@/lib/paper-sections";
 import RichTextField from "@/components/paper-builder/rich-text-field";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
@@ -361,7 +362,7 @@ export default function QbBuilder({
   );
   function sections(setName: string) {
     const base = s.seed + (setName === "খ" ? 7919 : 0);
-    const types = ["MCQ", "SHORT", "CQ"];
+    const types = PAPER_SECTION_ORDER;
     return types.flatMap((type) => {
       const selected = shuffled(
         data.filter((q) => questionType(q) === type),
@@ -401,15 +402,7 @@ export default function QbBuilder({
             type={type}
             setName={setName}
             duplicate={duplicates}
-            title={
-              group
-                ? `${group} — সৃজনশীল প্রশ্ন`
-                : type === "MCQ"
-                  ? s.info.section
-                  : type === "CQ"
-                    ? "সৃজনশীল প্রশ্ন"
-                    : "সংক্ষিপ্ত প্রশ্ন"
-            }
+            title={paperSectionTitle(type, s.info.section, group)}
             onImageSize={(id, size) => attachment(id, { size })}
           />
         );

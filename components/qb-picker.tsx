@@ -1,5 +1,6 @@
 "use client";
 
+import { toggleVisibleSelection } from "@/lib/paper-sections";
 import React, { useState } from "react";
 import { Search, CheckSquare, Square, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -43,19 +44,12 @@ export default function QbPicker({
   };
 
   const selectAll = () => {
-    if (
-      selectedIds.length === filteredQuestions.length &&
-      filteredQuestions.length > 0
-    ) {
-      setSelectedIds([]);
-    } else {
-      const currentTabIds = filteredQuestions.map((q) => q.id);
-      // আগের সিলেক্ট করা প্রশ্নগুলোর সাথে নতুনগুলো যোগ করা
-      const newSelected = Array.from(
-        new Set([...selectedIds, ...currentTabIds]),
-      );
-      setSelectedIds(newSelected);
-    }
+    setSelectedIds((prev) =>
+      toggleVisibleSelection(
+        prev,
+        filteredQuestions.map((q) => q.id),
+      ),
+    );
   };
 
   const handleProceed = () => {
@@ -104,6 +98,9 @@ export default function QbPicker({
 
   return (
     <div className="w-full mt-4">
+      <p className="mb-2 text-sm text-emerald-700">
+        একাধিক ট্যাব থেকে একসঙ্গে প্রশ্ন বাছুন। সেটআপে ক্রম হবে MCQ → CQ → SQ।
+      </p>
       <p className="mb-3 text-xs text-slate-500">
         প্রশ্নগুলো ধরন অনুযায়ী আলাদা ট্যাবে আছে। বন্ধনীর সংখ্যা এই পাতার
         প্রশ্নসংখ্যা।
@@ -142,18 +139,6 @@ export default function QbPicker({
           </button>
           <button
             onClick={() => {
-              setActiveTab("SHORT");
-            }}
-            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition ${
-              activeTab === "SHORT"
-                ? "bg-emerald-600 text-white shadow-md"
-                : "bg-white border text-slate-700 hover:bg-slate-50"
-            }`}
-          >
-            সংক্ষিপ্ত ({tabCount("SHORT")})
-          </button>
-          <button
-            onClick={() => {
               setActiveTab("CQ");
             }}
             className={`px-5 py-2.5 rounded-xl text-sm font-bold transition ${
@@ -164,6 +149,18 @@ export default function QbPicker({
           >
             সৃজনশীল ({tabCount("CQ")})
           </button>
+          <button
+            onClick={() => {
+              setActiveTab("SHORT");
+            }}
+            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition ${
+              activeTab === "SHORT"
+                ? "bg-emerald-600 text-white shadow-md"
+                : "bg-white border text-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            সংক্ষিপ্ত ({tabCount("SHORT")})
+          </button>
         </div>
 
         {/* কন্ট্রোল বাটন */}
@@ -172,8 +169,8 @@ export default function QbPicker({
             onClick={selectAll}
             className="flex items-center gap-2 rounded-xl border border-dashed border-slate-400 bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50 transition"
           >
-            {selectedIds.length === filteredQuestions.length &&
-            filteredQuestions.length > 0 ? (
+            {filteredQuestions.length > 0 &&
+            filteredQuestions.every((q) => selectedIds.includes(q.id)) ? (
               <CheckSquare size={16} className="text-blue-600" />
             ) : (
               <Square size={16} />
