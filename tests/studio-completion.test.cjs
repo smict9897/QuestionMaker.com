@@ -21,7 +21,10 @@ function load(file, mocks = {}) {
   return m.exports;
 }
 const header = load("lib/paper-header.ts");
-const lib = load("lib/paper-builder.ts", { "@/lib/paper-header": header });
+const lib = load("lib/paper-builder.ts", {
+  "@/lib/paper-math": require("./helpers/paper-math.cjs"),
+  "@/lib/paper-header": header,
+});
 const Rich = load("components/paper-builder/rich-paper-text.tsx", {
   "@/components/MathText": {
     default: ({ text }) => React.createElement("span", null, text),
@@ -99,6 +102,10 @@ test("booklet imposition orders front/back sides and pads missing pages", () => 
 });
 
 test("manual font sizes 7 through 28 survive restore; below minimum falls back safely", () => {
-  for (const fontSize of [7,8,9,10,14,28]) assert.equal(lib.restoreSettings({cfg:{fontSize}}).cfg.fontSize,fontSize);
-  assert.equal(lib.restoreSettings({cfg:{fontSize:6}}).cfg.fontSize,14);
+  for (const fontSize of [7, 8, 9, 10, 14, 28])
+    assert.equal(
+      lib.restoreSettings({ cfg: { fontSize } }).cfg.fontSize,
+      fontSize,
+    );
+  assert.equal(lib.restoreSettings({ cfg: { fontSize: 6 } }).cfg.fontSize, 14);
 });

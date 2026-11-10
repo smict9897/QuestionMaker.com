@@ -21,7 +21,10 @@ function load(path, deps = {}) {
   return mod.exports;
 }
 const lib = load("lib/paper-header.ts");
-const builder = load("lib/paper-builder.ts", { "@/lib/paper-header": lib });
+const builder = load("lib/paper-builder.ts", {
+  "@/lib/paper-math": require("./helpers/paper-math.cjs"),
+  "@/lib/paper-header": lib,
+});
 const Preview = load("components/paper-builder/header-preview.tsx").default;
 test("all fourteen screenshot header fields exist", () =>
   assert.equal(Object.keys(lib.newHeader().fields).length, 14));
