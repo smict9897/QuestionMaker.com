@@ -369,61 +369,72 @@ export default function QbBuilder({
   function sections(setName: string) {
     const base = s.seed + (setName === "খ" ? 7919 : 0);
     const types = PAPER_SECTION_ORDER;
-    return types.flatMap((type) => {
-      const selected = shuffled(
-        data.filter((q) => questionType(q) === type),
-        base,
-      );
-      const groups =
-        type === "CQ" && s.show.divisions
-          ? division
-            ? [division]
-            : divisions
-          : [""];
-      return groups.map((group) => {
-        const qs = selected.filter(
-          (q) =>
-            !group ||
-            (s.attachments[q.id]?.division || q.topic || "সাধারণ বিভাগ") ===
-              group,
+    const parts = types
+      .flatMap((type) => {
+        const selected = shuffled(
+          data.filter((q) => questionType(q) === type),
+          base,
         );
-        if (!qs.length) return null;
-        const views: PreviewQuestion[] = qs.map((q, i) => {
-          const opts = shuffled(
-            Object.entries(q.options || {}).filter(
-              (entry): entry is [string, string] =>
-                typeof entry[1] === "string",
-            ),
-            base ? base + i + 1 : 0,
+        const groups =
+          type === "CQ" && s.show.divisions
+            ? division
+              ? [division]
+              : divisions
+            : [""];
+        return groups.map((group) => {
+          const qs = selected.filter(
+            (q) =>
+              !group ||
+              (s.attachments[q.id]?.division || q.topic || "সাধারণ বিভাগ") ===
+                group,
           );
-          return { q, opts, ci: opts.findIndex(([key]) => key === q.correct) };
+          if (!qs.length) return null;
+          const views: PreviewQuestion[] = qs.map((q, i) => {
+            const opts = shuffled(
+              Object.entries(q.options || {}).filter(
+                (entry): entry is [string, string] =>
+                  typeof entry[1] === "string",
+              ),
+              base ? base + i + 1 : 0,
+            );
+            return {
+              q,
+              opts,
+              ci: opts.findIndex(([key]) => key === q.correct),
+            };
+          });
+          return {
+            type,
+            title: paperSectionTitle(type, s.info.section, group),
+            questions: views,
+          };
         });
-        return (
-          <div
-            key={`${setName}-${type}-${group}`}
-            id={
-              setName === (s.show.autoSet ? "ক" : s.setName) &&
-              group === groups[0]
-                ? `paper-section-${type}`
-                : undefined
-            }
-          >
-            <PaperPreview
-              key={`${setName}-${type}-${group}`}
-              onQuestionAction={edit ? questionAction : undefined}
-              previewScale={previewScale}
-              s={enriched}
-              questions={views}
-              type={type}
-              setName={setName}
-              duplicate={duplicates}
-              title={paperSectionTitle(type, s.info.section, group)}
-              onImageSize={(id, size) => attachment(id, { size })}
-            />
-          </div>
-        );
-      });
-    });
+      })
+      .filter((section) => section !== null);
+    if (!parts.length) return null;
+    // Preserve the mature single-section layout; mixed papers share one pagination pass.
+    return (
+      <div
+        id={
+          parts.length === 1 && setName === (s.show.autoSet ? "ক" : s.setName)
+            ? `paper-section-${parts[0].type}`
+            : undefined
+        }
+      >
+        <PaperPreview
+          s={enriched}
+          questions={parts[0].questions}
+          type={parts[0].type}
+          title={parts[0].title}
+          sections={parts.length > 1 ? parts : undefined}
+          setName={setName}
+          duplicate={duplicates}
+          onQuestionAction={edit ? questionAction : undefined}
+          previewScale={previewScale}
+          onImageSize={(id, size) => attachment(id, { size })}
+        />
+      </div>
+    );
   }
   if (loading)
     return <p className="py-12 text-center">প্রশ্নপত্র প্রস্তুত হচ্ছে…</p>;
@@ -486,8 +497,8 @@ export default function QbBuilder({
           </button>
         ))}
         <p className="w-full text-sm text-slate-500">
-          সব নির্বাচিত অংশ নিচে আলাদা পৃষ্ঠায় আছে: MCQ → CQ → SQ। অংশ দেখতে
-          উপরের বাটনে চাপুন।
+          সব নির্বাচিত অংশ ধারাবাহিকভাবে আছে: MCQ → CQ → SQ। অংশ দেখতে উপরের
+          বাটনে চাপুন।
         </p>
       </nav>
       <div
