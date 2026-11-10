@@ -56,8 +56,25 @@ const { chromium } = require("playwright-core"),
           `overflow ${grade}/${paper}`,
         );
         await page.setViewportSize({ width: 1200, height: 900 });
+        if (grade === 6 && paper === 1) {
+          await page.getByRole("button", { name: "Undo", exact: true }).click();
+          assert.equal(
+            await page.locator("#paper").evaluate((el) => el.style.textAlign),
+            "left",
+          );
+          await page.getByRole("button", { name: "Redo", exact: true }).click();
+          assert.equal(
+            await page.locator("#paper").evaluate((el) => el.style.textAlign),
+            "center",
+          );
+        }
         const count = await page.locator("#paper .english-task").count();
         assert.ok(count >= 8);
+        if (grade >= 11 && paper === 1)
+          assert.equal(
+            await page.locator(".english-data-chart svg").count(),
+            1,
+          );
         await page.pdf({
           path: `${process.env.ENGLISH_BROWSER_OUT || "/home/user/english-browser"}/paper-${grade}-${paper}.pdf`,
           format: "A4",

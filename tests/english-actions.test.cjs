@@ -39,7 +39,11 @@ function harness() {
           ? { key: where.key, value: rows.get(where.key) }
           : null,
       updateMany: async ({ where, data }) => {
-        if (!rows.has(where.key)) return { count: 0 };
+        if (
+          !rows.has(where.key) ||
+          (where.value !== undefined && rows.get(where.key) !== where.value)
+        )
+          return { count: 0 };
         rows.set(where.key, data.value);
         return { count: 1 };
       },
@@ -173,6 +177,41 @@ test("concurrent generation requests allow only one provider call", async () => 
     ]);
     assert.equal(results.filter((r) => r.ok).length, 1);
     assert.equal(h.calls, 1);
+  } finally {
+    if (old === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = old;
+  }
+});
+test("draft save rejects stale tabs instead of silently overwriting newer edits", async () => {
+  const old = process.env.DEEPSEEK_API_KEY;
+  process.env.DEEPSEEK_API_KEY = "test-only";
+  try {
+    const h = harness(),
+      r = await h.actions.generateEnglishPaper(selection),
+      original = await h.actions.loadEnglishPaper(r.key);
+    const saved = await h.actions.saveEnglishPaper(r.key, {
+      ...original,
+      name: "Tab one",
+    });
+    assert.equal(saved.ok, true);
+    assert.ok(saved.updatedAt > original.updatedAt);
+    const stale = await h.actions.saveEnglishPaper(r.key, {
+      ...original,
+      name: "Tab two",
+    });
+    assert.equal(stale.ok, false);
+    assert.equal(stale.conflict, true);
+    assert.equal((await h.actions.loadEnglishPaper(r.key)).name, "Tab one");
+    const current = await h.actions.loadEnglishPaper(r.key);
+    assert.equal(
+      (
+        await h.actions.saveEnglishPaper(r.key, {
+          ...current,
+          name: "Reloaded",
+        })
+      ).ok,
+      true,
+    );
   } finally {
     if (old === undefined) delete process.env.DEEPSEEK_API_KEY;
     else process.env.DEEPSEEK_API_KEY = old;

@@ -47,6 +47,17 @@ const output = {
           },
         }
       : {}),
+    ...(i.id === "graph"
+      ? {
+          table: {
+            headers: ["Year", "Attendance (%)"],
+            rows: [
+              ["2025", "60%"],
+              ["2026", "75%"],
+            ],
+          },
+        }
+      : {}),
     ...(["gap-clues", "cloze-clues"].includes(i.id)
       ? { clues: ["learn", "read", "write", "speak", "listen"] }
       : {}),

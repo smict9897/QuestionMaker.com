@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { type EnglishDraft, validateEnglishDraft } from "@/lib/english/draft";
 import {
@@ -16,6 +16,7 @@ import { applyHeader } from "@/lib/paper-header";
 import { headerFieldDefinitions } from "@/lib/paper-header";
 import "./english-paper.css";
 import "./english-theme.css";
+import EnglishDataChart from "@/components/english-data-chart";
 import PaperSettingsPanel from "@/components/paper-builder/settings";
 import { currentHeader } from "@/lib/paper-header";
 export default function EnglishEditor({
@@ -30,6 +31,21 @@ export default function EnglishEditor({
     [message, setMessage] = useState(""),
     [answerMode, setAnswerMode] = useState(false),
     [dirty, setDirty] = useState(false);
+  const latest = useRef(initial),
+    past = useRef<EnglishDraft[]>([]),
+    future = useRef<EnglishDraft[]>([]);
+  function travel(direction: "undo" | "redo") {
+    const from = direction === "undo" ? past : future,
+      to = direction === "undo" ? future : past;
+    const next = from.current.pop();
+    if (!next) return;
+    to.current.push(latest.current);
+    const restored = { ...next, updatedAt: latest.current.updatedAt };
+    latest.current = restored;
+    setDraft(restored);
+    setDirty(true);
+    setMessage("পরিবর্তন সেভ করা হয়নি।");
+  }
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => {
@@ -62,6 +78,9 @@ export default function EnglishEditor({
     }
   })();
   function update(next: EnglishDraft) {
+    past.current = [...past.current.slice(-9), latest.current];
+    future.current = [];
+    latest.current = next;
     setDraft(next);
     setDirty(true);
     setMessage("পরিবর্তন সেভ করা হয়নি।");
@@ -72,8 +91,18 @@ export default function EnglishEditor({
     try {
       validateEnglishDraft(draft);
       const response = await saveEnglishPaper(draftKey, draft);
-      setMessage(response.ok ? "সেভ হয়েছে।" : response.error || "সেভ হয়নি।");
-      if (response.ok) setDirty(false);
+      if (response.ok && response.updatedAt) {
+        const changed = latest.current !== draft;
+        const saved = { ...latest.current, updatedAt: response.updatedAt };
+        latest.current = saved;
+        setDraft(saved);
+        setDirty(changed);
+        setMessage(
+          changed
+            ? "সেভ হয়েছে; সেভ চলার সময় করা নতুন পরিবর্তন এখনও সেভ হয়নি।"
+            : "সেভ হয়েছে।",
+        );
+      } else setMessage(response.error || "সেভ হয়নি।");
     } catch {
       setMessage(
         "কাঠামো, source, topic বা word limit বদলে গেছে। ঠিক করে সেভ করুন।",
@@ -106,6 +135,18 @@ export default function EnglishEditor({
           ⚙ Page Setup / সেটিংস
         </button>
         <div className="flex flex-wrap gap-4">
+          <button
+            disabled={!past.current.length || busy}
+            onClick={() => travel("undo")}
+          >
+            Undo
+          </button>
+          <button
+            disabled={!future.current.length || busy}
+            onClick={() => travel("redo")}
+          >
+            Redo
+          </button>
           <Link href="/question-builder/english/saved">আমার draft</Link>
           <Link href="/question-builder/english">নতুন প্রশ্নপত্র</Link>
           <button disabled={busy} onClick={save}>
@@ -392,6 +433,9 @@ export default function EnglishEditor({
                         </span>
                       ))}
                     </div>
+                  )}
+                  {!answerMode && task.id === "graph" && (
+                    <EnglishDataChart table={task.table} />
                   )}
                   {!answerMode && task.table && (
                     <table>

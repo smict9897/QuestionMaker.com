@@ -1,4 +1,8 @@
-import { englishGenerationPrompt, validateEnglishOutput } from "./generation";
+import { EnglishProviderError } from "./provider-error";
+import {
+  englishGenerationPrompt,
+  assembleEnglishProviderOutput,
+} from "./generation";
 /** Server-only provider adapter. Called after auth/quota reservation in english-paper action.
  * No database writes or shared-bank publication happen in this adapter.
  */
@@ -7,8 +11,7 @@ export async function requestEnglishPaper(
   options: { apiKey: string; fetcher?: typeof fetch; timeoutMs?: number },
 ) {
   const prompt = englishGenerationPrompt(selection); // Validate before spending tokens.
-  if (!options.apiKey)
-    throw new Error("English generation provider is not configured.");
+  if (!options.apiKey) throw new EnglishProviderError("CONFIGURATION");
   const controller = new AbortController();
   const timer = setTimeout(
     () => controller.abort(),
@@ -41,10 +44,18 @@ export async function requestEnglishPaper(
       },
     );
     if (!response.ok)
-      throw new Error("English generation provider request failed.");
+      throw new EnglishProviderError(
+        response.status === 401 || response.status === 403
+          ? "AUTHENTICATION"
+          : response.status === 402
+            ? "BALANCE"
+            : response.status === 429
+              ? "RATE_LIMIT"
+              : "PROVIDER",
+      );
     // Bound parser input; never log source extracts, provider content or credentials.
     const reader = response.body?.getReader();
-    if (!reader) throw new Error("Empty provider response.");
+    if (!reader) throw new EnglishProviderError("INVALID_OUTPUT");
     const chunks: Uint8Array[] = [];
     let bytes = 0;
     while (true) {
@@ -53,7 +64,7 @@ export async function requestEnglishPaper(
       bytes += next.value.byteLength;
       if (bytes > 1000000) {
         await reader.cancel();
-        throw new Error("Provider response is too large.");
+        throw new EnglishProviderError("TOO_LARGE");
       }
       chunks.push(next.value);
     }
@@ -63,14 +74,31 @@ export async function requestEnglishPaper(
       buffer.set(chunk, offset);
       offset += chunk.length;
     }
-    const envelope = JSON.parse(new TextDecoder().decode(buffer));
+    let envelope;
+    try {
+      envelope = JSON.parse(new TextDecoder().decode(buffer));
+    } catch {
+      throw new EnglishProviderError("INVALID_OUTPUT");
+    }
     const choice = envelope?.choices?.[0];
     if (
       choice?.finish_reason !== "stop" ||
       typeof choice?.message?.content !== "string"
     )
-      throw new Error("Provider returned an incomplete paper.");
-    return validateEnglishOutput(selection, JSON.parse(choice.message.content));
+      throw new EnglishProviderError("INCOMPLETE");
+    try {
+      return assembleEnglishProviderOutput(
+        selection,
+        JSON.parse(choice.message.content),
+      );
+    } catch {
+      throw new EnglishProviderError("INVALID_OUTPUT");
+    }
+  } catch (error) {
+    if (error instanceof EnglishProviderError) throw error;
+    throw new EnglishProviderError(
+      controller.signal.aborted ? "TIMEOUT" : "PROVIDER",
+    );
   } finally {
     clearTimeout(timer);
   }
