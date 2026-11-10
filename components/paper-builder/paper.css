@@ -80,11 +80,13 @@
     background: white !important;
     border: 0 !important;
   }
-  .paper-builder-root > div,
-  .paper-builder-root > div > div {
+  .paper-builder-root > div:not([data-noprint]),
+  .paper-builder-root > div > div:not([data-noprint]) {
     display: block !important;
   }
   .paper-page-viewport {
+    break-after: page;
+    page-break-after: always;
     zoom: 1 !important;
   }
   .paper-sheet {
@@ -252,4 +254,6 @@
 .paper-measure h3 {
   color: inherit;
 }
-.booklet-output{display:none}
+.booklet-output {
+  display: none;
+}
