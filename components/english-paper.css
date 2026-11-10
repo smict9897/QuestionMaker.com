@@ -1,0 +1,131 @@
+.english-workspace .english-controls button {
+  border: 1px solid #94a3b8;
+  padding: 0.5rem 1rem;
+  border-radius: 0.4rem;
+  background: #fff;
+  color: #0f172a;
+}
+.english-workspace button:disabled {
+  opacity: 0.5;
+}
+.english-paper {
+  background: white;
+  color: black;
+  margin: 24px auto;
+  padding: 16mm;
+  max-width: 210mm;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.english-paper .custom-paper-header {
+  text-align: center;
+  border-bottom: 1px solid;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+}
+.english-paper .header-institute {
+  font-size: 1.4em;
+  font-weight: bold;
+}
+.english-paper .header-exam-row {
+  display: flex;
+  justify-content: space-between;
+}
+.english-paper h2 {
+  font-weight: bold;
+  text-align: center;
+  margin: 1rem 0;
+}
+.english-task {
+  margin-bottom: 1rem;
+}
+.english-passage {
+  white-space: pre-wrap;
+  margin-bottom: 1rem;
+}
+.english-question-heading {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+.english-question-heading > strong {
+  flex: 1;
+  white-space: pre-wrap;
+}
+.english-paper ol {
+  list-style: lower-alpha;
+  padding-left: 1.5rem;
+}
+.english-paper li {
+  white-space: pre-wrap;
+  margin: 0.3rem 0;
+}
+.english-paper .english-options {
+  list-style: lower-roman;
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+.english-clues {
+  display: flex;
+  flex-wrap: wrap;
+  border: 1px solid;
+  margin: 0.5rem 0;
+}
+.english-clues > span {
+  padding: 0.3rem 0.7rem;
+}
+.english-paper table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+}
+.english-paper th,
+.english-paper td {
+  border: 1px solid;
+  padding: 0.3rem;
+  white-space: pre-wrap;
+}
+.english-paper tr {
+  break-inside: avoid;
+}
+.english-paper thead {
+  display: table-header-group;
+}
+@media (max-width: 640px) {
+  .english-paper {
+    padding: 5mm;
+  }
+  .english-paper .english-options {
+    gap: 1rem;
+  }
+}
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  .english-controls {
+    display: none !important;
+  }
+  .english-workspace {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+  .english-paper {
+    padding: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+  .english-question-heading,
+  .english-paper h2 {
+    break-after: avoid;
+  }
+  .english-paper .custom-paper-header {
+    break-inside: avoid;
+  }
+  .english-paper table {
+    font-size: inherit;
+  }
+}

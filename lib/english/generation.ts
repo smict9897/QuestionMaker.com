@@ -65,6 +65,8 @@ export function validateEnglishOutput(
       task.table.rows.some((row) => row.length !== task.table!.headers.length)
     )
       throw new Error("Table row width does not match headers.");
+    if (item.id === "mcq" && task.subitems.length === 0)
+      throw new Error("MCQ must contain questions.");
     if (
       item.id === "mcq" &&
       task.subitems.some((s) => !s.options || new Set(s.options).size !== 4)
@@ -72,8 +74,11 @@ export function validateEnglishOutput(
       throw new Error("MCQ requires four distinct options per subitem.");
     if (item.id !== "mcq" && task.subitems.some((s) => s.options))
       throw new Error("Unexpected multiple-choice options.");
-    if (item.id === "substitution" && !task.table)
-      throw new Error("Substitution task requires a table.");
+    if (
+      ["substitution", "information", "matching", "graph"].includes(item.id) &&
+      !task.table
+    )
+      throw new Error("This exercise requires a structured table.");
     if (
       (item.id === "gap-clues" || item.id === "cloze-clues") &&
       !task.clues?.length

@@ -1,3 +1,4 @@
+export const maxDuration = 120;
 import EnglishSetup from "@/components/english-setup";
 export const metadata = { title: "English printable paper — 2027 practice" };
 export default async function EnglishPage({

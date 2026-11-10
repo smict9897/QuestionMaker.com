@@ -103,11 +103,14 @@ export function resolveEnglishSelection(raw: unknown) {
 }
 export function englishSubjectRoute(category: string, subject: string) {
   if (!/english|ইংরেজি/i.test(subject)) return null;
-  const grade = /HSC|11|12/.test(category)
-    ? 11
-    : /SSC|9|10/.test(category)
-      ? 9
-      : Number(category.replace(/^Class\s*/i, ""));
+  const numeric = /^Class\s*(\d+)$|^(\d+)$/i.exec(category);
+  const grade = numeric
+    ? Number(numeric[1] || numeric[2])
+    : /HSC|11|12/.test(category)
+      ? 11
+      : /SSC|9|10/.test(category)
+        ? 9
+        : NaN;
   if (!Number.isInteger(grade) || grade < 6 || grade > 12) return null;
   const paper = /2|২|grammar/i.test(subject) ? 2 : 1;
   return `/question-builder/english?grade=${grade}&paper=${paper}`;

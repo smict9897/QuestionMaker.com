@@ -1,6 +1,6 @@
 import { englishGenerationPrompt, validateEnglishOutput } from "./generation";
-/** Server-only provider adapter. Call only after auth/quota reservation in a future action.
- * Not exposed as an action/API yet; no database writes or shared-bank publication here.
+/** Server-only provider adapter. Called after auth/quota reservation in english-paper action.
+ * No database writes or shared-bank publication happen in this adapter.
  */
 export async function requestEnglishPaper(
   selection: unknown,
@@ -36,7 +36,7 @@ export async function requestEnglishPaper(
           ],
           response_format: { type: "json_object" },
           temperature: 0.4,
-          max_tokens: 16000,
+          max_tokens: 8192,
         }),
       },
     );
