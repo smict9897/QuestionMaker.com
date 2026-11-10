@@ -22,7 +22,7 @@ export async function register(_: string, fd: FormData): Promise<string> {
   if (await db.user.findUnique({ where: { email } })) return "This email already has an account. Log in instead.";
   await db.user.create({ data: {
     email, name: p.data.name, passwordHash: await bcrypt.hash(p.data.password, 10),
-    role: email === process.env.ADMIN_EMAIL?.toLowerCase() ? "ADMIN" : "STUDENT",
+    role: "STUDENT", // Email/password registration never grants elevated privileges.
   } });
   return login("", fd);
 }

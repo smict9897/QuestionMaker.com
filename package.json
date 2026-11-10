@@ -3,9 +3,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma db push && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:security": "node --test tests/*.test.cjs",
+    "typecheck": "tsc --noEmit --incremental false",
+    "db:security-deploy": "prisma db execute --file scripts/security-schema.sql --schema prisma/schema.prisma"
   },
   "dependencies": {
     "next": "^15",

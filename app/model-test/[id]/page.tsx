@@ -217,7 +217,7 @@ export default async function ModelTestPage({
     <ModelTestClient
       testId={test.id}
       examTitle={test.title}
-      questions={questions}
+      questions={questions.map((q) => ({ ...q, correctAnswer: -1, explanation: undefined }))}
       minutes={test.minutes}
       defaultName={session.user.name || user.name || ""}
     />

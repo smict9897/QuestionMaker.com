@@ -15,9 +15,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Missing ID." }, { status: 400 });
     }
 
-    // 🎯 আপনার ডাটাবেজে যে নামেই মডেল থাকুক, (db as any) দিলে এরর আসবে না।
-    // তবে আপনি যদি নিশ্চিত হন আপনার মডেলের নাম (যেমন: examResult), তবে (db as any).leaderboard এর জায়গায় db.examResult লিখতে পারেন।
-    await (db as any).leaderboard.delete({
+    await db.examLeaderboard.delete({
       where: { id },
     });
 

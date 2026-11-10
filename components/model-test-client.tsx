@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import LiveExamPlayer, { ExamQuestion, StudentInfo, AttemptResult } from "@/components/LiveExamPlayer";
-import { submitModelTestAttempt } from "@/app/actions/model-test-attempt";
+import { submitModelTestAttempt, startModelTestAttempt } from "@/app/actions/model-test-attempt";
 
 type Props = {
   testId: string;
@@ -20,7 +20,7 @@ export default function ModelTestClient({ testId, examTitle, questions, minutes,
     : undefined;
 
   async function handleSubmit(result: AttemptResult) {
-    await submitModelTestAttempt({
+    const response = await submitModelTestAttempt({
       testId,
       studentName: result.studentName,
       studentClass: result.studentClass,
@@ -32,6 +32,7 @@ export default function ModelTestClient({ testId, examTitle, questions, minutes,
       warnings: result.warnings,
       answers: result.answers,
     });
+    if (!response.success) throw new Error(response.error);
     router.refresh();
   }
 
@@ -43,6 +44,7 @@ export default function ModelTestClient({ testId, examTitle, questions, minutes,
       studentInfo={initialInfo}
       antiCheat
       leaderboardUrl={`/api/model-test-leaderboard?testId=${testId}`}
+      onStart={() => startModelTestAttempt(testId)}
       onSubmit={handleSubmit}
     />
   );

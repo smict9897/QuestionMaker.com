@@ -1,0 +1,17 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const ts = require('typescript');
+const fs = require('node:fs');
+const Module = require('node:module');
+const compiled = ts.transpileModule(fs.readFileSync('lib/exam-score.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } });
+const mod = new Module('exam-score');
+mod._compile(compiled.outputText, 'exam-score.js');
+const { scoreExam } = mod.exports;
+const questions = [{ options: ['a', 'b'], correctAnswer: 1 }, { options: ['a', 'b'], correctAnswer: 0 }];
+test('scores using the stored answer key', () => assert.deepEqual(scoreExam(questions, { 0: 1, 1: 0 }), { score: 2, total: 2, answers: { 0: 1, 1: 0 } }));
+test('wrong and omitted answers earn no marks', () => assert.equal(scoreExam(questions, { 0: 0 }).score, 0));
+test('rejects invalid option values and ignores extra question indexes', () => assert.deepEqual(scoreExam(questions, { 0: -1, 1: 1.5, 99: 0 }), { score: 0, total: 2, answers: {} }));
+test('strings are not accepted as option indexes', () => assert.equal(scoreExam(questions, { 0: '1' }).score, 0));
+test('client score and total cannot influence marks', () => assert.equal(scoreExam(questions, { score: 999, total: 999 }).score, 0));
+test('invalid stored answer keys fail closed', () => assert.throws(() => scoreExam([{ options: ['a'], correctAnswer: 8 }], { 0: 8 })));
+test('empty exams fail closed', () => assert.throws(() => scoreExam([], {})));

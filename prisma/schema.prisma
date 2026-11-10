@@ -318,3 +318,18 @@ model ExamLeaderboard {
 
   @@map("ExamLeaderboard")
 }
+
+// Server-owned clocks survive reloads and cannot be supplied by the browser.
+model ModelTestStart {
+  testId String
+  userId String
+  startedAt DateTime @default(now())
+  @@id([testId, userId])
+}
+
+// Shared across server instances; each key contains a user and UTC hour.
+model ApiUsage {
+  key String @id
+  count Int @default(1)
+  createdAt DateTime @default(now())
+}
