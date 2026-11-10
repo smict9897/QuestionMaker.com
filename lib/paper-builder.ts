@@ -58,7 +58,7 @@ export const settingsSchema = z.object({
     .default({}),
   info: z
     .object({
-      logo: text(),
+      logo: z.string().max(200000).catch("").default(""),
       brandHeader: text(),
       brandFooter: text(),
       instructor: text(),
@@ -79,6 +79,8 @@ export const settingsSchema = z.object({
   cfg: z
     .object({
       format: z.enum(["q", "qa", "ans", "sug"]).catch("q").default("q"),
+      autoFit: bool(),
+      booklet: bool(),
       orientation: z
         .enum(["portrait", "landscape"])
         .catch("portrait")
@@ -273,4 +275,28 @@ export function optionLabel(
       : style === "dot"
         ? `${value}.`
         : `◯${value}`;
+}
+
+export function safeLogo(url: string) {
+  return (
+    safeImage(url) ||
+    (url.length <= 200000 &&
+    /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(url)
+      ? url
+      : "")
+  );
+}
+
+// Each pair is one physical side. Pad to a multiple of four for duplex folding.
+export function bookletOrder(pageCount: number): (number | null)[][] {
+  const count = Math.ceil(Math.max(0, pageCount) / 4) * 4;
+  const index = (n: number) => (n < pageCount ? n : null);
+  const sides: (number | null)[][] = [];
+  for (let first = 0, last = count - 1; first < last; first += 2, last -= 2) {
+    sides.push(
+      [index(last), index(first)],
+      [index(first + 1), index(last - 1)],
+    );
+  }
+  return sides;
 }

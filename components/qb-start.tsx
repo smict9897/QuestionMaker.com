@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { NCTB_CLASSES, type NctbClass } from "@/lib/nctb-data";
 
@@ -40,13 +40,16 @@ function categoryAliases(key: string): string[] {
     ["Class 9", "Class 10", "Class 9-10", "9", "10"].forEach((v) => set.add(v));
   }
   if (key === "HSC") {
-    ["Class 11-12", "Class 11", "Class 12", "11", "12"].forEach((v) => set.add(v));
+    ["Class 11-12", "Class 11", "Class 12", "11", "12"].forEach((v) =>
+      set.add(v),
+    );
   }
   return Array.from(set);
 }
 
 export default function QbStart({ pairs }: { pairs: Pair[] }) {
   const router = useRouter();
+  const append = useSearchParams().get("append") === "1";
   const [category, setCategory] = useState("");
   const [subject, setSubject] = useState("");
   const [topicCategory, setTopicCategory] = useState(""); // ক্যাটাগরি/ইউনিট
@@ -55,8 +58,9 @@ export default function QbStart({ pairs }: { pairs: Pair[] }) {
   const selectedClassData = useMemo(() => findClassData(category), [category]);
 
   const curriculumSubjects = useMemo(
-    () => (selectedClassData ? selectedClassData.subjects.map((s) => s.name) : []),
-    [selectedClassData]
+    () =>
+      selectedClassData ? selectedClassData.subjects.map((s) => s.name) : [],
+    [selectedClassData],
   );
 
   const dbSubjects = useMemo(() => {
@@ -65,24 +69,30 @@ export default function QbStart({ pairs }: { pairs: Pair[] }) {
       new Set(
         pairs
           .filter((p) => !category || cats.includes(p.category))
-          .map((p) => p.subject)
-      )
+          .map((p) => p.subject),
+      ),
     );
   }, [pairs, category]);
 
   const subjects = useMemo(
     () => Array.from(new Set([...curriculumSubjects, ...dbSubjects])),
-    [curriculumSubjects, dbSubjects]
+    [curriculumSubjects, dbSubjects],
   );
 
   // নির্বাচিত সাবজেক্টের ডেটা (chapters/subCategories সহ)
   const currentSubjectData = useMemo(
     () => selectedClassData?.subjects.find((s) => s.name === subject),
-    [selectedClassData, subject]
+    [selectedClassData, subject],
   );
 
-  const flatTopics = useMemo(() => currentSubjectData?.chapters ?? [], [currentSubjectData]);
-  const groupedTopics = useMemo(() => currentSubjectData?.subCategories ?? [], [currentSubjectData]);
+  const flatTopics = useMemo(
+    () => currentSubjectData?.chapters ?? [],
+    [currentSubjectData],
+  );
+  const groupedTopics = useMemo(
+    () => currentSubjectData?.subCategories ?? [],
+    [currentSubjectData],
+  );
   const hasGroups = groupedTopics.length > 0;
 
   const topicsInSelectedCategory = useMemo(() => {
@@ -93,11 +103,14 @@ export default function QbStart({ pairs }: { pairs: Pair[] }) {
 
   const chip = (active: boolean) =>
     `rounded-full border px-4 py-2 text-sm font-semibold ${
-      active ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 bg-white text-slate-700"
+      active
+        ? "border-blue-600 bg-blue-600 text-white"
+        : "border-slate-300 bg-white text-slate-700"
     }`;
 
   function go() {
     const p = new URLSearchParams();
+    if (append) p.set("append", "1");
     if (category) p.set("category", category);
     if (subject) p.set("subject", subject);
     if (hasGroups) {
@@ -142,7 +155,11 @@ export default function QbStart({ pairs }: { pairs: Pair[] }) {
               setTopic("");
             }}
           >
-            {c === "SSC" ? "SSC (নবম-দশম)" : c === "HSC" ? "HSC (একাদশ-দ্বাদশ)" : c}
+            {c === "SSC"
+              ? "SSC (নবম-দশম)"
+              : c === "HSC"
+                ? "HSC (একাদশ-দ্বাদশ)"
+                : c}
           </button>
         ))}
       </div>
