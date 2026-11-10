@@ -104,3 +104,13 @@ test("English route is isolated from Bangla and unsupported classes", () => {
   assert.equal(route("6", "বাংলা"), null);
   assert.equal(route("5", "English"), null);
 });
+test("explicit class 10 and 12 routes retain the selected grade", () => {
+  assert.equal(
+    route("Class 10", "English For Today"),
+    "/question-builder/english?grade=10&paper=1",
+  );
+  assert.equal(
+    route("12", "ইংরেজি ২য় পত্র"),
+    "/question-builder/english?grade=12&paper=2",
+  );
+});

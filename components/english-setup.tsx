@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { generateEnglishPaper } from "@/app/actions/english-paper";
 import {
   englishBlueprint,
   type EnglishGrade,
@@ -19,6 +21,8 @@ export default function EnglishSetup({
   initialGrade: number;
   initialPaper: 1 | 2;
 }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
   const [grade, setGrade] = useState(initialGrade),
     [paper, setPaper] = useState<EnglishPaper>(initialPaper),
     [mode, setMode] = useState<"full" | "selected" | "writing">("full"),
@@ -55,7 +59,9 @@ export default function EnglishSetup({
     }));
     setMessage("");
   }
-  function validate() {
+  async function validate() {
+    if (busy) return;
+    setBusy(true);
     try {
       const result = resolveEnglishSelection({
         grade,
@@ -73,13 +79,19 @@ export default function EnglishSetup({
         ),
         includeAnswers: answers,
       });
-      setMessage(
-        `Selection validated: ${result.total} marks. Generation/editor integration is still in progress; no paper has been generated.`,
-      );
+      setMessage("প্রশ্ন তৈরি হচ্ছে। এই পেজ বন্ধ করবেন না।");
+      const generated = await generateEnglishPaper(result.selection);
+      if (!generated.ok) setMessage(generated.error);
+      else
+        router.push(
+          `/question-builder/english/edit?key=${encodeURIComponent(generated.key)}`,
+        );
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Check your selection.",
       );
+    } finally {
+      setBusy(false);
     }
   }
   const field =
@@ -87,6 +99,7 @@ export default function EnglishSetup({
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
       <header>
+        <a href="/question-builder/english/saved">আমার English draft</a>
         <h1 className="text-2xl font-bold">
           English printable paper — 2027 practice
         </h1>
@@ -303,16 +316,17 @@ export default function EnglishSetup({
       </p>
       <button
         className="rounded bg-blue-700 px-5 py-3 text-white"
+        disabled={busy}
         onClick={validate}
       >
-        Validate selection
+        {busy ? "তৈরি হচ্ছে…" : "প্রশ্নপত্র তৈরি করুন"}
       </button>
       <p role="status" aria-live="polite">
         {message}
       </p>
       <p className="text-sm text-slate-600">
-        Generation and editor integration are under development. This page does
-        not generate or save a paper yet.
+        প্রতিদিন সর্বোচ্চ ১০টি generation চেষ্টা করা যাবে। প্রশ্ন ব্যক্তিগত
+        draft হিসেবে সেভ হবে। ব্যবহারের আগে প্রশ্ন ও উত্তর যাচাই করুন।
       </p>
     </main>
   );
