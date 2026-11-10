@@ -1,5 +1,9 @@
 "use client";
-import { PAPER_SECTION_ORDER, paperSectionTitle } from "@/lib/paper-sections";
+import {
+  PAPER_SECTION_ORDER,
+  paperSectionTitle,
+  cqDivisionGroups,
+} from "@/lib/paper-sections";
 import RichTextField from "@/components/paper-builder/rich-text-field";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
@@ -376,10 +380,8 @@ export default function QbBuilder({
           base,
         );
         const groups =
-          type === "CQ" && s.show.divisions
-            ? division
-              ? [division]
-              : divisions
+          type === "CQ"
+            ? cqDivisionGroups(s.show.divisions, division, divisions)
             : [""];
         return groups.map((group) => {
           const qs = selected.filter(
@@ -476,6 +478,16 @@ export default function QbBuilder({
         >
           নির্বাচিত {missingCount}টি প্রশ্ন লোড হয়নি বা এখন ব্যবহারযোগ্য নয়।
           আবার প্রশ্ন বাছাই করুন।
+        </p>
+      )}
+      {s.show.divisions && division && divisions.includes(division) && (
+        <p
+          data-noprint
+          role="status"
+          className="mb-3 rounded-xl bg-amber-50 p-3 text-amber-900"
+        >
+          CQ বিভাগ ফিল্টার সক্রিয়: {division}। সব সৃজনশীল প্রশ্ন দেখতে বিভাগ
+          থেকে “সব বিভাগ” নির্বাচন করুন।
         </p>
       )}
       <nav
@@ -852,7 +864,7 @@ export default function QbBuilder({
               CQ বিভাগ ফিল্টার
               <select
                 className={`${input} mt-1`}
-                value={division}
+                value={divisions.includes(division) ? division : ""}
                 onChange={(e) => {
                   setDivision(e.target.value);
                   update({

@@ -13,3 +13,21 @@ export function toggleVisibleSelection(selected: string[], visible: string[]) {
     ? selected.filter((id) => !visible.includes(id))
     : [...new Set([...selected, ...visible])];
 }
+
+/** A saved filter from a different paper must never hide every CQ. */
+export function cqDivisionGroups(
+  enabled: boolean,
+  filter: string,
+  available: string[],
+): string[] {
+  if (!enabled || !available.length) return [""];
+  return filter && available.includes(filter) ? [filter] : available;
+}
+export function freshPaperSettings(settings: Record<string, any>) {
+  return {
+    ...settings,
+    excludedIds: [],
+    edits: {},
+    cfg: { ...settings.cfg, divisionFilter: "" },
+  };
+}
