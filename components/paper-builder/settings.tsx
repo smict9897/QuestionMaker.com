@@ -1,4 +1,5 @@
 "use client";
+import LayoutControls from "./layout-controls";
 import { useEffect, useRef } from "react";
 import { Download, X } from "lucide-react";
 import type { PaperSettings } from "@/lib/paper-builder";
@@ -78,6 +79,10 @@ export default function PaperSettingsPanel({
   onClose,
   counts,
   onPrint,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
 }: {
   settings: PaperSettings;
   update: (s: PaperSettings) => void;
@@ -87,6 +92,10 @@ export default function PaperSettingsPanel({
   onClose: () => void;
   counts: { MCQ: number; CQ: number; SHORT: number };
   onPrint: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }) {
   const panel = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -139,7 +148,9 @@ export default function PaperSettingsPanel({
     />
   );
   const heading = (title: string) => (
-    <h3 className="mb-2 text-base font-bold text-slate-900">{title}</h3>
+    <h3 className="studio-section-title mb-2 text-base font-bold text-slate-900">
+      {title}
+    </h3>
   );
   const quantity = (
     key: "cqAnswer" | "shortAnswer" | "mcqAnswer",
@@ -184,7 +195,7 @@ export default function PaperSettingsPanel({
         aria-modal={open || undefined}
         aria-labelledby="paper-settings-title"
         data-noprint
-        className={`${open ? "fixed inset-x-0 bottom-0 z-[80] max-h-[88dvh] rounded-t-3xl" : "hidden"} overflow-y-auto border border-slate-200 bg-slate-50 p-5 shadow-lg lg:sticky lg:top-24 lg:block lg:max-h-[calc(100dvh-7rem)] lg:rounded-2xl lg:shadow-sm`}
+        className={`${open ? "fixed left-0 top-0 bottom-0 z-[80] w-[min(88vw,390px)] h-[100dvh]" : "hidden"} overflow-y-auto border border-slate-200 bg-slate-50 p-5 shadow-lg lg:sticky lg:top-24 lg:block lg:max-h-[calc(100dvh-7rem)] lg:rounded-2xl lg:shadow-sm`}
       >
         <div className="mb-5 flex items-center justify-between">
           <h2
@@ -209,6 +220,44 @@ export default function PaperSettingsPanel({
         >
           <Download size={18} /> ডাউনলোড / প্রিন্ট
         </button>
+        <button
+          className="mb-3 w-full rounded-xl bg-blue-600 p-3 font-bold text-white"
+          onClick={() => {
+            onClose();
+            document.getElementById("paper-save-name")?.focus();
+            document
+              .getElementById("paper-save-name")
+              ?.scrollIntoView({ block: "center", behavior: "smooth" });
+          }}
+        >
+          সংরক্ষণ করুন
+        </button>
+        <details className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm">
+          <summary className="cursor-pointer text-center font-bold text-red-700">
+            শিখুন — ব্যবহার নির্দেশিকা
+          </summary>
+          <p className="mt-2">
+            এডিটিং মোডে প্রশ্নের লেখা ও অপশন বদলান। Page Setup থেকে মার্জিন,
+            পেপার ও কলাম সাজান। সেভ করতে উপরের নামের ঘরে নাম লিখুন। PDF পেতে
+            প্রিন্ট ডায়ালগে Save as PDF বাছুন।
+          </p>
+        </details>
+        <div className="mb-4 grid grid-cols-2 gap-2">
+          <button
+            disabled={!canUndo}
+            onClick={onUndo}
+            className="studio-choice disabled:opacity-40"
+          >
+            ↶ আনডু
+          </button>
+          <button
+            disabled={!canRedo}
+            onClick={onRedo}
+            className="studio-choice disabled:opacity-40"
+          >
+            ↷ রিডু
+          </button>
+        </div>
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3">
           <Toggle
             label="এডিটিং মোড"
@@ -232,6 +281,7 @@ export default function PaperSettingsPanel({
           {toggle("important", "গুরুত্বপূর্ণ প্রশ্ন")}
           {toggle("tags", "প্রশ্নের তথ্য")}
           {toggle("examinee", "শিক্ষার্থীর তথ্য")}
+          {toggle("instructor", "ইন্সট্রাক্টরের তথ্য")}
           {toggle("obtained", "প্রাপ্ত নম্বর ঘর")}
           {toggle("subjCode", "বিষয় কোড")}
           {toggle("marks", "প্রশ্নের মার্ক")}
@@ -435,6 +485,7 @@ export default function PaperSettingsPanel({
             "ক ও খ সেট আলাদা প্রশ্ন ও অপশন ক্রমে একসঙ্গে প্রিন্ট হবে।",
           )}
         </section>
+        <LayoutControls s={s} update={update} counts={counts} />
         <section className="border-t pt-4">
           {heading("ব্র্যান্ডিং")}
           {toggle("address", "ঠিকানা")}
@@ -456,7 +507,8 @@ export default function PaperSettingsPanel({
                 }
               />
               <span className="mt-2 block text-xs leading-relaxed text-slate-500">
-                এখানে নাম লিখলে প্রিভিউ ও প্রিন্টের জলছাপে সঙ্গে সঙ্গে দেখা যাবে।
+                এখানে নাম লিখলে প্রিভিউ ও প্রিন্টের জলছাপে সঙ্গে সঙ্গে দেখা
+                যাবে।
               </span>
             </label>
           )}

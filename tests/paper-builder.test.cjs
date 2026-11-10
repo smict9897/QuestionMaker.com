@@ -139,7 +139,7 @@ test("settings panel exposes a labelled watermark input only when enabled", () =
   const React = require("react");
   const { renderToStaticMarkup } = require("react-dom/server");
   const panel = new Module("paper-settings");
-  panel.require = require;
+  panel.require = name => name === "./layout-controls" ? { default: () => null } : require(name);
   panel._compile(
     ts.transpileModule(
       fs.readFileSync("components/paper-builder/settings.tsx", "utf8"),

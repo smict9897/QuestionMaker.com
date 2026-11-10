@@ -208,3 +208,47 @@
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
+.studio-section {
+  margin: 18px 0;
+  border-top: 2px solid #19ad87;
+  padding-top: 12px;
+}
+.studio-section > h3,
+.studio-section-title {
+  background: #eafff6;
+  border-top: 2px solid #19ad87;
+  padding: 9px 10px;
+  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.studio-choice {
+  border: 1px solid #dbe5e7;
+  border-radius: 7px;
+  background: #fff;
+  padding: 8px 10px;
+  color: #23453b;
+  font-size: 12px;
+  cursor: pointer;
+}
+.studio-choice[aria-pressed="true"] {
+  background: #009c75;
+  color: white;
+  border-color: #009c75;
+}
+.studio-choice:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.studio-toolbar input[type="color"] {
+  width: 30px;
+  height: 27px;
+  border: 0;
+  vertical-align: middle;
+}
+.paper-sheet h2,
+.paper-sheet h3,
+.paper-measure h2,
+.paper-measure h3 {
+  color: inherit;
+}
