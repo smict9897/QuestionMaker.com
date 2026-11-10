@@ -183,13 +183,14 @@ export function paginate(
   heights: number[],
   available: number,
   columns: number,
+  continuationAvailable: number = available,
 ): number[][][] {
   const pages: number[][][] = [];
   let page: number[][] = Array.from({ length: columns }, () => []);
   let col = 0,
     used = 0;
   heights.forEach((height, index) => {
-    if (page[col].length && used + height > available) {
+    if (page[col].length && used + height > (pages.length === 0 ? available : continuationAvailable)) {
       col++;
       used = 0;
     }
