@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { paginateContinuous, type FlowSegment } from "@/lib/continuous-paper";
+import PaperAnswer from "./paper-answer";
 import HeaderPreview from "./header-preview";
 import { currentHeader } from "@/lib/paper-header";
 import RichPaperText from "./rich-paper-text";
@@ -223,12 +224,10 @@ export default function PaperPreview({
               "উত্তর নেই"
             )
           ) : (
-            <PaperMathText
-              text={
-                q.explanation ||
-                Object.values(q.answers || {}).join("; ") ||
-                "উত্তর সংযুক্ত নেই"
-              }
+            <PaperAnswer
+              explanation={q.explanation}
+              answers={q.answers}
+              cq={type === "CQ"}
             />
           )}
         </div>
@@ -370,16 +369,14 @@ export default function PaperPreview({
               </div>
             )}
             {marked && type !== "MCQ" && (
-              <p className="mt-2">
+              <div className="mt-2">
                 <b>উত্তর: </b>
-                <PaperMathText
-                  text={
-                    q.explanation ||
-                    Object.values(q.answers || {}).join("; ") ||
-                    "উত্তর সংযুক্ত নেই"
-                  }
+                <PaperAnswer
+                  explanation={q.explanation}
+                  answers={q.answers}
+                  cq={type === "CQ"}
                 />
-              </p>
+              </div>
             )}
             {s.show.tags && (
               <p className="mt-1 text-[0.72em]">
