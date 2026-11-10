@@ -439,6 +439,27 @@ export default function PaperSettingsPanel({
           {heading("ব্র্যান্ডিং")}
           {toggle("address", "ঠিকানা")}
           {toggle("watermark", "জলছাপ")}
+          {s.show.watermark && (
+            <label className="mt-2 block text-sm text-slate-700">
+              <span className="mb-2 block font-medium">জলছাপের নাম / লেখা</span>
+              <input
+                type="text"
+                className={field}
+                value={s.info.watermark}
+                placeholder="যেমন: আপনার প্রতিষ্ঠান বা নিজের নাম"
+                maxLength={10000}
+                onChange={(e) =>
+                  update({
+                    ...s,
+                    info: { ...s.info, watermark: e.target.value },
+                  })
+                }
+              />
+              <span className="mt-2 block text-xs leading-relaxed text-slate-500">
+                এখানে নাম লিখলে প্রিভিউ ও প্রিন্টের জলছাপে সঙ্গে সঙ্গে দেখা যাবে।
+              </span>
+            </label>
+          )}
         </section>
       </aside>
     </>
