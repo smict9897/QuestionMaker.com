@@ -48,7 +48,7 @@ export default async function HomeFooter() {
     <footer className="qk-footer">
       <div className="qk-wrap">
         <div className="qk-fgrid">
-          <div>
+          <div className="qk-footer-brand">
             <Link href="/" className="qk-logo" aria-label={`${siteName} হোম`}>
               <span className="qk-mark">
                 <svg className="qk-i" viewBox="0 0 24 24" aria-hidden="true">
@@ -111,8 +111,9 @@ export default async function HomeFooter() {
             ))}
           </div>
 
-          <div>
+          <div className="qk-footer-policy">
             <h4>নীতিমালা ও সহায়তা</h4>
+            <div className="qk-footer-policy-links">
             {policy.map(([label, href]) => (
               <Link key={href} href={href}>
                 {label}
@@ -126,6 +127,7 @@ export default async function HomeFooter() {
               ))}
             {contact?.phone ? <a href={`tel:${contact.phone}`}>{contact.phone}</a> : null}
             {contact?.email ? <a href={`mailto:${contact.email}`}>{contact.email}</a> : null}
+            </div>
           </div>
         </div>
 

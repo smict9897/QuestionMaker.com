@@ -86,25 +86,25 @@ export default async function SiteFooter() {
         </div>
 
         {/* Links Grid Sections */}
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 sm:gap-8">
           {groups.map((g) => (
-            <div key={g.title}>
+            <div key={g.title} className={`min-w-0 ${g.title === "নীতিমালা ও সহায়তা" ? "col-span-2 sm:col-span-1" : ""}`}>
               <div className="mb-5">
                 <h2 className="text-base font-bold text-white tracking-wide">{g.title}</h2>
                 <span className="mt-2 block h-1 w-8 rounded-full bg-gradient-to-r from-violet-500 to-pink-500" />
               </div>
 
-              <ul className="space-y-3">
+              <ul className={g.title === "নীতিমালা ও সহায়তা" ? "grid grid-cols-2 items-start gap-x-4 gap-y-3 sm:grid-cols-1" : "space-y-3"}>
                 {g.items.map(([label, href, Icon]) => (
                   <li key={href}>
                     <Link 
                       href={href} 
-                      className="group flex items-center gap-3 text-slate-400 hover:text-white transition-colors"
+                      className="group flex min-h-9 items-center gap-2 break-words text-slate-400 hover:text-white transition-colors"
                     >
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 border border-white/5 group-hover:bg-violet-500/20 group-hover:border-violet-500/30 group-hover:text-violet-300 transition-all">
                         <Icon size={15} />
                       </span>
-                      <span className="font-medium">{label}</span>
+                      <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{label}</span>
                     </Link>
                   </li>
                 ))}
@@ -114,12 +114,12 @@ export default async function SiteFooter() {
                   <li key={pg.slug}>
                     <Link 
                       href={`/p/${pg.slug}`} 
-                      className="group flex items-center gap-3 text-slate-400 hover:text-white transition-colors"
+                      className="group flex min-h-9 items-center gap-2 break-words text-slate-400 hover:text-white transition-colors"
                     >
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 border border-white/5 group-hover:bg-violet-500/20 group-hover:border-violet-500/30 group-hover:text-violet-300 transition-all">
                         <FileText size={15} />
                       </span>
-                      <span className="font-medium truncate">{pg.title}</span>
+                      <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{pg.title}</span>
                     </Link>
                   </li>
                 ))}
@@ -129,12 +129,12 @@ export default async function SiteFooter() {
                   <li>
                     <a 
                       href={`tel:${contact.phone}`} 
-                      className="group flex items-center gap-3 text-slate-400 hover:text-white transition-colors"
+                      className="group flex min-h-9 items-center gap-2 break-words text-slate-400 hover:text-white transition-colors"
                     >
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-all">
                         <Phone size={15} />
                       </span>
-                      <span className="font-medium">{contact.phone}</span>
+                      <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{contact.phone}</span>
                     </a>
                   </li>
                 )}
@@ -143,12 +143,12 @@ export default async function SiteFooter() {
                   <li>
                     <a 
                       href={`mailto:${contact.email}`} 
-                      className="group flex items-center gap-3 text-slate-400 hover:text-white transition-colors"
+                      className="group flex min-h-9 items-center gap-2 break-words text-slate-400 hover:text-white transition-colors"
                     >
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 group-hover:bg-sky-500/20 transition-all">
                         <Mail size={15} />
                       </span>
-                      <span className="font-medium">{contact.email}</span>
+                      <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{contact.email}</span>
                     </a>
                   </li>
                 )}
