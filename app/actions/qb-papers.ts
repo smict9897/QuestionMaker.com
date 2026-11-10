@@ -1,4 +1,5 @@
 "use server";
+import { visibleQuestions } from "@/lib/paper-generation";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
@@ -106,7 +107,7 @@ export async function listPapers(): Promise<SavedPaper[]> {
   const ids = [...new Set(out.flatMap((p) => p.ids))];
   if (ids.length) {
     const questions = await db.question.findMany({
-      where: { id: { in: ids } },
+      where: { id: { in: ids }, ...visibleQuestions(user.id) },
       select: {
         id: true,
         category: true,

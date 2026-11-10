@@ -119,7 +119,7 @@ export default function QbStart({ pairs }: { pairs: Pair[] }) {
     } else if (topic) {
       p.set("topic", topic);
     }
-    router.push(`/question-builder/create?${p.toString()}`);
+    router.push(`/question-builder/prepare?${p.toString()}`);
   }
 
   return (

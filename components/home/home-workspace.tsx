@@ -217,7 +217,7 @@ export function HomeStarter({
           তৈরি শুরু করুন।
         </p>
       </div>
-      <form action="/question-builder/create" className="hm-start-form">
+      <form action="/question-builder/prepare" className="hm-start-form">
         <label>
           শ্রেণি <b>*</b>
           <select
