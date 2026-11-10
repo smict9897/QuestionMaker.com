@@ -4,7 +4,19 @@ const ts = require("typescript");
 const fs = require("node:fs");
 const Module = require("node:module");
 const mod = new Module("paper-builder");
-mod.require = require;
+const headerMod = new Module("paper-header");
+headerMod.require = require;
+headerMod._compile(
+  ts.transpileModule(fs.readFileSync("lib/paper-header.ts", "utf8"), {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+    },
+  }).outputText,
+  "paper-header.js",
+);
+mod.require = (name) =>
+  name === "@/lib/paper-header" ? headerMod.exports : require(name);
 mod._compile(
   ts.transpileModule(fs.readFileSync("lib/paper-builder.ts", "utf8"), {
     compilerOptions: {
@@ -129,17 +141,39 @@ test("settings panel exposes a labelled watermark input only when enabled", () =
   const panel = new Module("paper-settings");
   panel.require = require;
   panel._compile(
-    ts.transpileModule(fs.readFileSync("components/paper-builder/settings.tsx", "utf8"), {
-      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
-    }).outputText,
+    ts.transpileModule(
+      fs.readFileSync("components/paper-builder/settings.tsx", "utf8"),
+      {
+        compilerOptions: {
+          module: ts.ModuleKind.CommonJS,
+          target: ts.ScriptTarget.ES2022,
+          jsx: ts.JsxEmit.ReactJSX,
+        },
+      },
+    ).outputText,
     "paper-settings.js",
   );
   const settings = defaults();
-  const props = { settings, update: () => {}, edit: false, setEdit: () => {}, open: false, onClose: () => {}, counts: { MCQ: 0, CQ: 0, SHORT: 0 }, onPrint: () => {} };
-  assert(!renderToStaticMarkup(React.createElement(panel.exports.default, props)).includes("জলছাপের নাম / লেখা"));
+  const props = {
+    settings,
+    update: () => {},
+    edit: false,
+    setEdit: () => {},
+    open: false,
+    onClose: () => {},
+    counts: { MCQ: 0, CQ: 0, SHORT: 0 },
+    onPrint: () => {},
+  };
+  assert(
+    !renderToStaticMarkup(
+      React.createElement(panel.exports.default, props),
+    ).includes("জলছাপের নাম / লেখা"),
+  );
   settings.show.watermark = true;
   settings.info.watermark = "আমার বিদ্যালয়";
-  const html = renderToStaticMarkup(React.createElement(panel.exports.default, props));
+  const html = renderToStaticMarkup(
+    React.createElement(panel.exports.default, props),
+  );
   assert(html.includes("জলছাপের নাম / লেখা"));
   assert(html.includes('value="আমার বিদ্যালয়"'));
 });
