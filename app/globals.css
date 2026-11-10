@@ -21,7 +21,9 @@ body{@apply bg-paper text-navy-900 antialiased}
   #print-area,#print-area *,#paper,#paper *{visibility:visible !important}
   #print-area{position:fixed;inset:0;margin:0;border-radius:0;box-shadow:none}
   /* Question paper page: remove everything except the paper so no blank space is left */
-  body:has(#paper) *:not(#paper):not(#paper *):not(:has(#paper)){display:none !important}
+  body:not(.booklet-print):has(#paper) *:not(#paper):not(#paper *):not(:has(#paper)){display:none !important}
+  /* Booklet sheets are cloned outside #paper. Keep that print target visible too. */
+  body.booklet-print .booklet-output,body.booklet-print .booklet-output *{visibility:visible !important}
   #paper{margin:0 !important;max-width:none !important;box-shadow:none !important;background:#fff !important;color:#000 !important}
 }
 

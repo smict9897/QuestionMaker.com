@@ -1,0 +1,2 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');
+test('global paper-only print isolation does not hide booklet clones outside #paper',()=>{const css=fs.readFileSync('app/globals.css','utf8');assert.match(css,/body:not\(\.booklet-print\):has\(#paper\)/);assert.match(css,/body\.booklet-print \.booklet-output,body\.booklet-print \.booklet-output \*\{visibility:visible !important\}/);});
