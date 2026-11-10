@@ -1,3 +1,6 @@
+import ChapterSelector from "@/components/chapter-selector";
+import "@/components/chapter-selector.css";
+import { normalizeTopics, appendFilterParams } from "@/lib/chapter-filter";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import QbPicker from "@/components/qb-picker";
@@ -5,7 +8,7 @@ import QbPicker from "@/components/qb-picker";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "প্রশ্ন নির্বাচন" };
 
-type SP = { category?: string; subject?: string; topic?: string; q?: string; page?: string };
+type SP = { category?: string; subject?: string; topic?: string | string[]; q?: string; page?: string };
 const PER_PAGE = 50;
 
 // 🎯 ক্লাসের সব সম্ভাব্য নাম একসঙ্গে মেলানো (যেমন "8" আর "Class 8" দুটোই)
@@ -44,7 +47,7 @@ export default async function CreatePage({ searchParams }: { searchParams: Promi
   const sp = await searchParams;
   const category = sp.category ?? "";
   const subject = sp.subject ?? "";
-  const topic = sp.topic ?? "";
+  const selectedTopics = normalizeTopics(sp.topic);
   const q = (sp.q ?? "").trim();
   const page = Math.max(1, Number(sp.page) || 1);
 
@@ -54,7 +57,7 @@ export default async function CreatePage({ searchParams }: { searchParams: Promi
     approved: true,
     ...(category ? { category: { in: cats } } : {}),
     ...(subject ? { subject } : {}),
-    ...(topic ? { topic } : {}),
+    ...(selectedTopics.length ? { topic: { in: selectedTopics } } : {}),
     ...(q ? { text: { contains: q, mode: "insensitive" as const } } : {}),
   };
 
@@ -62,7 +65,7 @@ export default async function CreatePage({ searchParams }: { searchParams: Promi
     db.question.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * PER_PAGE, take: PER_PAGE }),
     db.question.count({ where }),
     db.question.findMany({
-      where: { approved: true, ...(category ? { category: { in: cats } } : {}) },
+      where: { approved: true, ...(category ? { category: { in: cats } } : {}), ...(subject ? { subject } : {}) },
       select: { topic: true },
       distinct: ["topic"],
     }),
@@ -72,9 +75,9 @@ export default async function CreatePage({ searchParams }: { searchParams: Promi
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
 
   const href = (o: Partial<SP>) => {
-    const m: SP = { category, subject, topic, q, ...o };
+    const m: SP = { category, subject, topic: selectedTopics, q, ...o };
     const p = new URLSearchParams();
-    for (const [k, v] of Object.entries(m)) if (v) p.set(k, String(v));
+    appendFilterParams(p, m);
     return `?${p.toString()}`;
   };
 
@@ -115,10 +118,7 @@ export default async function CreatePage({ searchParams }: { searchParams: Promi
       <form method="get" className="mt-4 grid gap-2">
         <input type="hidden" name="category" value={category} />
         <input type="hidden" name="subject" value={subject} />
-        <select name="topic" defaultValue={topic} className={input}>
-          <option value="">অধ্যায় নির্বাচন করুন</option>
-          {topics.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
+        <ChapterSelector key={selectedTopics.join("\u0000")} topics={topics} defaultValue={selectedTopics}/>
         <div className="flex gap-2">
           <input name="q" defaultValue={q} placeholder="এখানে খুঁজুন" className={input} />
           <button className="rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white">খুঁজুন</button>

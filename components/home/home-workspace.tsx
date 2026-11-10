@@ -1,5 +1,7 @@
 "use client";
 
+import "@/components/chapter-selector.css";
+import ChapterSelector from "@/components/chapter-selector";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
@@ -158,7 +160,7 @@ export function HomeStarter({
 }) {
   const [category, setCategory] = useState("");
   const [subject, setSubject] = useState("");
-  const [topic, setTopic] = useState("");
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const classes = useMemo(
     () =>
       Array.from(
@@ -203,7 +205,7 @@ export function HomeStarter({
       (r) =>
         homeCategoryMatches(category, r.category) &&
         r.subject === subject &&
-        (!topic || r.topic === topic),
+        (!selectedTopics.length || selectedTopics.includes(r.topic)),
     )
     .reduce((n, r) => n + r.count, 0);
   return (
@@ -225,7 +227,7 @@ export function HomeStarter({
             onChange={(e) => {
               setCategory(e.target.value);
               setSubject("");
-              setTopic("");
+              setSelectedTopics([]);
             }}
           >
             <option value="">শ্রেণি নির্বাচন করুন</option>
@@ -243,7 +245,7 @@ export function HomeStarter({
             value={subject}
             onChange={(e) => {
               setSubject(e.target.value);
-              setTopic("");
+              setSelectedTopics([]);
             }}
           >
             <option value="">বিষয় নির্বাচন করুন</option>
@@ -252,22 +254,7 @@ export function HomeStarter({
             ))}
           </select>
         </label>
-        <label>
-          অধ্যায়
-          <select
-            disabled={!subject}
-            name="topic"
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-          >
-            <option value="">
-              {subject ? "সকল অধ্যায়" : "অধ্যায় নির্বাচন করুন"}
-            </option>
-            {topics.map((t) => (
-              <option key={t}>{t}</option>
-            ))}
-          </select>
-        </label>
+        <ChapterSelector topics={topics} value={selectedTopics} onChange={setSelectedTopics} disabled={!subject}/>
         <p className="hm-info" role="status">
           ⓘ{" "}
           {unavailable
