@@ -24,3 +24,11 @@ Validation: TypeScript and128 security/regression tests passed. No production bu
 5. English-specific setup/selection UI and start-flow integration, full model test label, reference provenance/year, pattern preview, word/topic inputs. Single-column default; template-specific numbering/headings rather than Bengali MCQ/CQ divisions.
 6. Persistence and existing editor/save/reopen/append/PDF integration without regressions. Test all grades, modes, marks, topic exclusion, malformed provider output, auth/private visibility, passages/tables, print/page counts and mobile flow.
 7. Production build, real mock browser/PDF tests, diff check; then open PR per standing workflow. User merges unless explicitly authorizes merge; after merge rerun mock tests and check Vercel status. Deployment/account/provider integration unverified must remain explicit.
+
+## Selection stage added (next iteration)
+- Dedicated authenticated `/question-builder/english` setup page (inherits existing question-builder auth layout) provides full/selected/writing-only modes, live marks preview, reference provenance, topic/word-limit/instruction inputs and separate-answer request.
+- Seen/textbook tasks require a supplied exact extract and book/unit reference. This is an input requirement, not verification of textbook authenticity.
+- Reusable strict selection resolver enforces known unique IDs, server-owned totals, required/exclusive writing topics and valid task alternatives. It rejects unsupported grades, extra fields and missing seen sources.
+- Subject-route helper covers English names in English/Bengali; it is intentionally NOT wired into the existing prepare page until generation/editor integration works, to avoid diverting users into an unfinished workflow. Existing production preparation is unchanged.
+- Setup currently validates only: it explicitly states no paper is generated or saved. Provider path, persistence, editor/PDF integration remain outstanding. No PR or deployment for this iteration yet.
+- TypeScript and133 regression tests passed; production build and browser tests have not run for this iteration.
