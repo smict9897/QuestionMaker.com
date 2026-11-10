@@ -124,7 +124,7 @@ export const settingsSchema = z.object({
         .enum(["adorsho", "hind", "anek", "serif"])
         .catch("hind")
         .default("hind"),
-      fontSize: number(14, 10, 28),
+      fontSize: number(14, 7, 28),
       imageSize: number(280, 80, 600),
       imagePosition: z.enum(["left", "center"]).catch("left").default("left"),
       divisionFilter: text(),

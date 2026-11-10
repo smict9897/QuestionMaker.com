@@ -53,3 +53,6 @@ Question/stimulus/subquestion/option editing, HTTPS image attachments/sizing, di
 - TypeScript and production Next build passed with dummy local env; no production data changes or schema migration.
 - 76 regression/security tests passed, covering old-settings defaults, layout roundtrip, orientation/style helpers, replacement validation/type/scope/exclusions, and previous features.
 - Real Chromium against the actual builder with a locally signed test-only session and intercepted question response: 390px left drawer, landscape/margin/page-number persistence, configurable checker, undo, Escape, desktop screenshot and PDF generation; no client errors. No test routes or auth bypass added to repository. Production auth/DB/printing hardware not tested. Artifacts outside repo at /home/user/studio-browser.
+
+## Font minimum update
+Manual font controls and persisted settings now accept 7–28pt. Auto-fit can reduce to 7pt (previously 10pt); if the content still does not fit, normal pagination continues. It retains a larger size when that already fits rather than forcing every paper to 7pt. TypeScript and 83 tests passed, including settings restore for 7/8/9pt and below-minimum rejection.
