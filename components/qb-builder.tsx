@@ -38,6 +38,7 @@ export default function QbBuilder({
     [loading, setLoading] = useState(true),
     [ready, setReady] = useState(false),
     [error, setError] = useState("");
+  const [missingCount, setMissingCount] = useState(0);
   const [edit, setEdit] = useState(false),
     [open, setOpen] = useState(false),
     [division, setDivision] = useState(""),
@@ -120,7 +121,12 @@ export default function QbBuilder({
       .then(async (r) => {
         if (!r.ok) throw Error();
         const d = await r.json();
-        setItems(Array.isArray(d.items) ? d.items : []);
+        const loaded: PaperItem[] = Array.isArray(d.items) ? d.items : [];
+        setItems(loaded);
+        setMissingCount(
+          (ids as string[]).filter((id) => !loaded.some((q) => q.id === id))
+            .length,
+        );
       })
       .catch((e) => {
         if (e.name !== "AbortError")
@@ -393,18 +399,28 @@ export default function QbBuilder({
           return { q, opts, ci: opts.findIndex(([key]) => key === q.correct) };
         });
         return (
-          <PaperPreview
+          <div
             key={`${setName}-${type}-${group}`}
-            onQuestionAction={edit ? questionAction : undefined}
-            previewScale={previewScale}
-            s={enriched}
-            questions={views}
-            type={type}
-            setName={setName}
-            duplicate={duplicates}
-            title={paperSectionTitle(type, s.info.section, group)}
-            onImageSize={(id, size) => attachment(id, { size })}
-          />
+            id={
+              setName === (s.show.autoSet ? "ক" : s.setName) &&
+              group === groups[0]
+                ? `paper-section-${type}`
+                : undefined
+            }
+          >
+            <PaperPreview
+              key={`${setName}-${type}-${group}`}
+              onQuestionAction={edit ? questionAction : undefined}
+              previewScale={previewScale}
+              s={enriched}
+              questions={views}
+              type={type}
+              setName={setName}
+              duplicate={duplicates}
+              title={paperSectionTitle(type, s.info.section, group)}
+              onImageSize={(id, size) => attachment(id, { size })}
+            />
+          </div>
         );
       });
     });
@@ -441,6 +457,39 @@ export default function QbBuilder({
   return (
     <div className="paper-builder-root">
       <style>{style}</style>
+      {missingCount > 0 && (
+        <p
+          role="alert"
+          data-noprint
+          className="mb-3 rounded-xl bg-amber-50 p-3 text-amber-900"
+        >
+          নির্বাচিত {missingCount}টি প্রশ্ন লোড হয়নি বা এখন ব্যবহারযোগ্য নয়।
+          আবার প্রশ্ন বাছাই করুন।
+        </p>
+      )}
+      <nav
+        data-noprint
+        aria-label="প্রশ্নপত্রের অংশ"
+        className="mb-4 flex flex-wrap gap-2"
+      >
+        {PAPER_SECTION_ORDER.filter((type) => counts[type] > 0).map((type) => (
+          <button
+            key={type}
+            className="rounded-xl border px-3 py-2"
+            onClick={() =>
+              document
+                .getElementById(`paper-section-${type}`)
+                ?.scrollIntoView({ behavior: "smooth", block: "start" })
+            }
+          >
+            {type === "SHORT" ? "SQ" : type} ({counts[type]}) — অংশ দেখুন
+          </button>
+        ))}
+        <p className="w-full text-sm text-slate-500">
+          সব নির্বাচিত অংশ নিচে আলাদা পৃষ্ঠায় আছে: MCQ → CQ → SQ। অংশ দেখতে
+          উপরের বাটনে চাপুন।
+        </p>
+      </nav>
       <div
         data-noprint
         className="mb-5 flex flex-wrap items-center justify-between gap-3"

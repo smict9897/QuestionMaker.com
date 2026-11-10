@@ -88,6 +88,17 @@ export default function QbPicker({
         }
         localStorage.setItem("qb:settings", JSON.stringify(settings));
       }
+      if (ids.length > 300)
+        return alert("একবারে সর্বোচ্চ ৩০০টি প্রশ্ন নির্বাচন করুন।");
+      // A fresh paper must not inherit exclusions/edits from the previous paper.
+      if (!append) {
+        const settings = JSON.parse(
+          localStorage.getItem("qb:settings") || "{}",
+        );
+        settings.excludedIds = [];
+        settings.edits = {};
+        localStorage.setItem("qb:settings", JSON.stringify(settings));
+      }
       localStorage.setItem("qb:selected", JSON.stringify(ids));
     } catch {
       alert("প্রশ্নগুলো সংরক্ষণ করা যায়নি। ব্রাউজারের স্টোরেজ পরীক্ষা করুন।");

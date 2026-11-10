@@ -409,9 +409,7 @@ export default function PaperSettingsPanel({
                 type="button"
                 aria-label="ফন্ট ছোট করুন"
                 className="rounded-xl border px-4"
-                onClick={() =>
-                  cfg("fontSize", Math.max(7, s.cfg.fontSize - 1))
-                }
+                onClick={() => cfg("fontSize", Math.max(7, s.cfg.fontSize - 1))}
               >
                 −
               </button>
@@ -450,6 +448,15 @@ export default function PaperSettingsPanel({
               [3, "▮▮▮"],
             ]}
             onChange={(v) => cfg("cols", v)}
+          />
+          <Choices
+            label="কলাম (CQ / SQ)"
+            value={s.cfg.cqColumns}
+            options={[
+              [1, "১ কলাম"],
+              [2, "২ কলাম"],
+            ]}
+            onChange={(v) => cfg("cqColumns", v)}
           />
           {toggle("divider", "কলাম ডিভাইডার")}
           <Choices
