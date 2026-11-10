@@ -48,27 +48,49 @@ export default function PaperPreparation({
         setTotal(plan.topics.length);
         for (let i = 0; i < plan.topics.length; i++) {
           if (stopped) return;
-          setMessage(
-            `${plan.topics[i]} — প্রশ্ন খোঁজা হচ্ছে; না থাকলে AI তৈরি করবে…`,
-          );
-          const key = JSON.stringify([category, subject, plan.topics[i]]);
-          if (!taskCache.current.has(key))
-            taskCache.current.set(
-              key,
-              preparePaperTopic({
-                category,
-                subject,
-                topics: [plan.topics[i]],
-              }),
+          let ready = false;
+          for (let batch = 0; batch < 12; batch++) {
+            if (stopped) return;
+            setMessage(
+              `${plan.topics[i]} — প্রশ্ন প্রস্তুত হচ্ছে (ধাপ ${batch + 1})…`,
             );
-          const result = await taskCache.current.get(key)!;
-          if (stopped) return;
-          if (!result.ok) {
-            setError(result.error);
+            const key = JSON.stringify([
+              category,
+              subject,
+              plan.topics[i],
+              batch,
+            ]);
+            if (!taskCache.current.has(key))
+              taskCache.current.set(
+                key,
+                preparePaperTopic({
+                  category,
+                  subject,
+                  topics: [plan.topics[i]],
+                }),
+              );
+            const result = await taskCache.current.get(key)!;
+            if (stopped) return;
+            if (!result.ok) {
+              setError(result.error);
+              return;
+            }
+            setMessage(
+              `${plan.topics[i]} — ${result.count.toLocaleString("bn-BD")} / ৩০টি প্রশ্ন প্রস্তুত`,
+            );
+            if (result.generated) setGenerated((n) => n + (result.added || 0));
+            if (result.count >= 30) {
+              ready = true;
+              break;
+            }
+          }
+          if (!ready) {
+            setError(
+              "এই দফায় ৩০টি প্রশ্ন সম্পূর্ণ হয়নি। তৈরি প্রশ্নগুলো রাখা আছে। আবার চেষ্টা করলে বাকি অংশ পূরণ হবে।",
+            );
             return;
           }
           setDone(i + 1);
-          if (result.generated) setGenerated((n) => n + result.count);
         }
         if (stopped) return;
         setMessage("প্রশ্ন প্রস্তুত। নির্বাচন পেজ খোলা হচ্ছে…");
@@ -103,7 +125,7 @@ export default function PaperPreparation({
           <li>✓ নির্বাচিত বিষয় ও অধ্যায় পরীক্ষা</li>
           <li>অনুমোদিত প্রশ্ন থাকলে সেখান থেকেই ব্যবহার</li>
           <li>
-            না থাকলে AI প্রশ্ন তৈরি ও অ্যাডমিনের অপেক্ষমাণ তালিকায় সংরক্ষণ
+            প্রয়োজনে ধাপে ধাপে নতুন প্রশ্ন প্রস্তুত ও পর্যালোচনার জন্য সংরক্ষণ
           </li>
         </ol>
         <p role="status" className="preparation-status">
@@ -122,8 +144,9 @@ export default function PaperPreparation({
           <p>{generated.toLocaleString("bn-BD")}টি নতুন প্রশ্ন তৈরি হয়েছে।</p>
         )}
         <aside>
-          AI প্রশ্ন আপনি এখন ব্যবহার করতে পারবেন। অ্যাডমিন অনুমোদনের আগে অন্য
-          ব্যবহারকারীরা পাবেন না। AI-এর উত্তর ব্যবহারের আগে যাচাই করুন।
+          নতুন প্রশ্ন আপনি এখন ব্যবহার করতে পারবেন। পর্যালোচনা শেষ না হওয়া
+          পর্যন্ত অন্য ব্যবহারকারীরা পাবেন না। ব্যবহারের আগে প্রশ্ন ও উত্তর
+          যাচাই করুন।
         </aside>
         {error && (
           <div role="alert">

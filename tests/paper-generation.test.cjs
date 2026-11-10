@@ -19,12 +19,18 @@ function load(file, mocks = {}) {
 }
 const lib = load("lib/paper-generation.ts");
 const home = load("lib/home-data.ts");
-function api({ user = { id: "owner" }, counts = [0, 0], quota = false } = {}) {
+function api({
+  user = { id: "owner" },
+  counts = [0, 0],
+  quota = false,
+  existing = [],
+} = {}) {
   let aiCalls = 0,
     created = [],
     queries = [];
   const db = {
     question: {
+      findMany: async () => existing,
       count: async (args) => {
         queries.push(args.where);
         return counts.length ? counts.shift() : 0;
@@ -75,9 +81,9 @@ test("validates topic limits and complete AI question structure", () => {
   );
 });
 test("existing database questions avoid AI and need no API key", async () => {
-  const a = api({ counts: [4] });
+  const a = api({ counts: [30] });
   const result = await a.actions.preparePaperTopic(input);
-  assert.deepEqual(result, { ok: true, generated: false, count: 4 });
+  assert.deepEqual(result, { ok: true, generated: false, count: 30 });
   assert.equal(a.created.length, 0);
 });
 test("unauthenticated callers cannot check or generate", async () => {
@@ -169,9 +175,86 @@ test("missing provider configuration returns actionable error without saving", a
   }
 });
 test("all-chapter existing bank skips generation tasks", async () => {
-  const a = api({ counts: [5] });
+  const a = api({ counts: [30] });
   assert.deepEqual(await a.actions.checkPaperTopics({ ...input, topics: [] }), {
     ok: true,
     topics: [],
   });
+});
+test("an incomplete chapter is topped up and response reports cumulative count", async () => {
+  const oldFetch = global.fetch,
+    oldKey = process.env.DEEPSEEK_API_KEY;
+  process.env.DEEPSEEK_API_KEY = "test";
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              questions: [
+                { type: "SHORT", text: "New one", explanation: "Answer one" },
+                { type: "SHORT", text: "New two", explanation: "Answer two" },
+                { type: "SHORT", text: "Extra", explanation: "Answer" },
+              ],
+            }),
+          },
+        },
+      ],
+    }),
+  });
+  try {
+    const a = api({ counts: [28, 28] });
+    const result = await a.actions.preparePaperTopic(input);
+    assert.equal(result.ok, true);
+    assert.equal(result.count, 30);
+    assert.equal(result.added, 2);
+    assert.equal(a.created.length, 2);
+  } finally {
+    global.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = oldKey;
+  }
+});
+test("repeated questions are not saved across batches", async () => {
+  const oldFetch = global.fetch,
+    oldKey = process.env.DEEPSEEK_API_KEY;
+  process.env.DEEPSEEK_API_KEY = "test";
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              questions: [
+                {
+                  type: "SHORT",
+                  text: " ALREADY   EXISTS ",
+                  explanation: "Answer",
+                },
+              ],
+            }),
+          },
+        },
+      ],
+    }),
+  });
+  try {
+    const a = api({ counts: [6, 6], existing: [{ text: "already exists" }] });
+    const result = await a.actions.preparePaperTopic(input);
+    assert.equal(result.ok, false);
+    assert.equal(a.created.length, 0);
+  } finally {
+    global.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = oldKey;
+  }
+});
+test("preparation does not advance before 30 and uses bounded sequential batches", () => {
+  const source = fs.readFileSync("components/paper-preparation.tsx", "utf8");
+  assert.match(source, /batch\s*<\s*12/);
+  assert.match(source, /result.count\s*>=\s*30/);
+  assert.match(source, /if\s*\(!ready\)/);
+  assert.doesNotMatch(source, /AI তৈরি করবে/);
 });

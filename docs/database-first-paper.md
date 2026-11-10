@@ -49,3 +49,21 @@ Screenshot-inspired green/cream processing card, animated document icon, selecte
 9. Check mobile layout/reduced motion and retained multiple-chapter/append selections.
 
 User will click Create PR and merge. Agent does neither.
+
+## Minimum-30 batched preparation update
+- Each explicitly selected chapter now targets at least 30 total visible questions (all types combined, not 30 per type). Existing chapters below 30 are topped up; chapters at/above 30 avoid provider calls.
+- One server request generates at most six new questions, capped to the remaining deficit. Client runs sequential batches, checking the cumulative count, and never automatically advances to selection below 30 for a processed chapter.
+- Up to 12 batch attempts per chapter per run. Failure/insufficient progress stops with Retry; previously saved pending batches survive and are reused. Provider/quotas can prevent completion; there is no unconditional promise of 30 on a failed run.
+- Existing visible question texts are supplied as avoid examples; normalized exact duplicates are filtered both within a batch and against earlier batches. Semantic paraphrase duplicates still require review.
+- The new preparation quota is now 60 provider batch attempts/account/UTC day, replacing the prior 12-attempt limit to support multi-batch top-ups. Failed attempts still consume quota. Locks and private pending/admin approval remain unchanged.
+- Routine progress/error copy is implementation-neutral ("প্রশ্ন প্রস্তুত হচ্ছে"). No false claim of human authorship or textbook scanning was added. Source/review information remains available through existing question information and the admin queue.
+- Picker tabs display the number of each question type on the current page and explain that the overall total is spread across tabs.
+- TypeScript, 94 tests and production build passed. No live provider/production database or browser end-to-end check for this update. Deployment not verified.
+
+### Preview checklist for this update
+1. Start with a selected chapter having six visible questions: it should prepare additional batches rather than stop at six.
+2. Confirm the chapter reaches at least 30 combined questions before navigating; switch all three tabs and check counts/pagination.
+3. Retry after an interrupted batch: previously saved questions remain and only the remaining deficit is filled.
+4. Select a chapter already containing 30+ visible questions: no new generation should occur.
+5. Check pending batches remain private until admin approval, including generated top-up rows.
+6. Check quota/provider failure shows an error and does not falsely mark the chapter complete.
