@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paperHeaderSchema } from "@/lib/paper-header";
 export type PaperItem = {
   id: string;
   text: string;
@@ -20,6 +21,9 @@ const number = (value: number, min: number, max: number) =>
   z.number().int().min(min).max(max).catch(value).default(value);
 export const settingsSchema = z.object({
   version: z.literal(2).default(2),
+  header: paperHeaderSchema
+    .catch(() => paperHeaderSchema.parse({}))
+    .default({}),
   show: z
     .object({
       title: bool(true),

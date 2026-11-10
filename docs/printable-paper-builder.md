@@ -33,3 +33,17 @@ Available fonts are the repository's AdorshoLipi, Hind Siliguri (default), Anek 
 `npm run test:security` includes pure-helper regression tests for defaults/migration, persistence roundtrip, set shuffling, pagination, duplicate detection, image protocol validation, Bengali numbering and math digits.
 
 Local Chromium smoke testing uses mocked question API responses (not production data). Checked: desktop and 390px mobile layout, metadata, student/subject-code/duplicate switches, stateful question editing, reload persistence, A4/A5, CQ division filtering, answer-only mode, auto-sets, PDF generation, drawer Escape handling, and no page-level JS errors/horizontal overflow. A temporary test harness is removed before commit; no authentication bypass ships.
+
+## Smart Header and Dynamic Header templates
+
+The **প্রশ্নের হেডার** panel now sits above the expandable Page Setup section:
+- **Smart Header:** pick a named header, Create a new one or Edit the selected template.
+- **Dynamic Header:** create/pick templates using **Header** or **Branding+Header** layouts. The branded layout adds a dark banner, colored institution heading and bordered note box.
+- Creation/editing includes a live preview and independent enabled/text controls for Institute Name, Program, Class/Exam, Subject/Syllabus, Subject Code, Set Code, Time, Full Marks, Question Type, Note, Extra Info, Add New, Student Name and Student Roll. Dynamic banner text is editable as well.
+- Cancel/Escape do not apply draft edits. Save validates the template name, saves to the signed-in account and applies it to the current paper. Smart and dynamic template lists are separate. Keyboard arrow/Home/End navigation is available on the tabs.
+- Header templates are stored in the existing `Setting` table using `qbheader:<userId>:<uuid>` keys. Reads and edits are scoped to the session user. No database schema/migration is needed. DB errors are shown; the UI does not falsely report a successful save.
+- The selected header snapshot is also embedded in `qb:settings`/saved-paper settings. Named-paper snapshots do not change when another template is edited later. Opening old papers keeps the legacy header until a custom template is explicitly selected.
+- Mapped legacy Page Setup fields and visibility switches remain synchronized with custom headers. Watermarks, fonts, image controls, question edits, pagination, answer keys and auto sets continue to use the existing paper settings. Auto-generated sets override template set labels for correct A/B identification.
+- **আগের সাধারণ হেডারে ফিরুন** disables custom layout without deleting account templates.
+
+Header verification: unit tests cover fourteen fields, both dynamic layouts, old/corrupt settings, metadata synchronization, output visibility, HTML escaping, auto-set labels, saved-paper roundtrip and owner-scoped server-action saves/edits. Local Chromium tests exercise smart create/edit/cancel, Dynamic Branding+Header selection and save, visibility switches, reload persistence, mobile dialog/Escape, switching templates and PDF output. Browser checks use a temporary local harness with a mock repository; production account persistence is not exercised. No test route ships.

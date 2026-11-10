@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import HeaderPreview from "./header-preview";
+import { currentHeader } from "@/lib/paper-header";
 import MathText from "@/components/MathText";
 import {
   bn,
@@ -67,7 +69,7 @@ export default function PaperPreview({
         ? s.cfg.cqAnswer
         : s.cfg.shortAnswer) || questions.length,
   );
-  const header = (
+  const legacyHeader = (
     <div className="paper-heading text-center">
       {s.show.title && (
         <h2 style={{ fontSize: "1.65em", fontWeight: 700, margin: 0 }}>
@@ -113,6 +115,37 @@ export default function PaperPreview({
         </p>
       )}
     </div>
+  );
+  const header = s.header.enabled ? (
+    <div className="paper-heading">
+      <HeaderPreview
+        header={currentHeader(s)}
+        setName={setName}
+        autoSet={s.show.autoSet}
+        sectionTitle={
+          mode !== "questions" || type !== "MCQ" ? title : undefined
+        }
+      />
+      {s.show.examinee &&
+        !s.header.fields.studentName.enabled &&
+        !s.header.fields.studentRoll.enabled && (
+          <p className="my-2 text-left">
+            নাম: …………………………… রোল: …………… শাখা: ……………
+          </p>
+        )}
+      {s.show.obtained && (
+        <div className="mb-2 border border-black p-2 text-right">
+          প্রাপ্ত নম্বর: ……………
+        </div>
+      )}
+      {mode === "questions" && (
+        <p className="mb-3 text-right text-[0.85em]">
+          {bn(questions.length)}টির মধ্যে {bn(numberToAnswer)}টির উত্তর দাও।
+        </p>
+      )}
+    </div>
+  ) : (
+    legacyHeader
   );
   function question(v: PreviewQuestion, index: number) {
     const { q, opts, ci } = v;
