@@ -1,0 +1,231 @@
+.paper-demo {
+  min-width: 0;
+  padding: 23px;
+  background: radial-gradient(ellipse at top, #fff9df, #f0f2e9 80%);
+  border: 1px solid #e4e6da;
+  border-radius: 18px;
+  grid-column: 1/-1;
+  overflow: hidden;
+}
+.paper-demo-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  color: #536453;
+  font-size: 14px;
+}
+.paper-demo-caption > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.paper-demo-caption i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2a9967;
+}
+.paper-demo-caption small {
+  font-size: 11px;
+  border: 1px solid #d9e0d1;
+  padding: 3px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.paper-demo-sheet {
+  position: relative;
+  max-width: 760px;
+  min-height: 590px;
+  margin: auto;
+  background-color: #fffef9;
+  background-image: radial-gradient(#d9d4be44 0.55px, transparent 0.55px);
+  background-size: 4px 4px;
+  box-shadow:
+    0 15px 35px #39422a24,
+    0 2px 5px #39422a12;
+  border: 1px solid #e3dfd0;
+  border-radius: 12px;
+  padding: 28px 30px 35px;
+  color: #262d24;
+  opacity: 1;
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease;
+  font-family: var(--qk-body), var(--font-bn), serif;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.paper-demo-sheet.paper-demo-fade {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+.paper-demo-header {
+  text-align: center;
+  margin-bottom: 18px;
+}
+.qk-home .paper-demo-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #263528;
+  line-height: 1.35;
+}
+.paper-demo-header p {
+  font-size: 14px;
+  margin-top: 3px;
+}
+.paper-demo-meta,
+.paper-demo-student {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+.paper-demo-student {
+  padding: 5px 0 9px;
+  border-bottom: 1px solid #a8ac9e;
+  margin-bottom: 10px;
+}
+.paper-demo-body {
+  min-height: 370px;
+}
+.qk-home .paper-demo-body h3 {
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+  color: #293426;
+  margin: 8px 0 3px;
+}
+.paper-demo-instruction {
+  text-align: center;
+  font-size: 12px;
+  margin-bottom: 15px;
+}
+.paper-demo-columns {
+  columns: 2;
+  column-gap: 28px;
+  column-rule: 1px solid #b8bcae;
+}
+.paper-demo-question {
+  break-inside: avoid;
+  margin: 0 0 12px;
+  animation: paper-demo-reveal 0.45s ease both;
+}
+.paper-demo-cq {
+  font-size: 12px;
+  line-height: 1.65;
+}
+.paper-demo-cq > p {
+  margin-bottom: 6px;
+}
+.paper-demo-cq em {
+  float: right;
+  font-style: normal;
+  margin-left: 8px;
+}
+.paper-demo-writing {
+  font-size: 11px;
+  color: #7c8776;
+  margin-top: 10px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.paper-demo-writing span {
+  height: 14px;
+  width: 2px;
+  background: #607158;
+  animation: paper-demo-blink 1s steps(2, start) infinite;
+}
+.paper-demo-page {
+  text-align: center;
+  font-size: 11px;
+  margin-top: 15px;
+  color: #6e7866;
+}
+.paper-demo-note {
+  text-align: center;
+  font-size: 12px;
+  color: #75806c;
+  margin-top: 20px;
+}
+.paper-demo-accessible {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@keyframes paper-demo-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes paper-demo-blink {
+  to {
+    visibility: hidden;
+  }
+}
+@media (max-width: 640px) {
+  .paper-demo {
+    padding: 15px 10px;
+  }
+  .paper-demo-sheet {
+    padding: 22px 15px 25px;
+    min-height: 530px;
+    font-size: 11px;
+  }
+  .qk-home .paper-demo-header h2 {
+    font-size: 18px;
+  }
+  .paper-demo-header p {
+    font-size: 12px;
+  }
+  .paper-demo-meta,
+  .paper-demo-student {
+    font-size: 10px;
+  }
+  .paper-demo-columns {
+    column-gap: 18px;
+  }
+  .paper-demo-instruction {
+    font-size: 10px;
+  }
+  .paper-demo-cq {
+    font-size: 10px;
+  }
+  .paper-demo-caption {
+    font-size: 12px;
+    gap: 6px;
+  }
+  .paper-demo-caption small {
+    font-size: 9px;
+    padding: 3px 6px;
+  }
+  .paper-demo-body {
+    min-height: 335px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .paper-demo-question,
+  .paper-demo-writing span {
+    animation: none;
+  }
+  .paper-demo-sheet {
+    transition: none;
+  }
+}
+@media (min-width: 1500px) {
+  .hm-hero-stack:has(.paper-demo) {
+    grid-template-columns: 1fr;
+    max-width: 1120px;
+  }
+}

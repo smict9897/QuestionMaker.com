@@ -11,6 +11,7 @@ import {
   HomeStarter,
   HomeGuide,
 } from "@/components/home/home-workspace";
+import PaperAnimation from "@/components/home/paper-animation";
 import HomeStats from "@/components/home/home-stats";
 import "@/components/home/workspace.css";
 import HomeFooter from "@/components/proshnoday/home/home-footer";
@@ -193,6 +194,7 @@ export default async function Home() {
               }))}
               unavailable={bank === null}
             />
+            <PaperAnimation />
             <HomeStats
               rows={
                 bank === null
