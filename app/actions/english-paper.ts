@@ -23,6 +23,7 @@ export async function generateEnglishPaper(raw: unknown) {
       ok: false as const,
       error: "শিক্ষক বা অ্যাডমিন হিসেবে লগইন করুন।",
     };
+  let stage = "selection";
   let acquired = false;
   const token = randomUUID(),
     lock = `englishai:lock:${createHash("sha256").update(user.id).digest("hex")}`;
@@ -68,6 +69,7 @@ export async function generateEnglishPaper(raw: unknown) {
         ok: false as const,
         error: "আজকের English generation সীমা (১০ বার) শেষ।",
       };
+    stage = "generation";
     const generated = await requestEnglishPaper(request.selection, {
       apiKey: process.env.DEEPSEEK_API_KEY,
     });
@@ -105,13 +107,19 @@ export async function generateEnglishPaper(raw: unknown) {
       updatedAt: new Date().toISOString(),
     });
     const key = englishOwnerPrefix(user.id) + randomUUID();
+    stage = "storage";
     await db.setting.create({ data: { key, value: JSON.stringify(draft) } });
     return { ok: true as const, key };
   } catch {
     return {
       ok: false as const,
+      stage,
       error:
-        "প্রশ্ন তৈরি বা সংরক্ষণ হয়নি। Output অসম্পূর্ণ বা ভুল হলে সেটি গ্রহণ করা হয় না। আবার চেষ্টা করলে দৈনিক সীমা থেকে আরেকবার গণনা হবে।",
+        stage === "selection"
+          ? "শ্রেণি, পত্র, নির্বাচিত task, writing topic এবং প্রয়োজনীয় textbook source/reference যাচাই করুন। সংযোগ বা দৈনিক সীমা যাচাইও ব্যর্থ হয়ে থাকতে পারে।"
+          : stage === "storage"
+            ? "প্রশ্ন তৈরি হয়েছে কিন্তু draft সেভ হয়নি। Database সংযোগ যাচাই করতে হবে। আবার চেষ্টা করলে দৈনিক সীমা থেকে আরেকবার গণনা হবে।"
+            : "Generation ব্যর্থ হয়েছে: provider সংযোগ, সময়সীমা অথবা output validation সমস্যা হতে পারে। অসম্পূর্ণ paper সেভ করা হয়নি। শ্রেণি/পত্র ও এই error-এর screenshot দিন। আবার চেষ্টা করলে দৈনিক সীমা থেকে আরেকবার গণনা হবে।",
     };
   } finally {
     if (acquired)

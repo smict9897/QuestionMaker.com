@@ -1,4 +1,5 @@
 "use client";
+import "./english-theme.css";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { generateEnglishPaper } from "@/app/actions/english-paper";
@@ -84,7 +85,7 @@ export default function EnglishSetup({
       if (!generated.ok) setMessage(generated.error);
       else
         router.push(
-          `/question-builder/english/edit?key=${encodeURIComponent(generated.key)}`,
+          `/question-builder/build?englishKey=${encodeURIComponent(generated.key)}`,
         );
     } catch (error) {
       setMessage(
@@ -97,7 +98,7 @@ export default function EnglishSetup({
   const field =
     "w-full rounded border border-slate-300 bg-white p-2 text-slate-900";
   return (
-    <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
+    <main className="english-setup mx-auto max-w-4xl space-y-6 px-4 py-8">
       <header>
         <a href="/question-builder/english/saved">আমার English draft</a>
         <h1 className="text-2xl font-bold">
@@ -315,7 +316,7 @@ export default function EnglishSetup({
         topic is requested.
       </p>
       <button
-        className="rounded bg-blue-700 px-5 py-3 text-white"
+        className="rounded bg-emerald-600 px-5 py-3 text-white"
         disabled={busy}
         onClick={validate}
       >

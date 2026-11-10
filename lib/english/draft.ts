@@ -9,8 +9,18 @@ export const englishDraftSchema = z
     selection: englishSelectionSchema,
     output: englishOutputSchema,
     header: paperHeaderSchema,
-    fontSize: z.number().int().min(10).max(22),
-    font: z.enum(["serif", "sans-serif"]),
+    fontSize: z.number().int().min(7).max(28),
+    font: z.enum(["serif", "sans-serif", "hind", "anek", "adorsho"]),
+    layout: z
+      .object({
+        paper: z.enum(["A4", "Letter", "Legal", "A5"]).default("A4"),
+        align: z.enum(["left", "right", "center", "justify"]).default("left"),
+        marginTop: z.number().min(0).max(150).default(53),
+        marginBottom: z.number().min(0).max(150).default(53),
+        marginLeft: z.number().min(0).max(150).default(53),
+        marginRight: z.number().min(0).max(150).default(53),
+      })
+      .default({}),
     updatedAt: z.string().datetime(),
   })
   .strict();

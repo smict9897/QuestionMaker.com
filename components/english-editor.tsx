@@ -15,6 +15,9 @@ import { restoreSettings } from "@/lib/paper-builder";
 import { applyHeader } from "@/lib/paper-header";
 import { headerFieldDefinitions } from "@/lib/paper-header";
 import "./english-paper.css";
+import "./english-theme.css";
+import PaperSettingsPanel from "@/components/paper-builder/settings";
+import { currentHeader } from "@/lib/paper-header";
 export default function EnglishEditor({
   draftKey,
   initial,
@@ -36,6 +39,21 @@ export default function EnglishEditor({
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
+  const [settingsOpen, setSettingsOpen] = useState(false),
+    [edit, setEdit] = useState(false);
+  const pageSettings = applyHeader(restoreSettings({}), draft.header);
+  Object.assign(pageSettings.cfg, draft.layout, {
+    fontSize: draft.fontSize,
+    font: draft.font === "sans-serif" ? "hind" : draft.font,
+  });
+  const family =
+    draft.font === "serif"
+      ? "var(--font-en), Georgia, serif"
+      : draft.font === "anek"
+        ? "var(--qk-head), sans-serif"
+        : draft.font === "adorsho"
+          ? "AdorshoLipi, serif"
+          : "var(--qk-body), sans-serif";
   const result = (() => {
     try {
       return validateEnglishOutput(draft.selection, draft.output);
@@ -81,7 +99,12 @@ export default function EnglishEditor({
   return (
     <main className="english-workspace mx-auto max-w-6xl p-4">
       <div className="english-controls space-y-4">
-        <h1 className="text-2xl font-bold">English draft editor</h1>
+        <h1 className="text-2xl font-bold">
+          প্রশ্নপত্রের Page Setup — English
+        </h1>
+        <button onClick={() => setSettingsOpen(true)}>
+          ⚙ Page Setup / সেটিংস
+        </button>
         <div className="flex flex-wrap gap-4">
           <Link href="/question-builder/english/saved">আমার draft</Link>
           <Link href="/question-builder/english">নতুন প্রশ্নপত্র</Link>
@@ -114,35 +137,7 @@ export default function EnglishEditor({
             onChange={(e) => update({ ...draft, name: e.target.value })}
           />
         </label>
-        <div className="flex gap-4">
-          <label>
-            Font
-            <select
-              value={draft.font}
-              onChange={(e) =>
-                update({
-                  ...draft,
-                  font: e.target.value as EnglishDraft["font"],
-                })
-              }
-            >
-              <option value="serif">Serif</option>
-              <option value="sans-serif">Sans serif</option>
-            </select>
-          </label>
-          <label>
-            Font size
-            <input
-              type="number"
-              min={10}
-              max={22}
-              value={draft.fontSize}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                if (n >= 10 && n <= 22) update({ ...draft, fontSize: n });
-              }}
-            />
-          </label>
+        <div className="flex flex-wrap gap-4">
           <label>
             <input
               type="checkbox"
@@ -204,7 +199,7 @@ export default function EnglishEditor({
             </label>
           ))}
         </details>
-        <details>
+        <details open={edit} onToggle={(e) => setEdit(e.currentTarget.open)}>
           <summary>প্রশ্ন ও উত্তর সম্পাদনা</summary>
           <p>
             Topic/word limit/source ও প্রশ্নের সংখ্যা অক্ষুণ্ণ রাখুন। Table ও
@@ -293,117 +288,161 @@ export default function EnglishEditor({
           </p>
         )}
       </div>
-      <article
-        id="paper"
-        className="english-paper"
-        style={{ fontFamily: draft.font, fontSize: `${draft.fontSize}pt` }}
-      >
-        <HeaderPreview header={draft.header} />
-        {answerMode && <h2>Answer key / sample answers</h2>}
-        {result &&
-          result.tasks.map((task, index) => {
-            const previous = result.tasks[index - 1];
-            const sectionStart = !previous || previous.section !== task.section;
-            const group = task.passageKey;
-            const firstGroup =
-              group &&
-              !result.tasks.slice(0, index).some((t) => t.passageKey === group);
-            return (
-              <section key={task.id} className="english-task">
-                {sectionStart && (
-                  <h2>
-                    Part {task.section === "writing" ? "B" : "A"}:{" "}
-                    {task.section[0].toUpperCase() + task.section.slice(1)} —{" "}
-                    {result.tasks
-                      .filter((t) => t.section === task.section)
-                      .reduce((s, t) => s + t.marks, 0)}{" "}
-                    marks
-                  </h2>
-                )}
-                {!answerMode && firstGroup && (
-                  <div className="english-passage">
+      <div className="english-document-grid">
+        <PaperSettingsPanel
+          english
+          settings={pageSettings}
+          update={(next) =>
+            update({
+              ...draft,
+              header: currentHeader(next),
+              font: next.cfg.font,
+              fontSize: next.cfg.fontSize,
+              layout: {
+                paper: next.cfg.paper,
+                align: next.cfg.align,
+                marginTop: next.cfg.marginTop,
+                marginBottom: next.cfg.marginBottom,
+                marginLeft: next.cfg.marginLeft,
+                marginRight: next.cfg.marginRight,
+              },
+            })
+          }
+          edit={edit}
+          setEdit={setEdit}
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          counts={{ MCQ: 0, CQ: 0, SHORT: 0 }}
+          onPrint={() => {
+            if (result) window.print();
+          }}
+          onUndo={() => {}}
+          onRedo={() => {}}
+          canUndo={false}
+          canRedo={false}
+        />
+        <style>{`@media print{@page{size:${draft.layout.paper};margin:${draft.layout.marginTop}px ${draft.layout.marginRight}px ${draft.layout.marginBottom}px ${draft.layout.marginLeft}px}}`}</style>
+        <article
+          id="paper"
+          className="english-paper"
+          style={{
+            fontFamily: family,
+            fontSize: `${draft.fontSize}pt`,
+            textAlign: draft.layout.align,
+          }}
+        >
+          <HeaderPreview header={draft.header} />
+          {answerMode && <h2>Answer key / sample answers</h2>}
+          {result &&
+            result.tasks.map((task, index) => {
+              const previous = result.tasks[index - 1];
+              const sectionStart =
+                !previous || previous.section !== task.section;
+              const group = task.passageKey;
+              const firstGroup =
+                group &&
+                !result.tasks
+                  .slice(0, index)
+                  .some((t) => t.passageKey === group);
+              return (
+                <section key={task.id} className="english-task">
+                  {sectionStart && (
+                    <h2>
+                      Part {task.section === "writing" ? "B" : "A"}:{" "}
+                      {task.section[0].toUpperCase() + task.section.slice(1)} —{" "}
+                      {result.tasks
+                        .filter((t) => t.section === task.section)
+                        .reduce((s, t) => s + t.marks, 0)}{" "}
+                      marks
+                    </h2>
+                  )}
+                  {!answerMode && firstGroup && (
+                    <div className="english-passage">
+                      <p>
+                        <strong>
+                          Read the following text and answer the linked
+                          questions.
+                        </strong>
+                      </p>
+                      <RichPaperText
+                        text={
+                          draft.output.passages.find((p) => p.key === group)!
+                            .text
+                        }
+                      />
+                    </div>
+                  )}
+                  <div className="english-question-heading">
+                    <strong>
+                      {task.number}. <RichPaperText text={task.instruction} />
+                    </strong>
+                    <span>{task.marks}</span>
+                  </div>
+                  {task.answerCount && (
                     <p>
-                      <strong>
-                        Read the following text and answer the linked questions.
-                      </strong>
+                      Answer any {task.answerCount} of the following{" "}
+                      {task.subitems.length} questions.
                     </p>
-                    <RichPaperText
-                      text={
-                        draft.output.passages.find((p) => p.key === group)!.text
-                      }
-                    />
-                  </div>
-                )}
-                <div className="english-question-heading">
-                  <strong>
-                    {task.number}. <RichPaperText text={task.instruction} />
-                  </strong>
-                  <span>{task.marks}</span>
-                </div>
-                {task.answerCount && (
-                  <p>
-                    Answer any {task.answerCount} of the following{" "}
-                    {task.subitems.length} questions.
-                  </p>
-                )}
-                {!answerMode && task.clues && (
-                  <div className="english-clues">
-                    {task.clues.map((c, i) => (
-                      <span key={i}>
-                        <RichPaperText text={c} />
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {!answerMode && task.table && (
-                  <table>
-                    <thead>
-                      <tr>
-                        {task.table.headers.map((h, i) => (
-                          <th key={i}>
-                            <RichPaperText text={h} />
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {task.table.rows.map((row, i) => (
-                        <tr key={i}>
-                          {row.map((c, j) => (
-                            <td key={j}>
-                              <RichPaperText text={c} />
-                            </td>
+                  )}
+                  {!answerMode && task.clues && (
+                    <div className="english-clues">
+                      {task.clues.map((c, i) => (
+                        <span key={i}>
+                          <RichPaperText text={c} />
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {!answerMode && task.table && (
+                    <table>
+                      <thead>
+                        <tr>
+                          {task.table.headers.map((h, i) => (
+                            <th key={i}>
+                              <RichPaperText text={h} />
+                            </th>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-                <ol type="a">
-                  {task.subitems.map((s, i) => (
-                    <li key={i}>
-                      <RichPaperText
-                        text={answerMode ? s.answer || "" : s.text}
-                      />
-                      {!answerMode && s.options && (
-                        <ol type="i" className="english-options">
-                          {s.options.map((option, j) => (
-                            <li key={j}>
-                              <RichPaperText text={option} />
-                            </li>
-                          ))}
-                        </ol>
-                      )}
-                    </li>
-                  ))}
-                </ol>
-                {answerMode && task.answer && (
-                  <RichPaperText text={task.answer} />
-                )}
-              </section>
-            );
-          })}
-      </article>
+                      </thead>
+                      <tbody>
+                        {task.table.rows.map((row, i) => (
+                          <tr key={i}>
+                            {row.map((c, j) => (
+                              <td key={j}>
+                                <RichPaperText text={c} />
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                  <ol type="a">
+                    {task.subitems.map((s, i) => (
+                      <li key={i}>
+                        <RichPaperText
+                          text={answerMode ? s.answer || "" : s.text}
+                        />
+                        {!answerMode && s.options && (
+                          <ol type="i" className="english-options">
+                            {s.options.map((option, j) => (
+                              <li key={j}>
+                                <RichPaperText text={option} />
+                              </li>
+                            ))}
+                          </ol>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                  {answerMode && task.answer && (
+                    <RichPaperText text={task.answer} />
+                  )}
+                </section>
+              );
+            })}
+        </article>
+      </div>
     </main>
   );
 }

@@ -17,7 +17,7 @@ export default async function SavedEnglishPage() {
       {papers.map((p) => (
         <div className="rounded border p-4" key={p.key}>
           <Link
-            href={`/question-builder/english/edit?key=${encodeURIComponent(p.key)}`}
+            href={`/question-builder/build?englishKey=${encodeURIComponent(p.key)}`}
           >
             {p.name}
           </Link>

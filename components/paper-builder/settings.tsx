@@ -85,6 +85,7 @@ export default function PaperSettingsPanel({
   onRedo,
   canUndo,
   canRedo,
+  english = false,
 }: {
   settings: PaperSettings;
   update: (s: PaperSettings) => void;
@@ -100,6 +101,7 @@ export default function PaperSettingsPanel({
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  english?: boolean;
 }) {
   const panel = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -217,323 +219,435 @@ export default function PaperSettingsPanel({
             <X size={20} />
           </button>
         </div>
-        <button
-          type="button"
-          onClick={onPrint}
-          className="mb-5 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 font-bold text-white"
-        >
-          <Download size={18} /> ডাউনলোড / প্রিন্ট
-        </button>
-        <button
-          className="mb-3 w-full rounded-xl bg-blue-600 p-3 font-bold text-white"
-          onClick={() => {
-            onClose();
-            document.getElementById("paper-save-name")?.focus();
-            document
-              .getElementById("paper-save-name")
-              ?.scrollIntoView({ block: "center", behavior: "smooth" });
-          }}
-        >
-          সংরক্ষণ করুন
-        </button>
-        <details className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm">
-          <summary className="cursor-pointer text-center font-bold text-red-700">
-            শিখুন — ব্যবহার নির্দেশিকা
-          </summary>
-          <p className="mt-2">
-            এডিটিং মোডে প্রশ্নের লেখা ও অপশন বদলান। Page Setup থেকে মার্জিন,
-            পেপার ও কলাম সাজান। সেভ করতে উপরের নামের ঘরে নাম লিখুন। PDF পেতে
-            প্রিন্ট ডায়ালগে Save as PDF বাছুন।
-          </p>
-        </details>
-        {tutorialHref && (
-          <a
-            href={tutorialHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mb-3 block rounded-lg border border-red-200 bg-red-50 p-3 text-center text-sm text-red-700"
-          >
-            ভিডিও টিউটোরিয়াল ↗
-          </a>
-        )}
-        <div className="mb-4 grid grid-cols-2 gap-2">
-          <button
-            disabled={!canUndo}
-            onClick={onUndo}
-            className="studio-choice disabled:opacity-40"
-          >
-            ↶ আনডু
-          </button>
-          <button
-            disabled={!canRedo}
-            onClick={onRedo}
-            className="studio-choice disabled:opacity-40"
-          >
-            ↷ রিডু
-          </button>
-        </div>
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3">
-          <Toggle
-            label="এডিটিং মোড"
-            checked={edit}
-            onChange={setEdit}
-            hint="প্রশ্নের লেখা, অপশন ও সংযুক্তি সম্পাদনা করুন"
-          />
-        </div>
-        {toggle(
-          "divisions",
-          "বিভাগ অনুযায়ী",
-          "CQ বিভাগ শিরোনাম ও ফিল্টার দেখাবে।",
-        )}
-        <section className="my-4 border-t pt-4">
-          {heading("প্রশ্নে সংযুক্তি")}
-          <Toggle
-            label="উত্তরপত্র"
-            checked={s.cfg.ansKey}
-            onChange={(v) => cfg("ansKey", v)}
-          />
-          {toggle("important", "গুরুত্বপূর্ণ প্রশ্ন")}
-          {toggle("tags", "প্রশ্নের তথ্য")}
-          {toggle("examinee", "শিক্ষার্থীর তথ্য")}
-          {toggle("instructor", "ইন্সট্রাক্টরের তথ্য")}
-          {toggle("obtained", "প্রাপ্ত নম্বর ঘর")}
-          {toggle("subjCode", "বিষয় কোড")}
-          {toggle("marks", "প্রশ্নের মার্ক")}
-          {toggle("omr", "OMR যুক্ত")}
-        </section>
-        <section className="border-t pt-4">
-          {quantity("cqAnswer", "সৃজনশীল প্রশ্ন", counts.CQ)}
-          <label className="text-xs text-slate-500">
-            ছবির ডিফল্ট আকার — {s.cfg.imageSize}px
-          </label>
-          <Choices
-            label="ছবির আকার"
-            value={s.cfg.imageSize}
-            options={[
-              [160, "ছোট"],
-              [280, "স্বাভাবিক"],
-              [400, "বড়"],
-            ]}
-            onChange={(v) => cfg("imageSize", v)}
-          />
-          <input
-            aria-label="ছবির ডিফল্ট আকার"
-            className="w-full accent-emerald-500"
-            type="range"
-            min={80}
-            max={600}
-            step={10}
-            value={s.cfg.imageSize}
-            onChange={(e) => cfg("imageSize", +e.target.value)}
-          />
-          <Choices
-            label="ছবির পজিশন"
-            value={s.cfg.imagePosition}
-            options={[
-              ["left", "বামে (Left)"],
-              ["center", "মাঝে (Center)"],
-            ]}
-            onChange={(v) => cfg("imagePosition", v)}
-          />
-          <p className="mb-4 rounded-lg bg-slate-100 p-3 text-xs leading-relaxed text-slate-500">
-            এডিটিং মোডে প্রতিটি প্রশ্নে HTTPS ছবির URL যোগ করুন। প্রিভিউতে ছবির
-            + / − / রিসেট দিয়ে আলাদা আকার বদলানো যাবে।
-          </p>
-          {quantity("shortAnswer", "সংক্ষিপ্ত প্রশ্ন", counts.SHORT)}
-          {quantity("mcqAnswer", "বহুনির্বাচনি প্রশ্ন", counts.MCQ)}
-        </section>
-        <section className="my-4 border-t pt-4">
-          {heading("প্রশ্নের মেটাডাটা (হেডার)")}
-          {toggle("title", "প্রতিষ্ঠানের নাম")}
-          {toggle("cls", "শ্রেণির নাম")}
-          {toggle("subject", "বিষয়ের নাম")}
-          {toggle("chapter", "অধ্যায়ের নাম")}
-          {toggle("exam", "প্রোগ্রাম/পরীক্ষার নাম")}
-          {toggle("instr", "নির্দেশনা")}
-          {toggle("setCode", "সেট কোড")}
-        </section>
-        <section className="my-4 border-t pt-4">
-          {heading("ডকুমেন্ট কাস্টমাইজেশন")}
-          <Choices
-            label="টেক্সট এলাইনমেন্ট"
-            value={s.cfg.align}
-            options={[
-              ["left", "বামে"],
-              ["center", "মাঝে"],
-              ["right", "ডানে"],
-              ["justify", "উভয়"],
-            ]}
-            onChange={(v) => cfg("align", v)}
-          />
-          <Choices
-            label="পেপার সাইজ"
-            value={s.cfg.paper}
-            options={[
-              ["A4", "A4"],
-              ["Letter", "Letter"],
-              ["Legal", "Legal"],
-              ["A5", "A5"],
-            ]}
-            onChange={(v) => cfg("paper", v)}
-          />
-          <Choices
-            label="অপশন স্টাইল"
-            value={s.cfg.style}
-            options={[
-              ["circle", "◦"],
-              ["paren", "(ক)"],
-              ["dot", "ক."],
-              ["close", "ক)"],
-            ]}
-            onChange={(v) => cfg("style", v)}
-          />
-          <label className="my-3 block text-xs text-slate-500">
-            ফন্ট পরিবর্তন
-            <select
-              className={`${field} mt-2`}
-              value={s.cfg.font}
-              onChange={(e) =>
-                cfg("font", e.target.value as PaperSettings["cfg"]["font"])
-              }
+        {english ? (
+          <section className="space-y-4">
+            <button
+              type="button"
+              onClick={onPrint}
+              className="w-full rounded-xl bg-emerald-600 p-3 font-bold text-white"
             >
-              <option value="adorsho">আদর্শলিপি</option>
-              <option value="hind">Hind Siliguri</option>
-              <option value="anek">Anek Bangla</option>
-              <option value="serif">Tinos + আদর্শলিপি</option>
-            </select>
-          </label>
-          <fieldset>
-            <legend className="text-xs text-slate-500">ফন্ট সাইজ (pt)</legend>
-            <div className="mt-2 flex gap-2">
-              <button
-                type="button"
-                aria-label="ফন্ট ছোট করুন"
-                className="rounded-xl border px-4"
-                onClick={() => cfg("fontSize", Math.max(7, s.cfg.fontSize - 1))}
+              ডাউনলোড / প্রিন্ট
+            </button>
+            <Toggle label="প্রশ্ন সম্পাদনা" checked={edit} onChange={setEdit} />
+            <label className="block text-sm">
+              ফন্ট পরিবর্তন
+              <select
+                className={field}
+                value={s.cfg.font}
+                onChange={(e) =>
+                  cfg("font", e.target.value as PaperSettings["cfg"]["font"])
+                }
               >
-                −
-              </button>
+                <option value="serif">Tinos / Serif</option>
+                <option value="hind">Hind Siliguri</option>
+                <option value="anek">Anek Bangla</option>
+                <option value="adorsho">আদর্শলিপি</option>
+              </select>
+            </label>
+            <label className="block text-sm">
+              ফন্ট সাইজ (pt)
               <input
                 aria-label="ফন্ট সাইজ"
+                className={field}
                 type="number"
                 min={7}
                 max={28}
-                className={`${field} text-center`}
                 value={s.cfg.fontSize}
                 onChange={(e) =>
                   cfg(
                     "fontSize",
-                    Math.max(7, Math.min(28, +e.target.value || 14)),
+                    Math.max(7, Math.min(28, Number(e.target.value) || 12)),
                   )
                 }
               />
-              <button
-                type="button"
-                aria-label="ফন্ট বড় করুন"
-                className="rounded-xl border px-4"
-                onClick={() =>
-                  cfg("fontSize", Math.min(28, s.cfg.fontSize + 1))
-                }
+            </label>
+            <Choices
+              label="পেপার সাইজ"
+              value={s.cfg.paper}
+              options={[
+                ["A4", "A4"],
+                ["Letter", "Letter"],
+                ["Legal", "Legal"],
+                ["A5", "A5"],
+              ]}
+              onChange={(v) => cfg("paper", v)}
+            />
+            <Choices
+              label="টেক্সট এলাইনমেন্ট"
+              value={s.cfg.align}
+              options={[
+                ["left", "বামে"],
+                ["center", "মাঝে"],
+                ["right", "ডানে"],
+                ["justify", "উভয়"],
+              ]}
+              onChange={(v) => cfg("align", v)}
+            />
+            {(
+              [
+                "marginTop",
+                "marginBottom",
+                "marginLeft",
+                "marginRight",
+              ] as const
+            ).map((key, i) => (
+              <label className="block text-sm" key={key}>
+                {
+                  [
+                    "উপরের মার্জিন",
+                    "নিচের মার্জিন",
+                    "বামের মার্জিন",
+                    "ডানের মার্জিন",
+                  ][i]
+                }{" "}
+                (px)
+                <input
+                  className={field}
+                  type="number"
+                  min={0}
+                  max={150}
+                  value={s.cfg[key]}
+                  onChange={(e) =>
+                    cfg(
+                      key,
+                      Math.max(0, Math.min(150, Number(e.target.value) || 0)),
+                    )
+                  }
+                />
+              </label>
+            ))}
+            <p className="text-sm text-slate-600">
+              English paper এক কলামে থাকবে। Passage, table ও নম্বরের কাঠামো
+              অপরিবর্তিত থাকবে।
+            </p>
+          </section>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={onPrint}
+              className="mb-5 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 font-bold text-white"
+            >
+              <Download size={18} /> ডাউনলোড / প্রিন্ট
+            </button>
+            <button
+              className="mb-3 w-full rounded-xl bg-blue-600 p-3 font-bold text-white"
+              onClick={() => {
+                onClose();
+                document.getElementById("paper-save-name")?.focus();
+                document
+                  .getElementById("paper-save-name")
+                  ?.scrollIntoView({ block: "center", behavior: "smooth" });
+              }}
+            >
+              সংরক্ষণ করুন
+            </button>
+            <details className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm">
+              <summary className="cursor-pointer text-center font-bold text-red-700">
+                শিখুন — ব্যবহার নির্দেশিকা
+              </summary>
+              <p className="mt-2">
+                এডিটিং মোডে প্রশ্নের লেখা ও অপশন বদলান। Page Setup থেকে মার্জিন,
+                পেপার ও কলাম সাজান। সেভ করতে উপরের নামের ঘরে নাম লিখুন। PDF পেতে
+                প্রিন্ট ডায়ালগে Save as PDF বাছুন।
+              </p>
+            </details>
+            {tutorialHref && (
+              <a
+                href={tutorialHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mb-3 block rounded-lg border border-red-200 bg-red-50 p-3 text-center text-sm text-red-700"
               >
-                +
+                ভিডিও টিউটোরিয়াল ↗
+              </a>
+            )}
+            <div className="mb-4 grid grid-cols-2 gap-2">
+              <button
+                disabled={!canUndo}
+                onClick={onUndo}
+                className="studio-choice disabled:opacity-40"
+              >
+                ↶ আনডু
+              </button>
+              <button
+                disabled={!canRedo}
+                onClick={onRedo}
+                className="studio-choice disabled:opacity-40"
+              >
+                ↷ রিডু
               </button>
             </div>
-          </fieldset>
-          <Choices
-            label="কলাম (MCQ)"
-            value={s.cfg.cols}
-            options={[
-              [1, "▮"],
-              [2, "▮▮"],
-              [3, "▮▮▮"],
-            ]}
-            onChange={(v) => cfg("cols", v)}
-          />
-          <Choices
-            label="কলাম (CQ / SQ)"
-            value={s.cfg.cqColumns}
-            options={[
-              [1, "১ কলাম"],
-              [2, "২ কলাম"],
-            ]}
-            onChange={(v) => cfg("cqColumns", v)}
-          />
-          {toggle("divider", "কলাম ডিভাইডার")}
-          <Choices
-            label="অপশন কলাম"
-            value={s.cfg.optCols}
-            options={[
-              [1, "১"],
-              [2, "২"],
-              [3, "৩"],
-              [4, "৪"],
-            ]}
-            onChange={(v) => cfg("optCols", v)}
-          />
-          <Choices
-            label="অপশন লেবেল"
-            value={s.cfg.label}
-            options={[
-              ["bn", "ক খ"],
-              ["abc", "a b"],
-              ["num", "১ ২"],
-              ["roman", "i ii"],
-            ]}
-            onChange={(v) => cfg("label", v)}
-          />
-          <Choices
-            label="ফাইল ফরম্যাট"
-            value={s.cfg.format}
-            options={[
-              ["q", "প্রশ্ন"],
-              ["qa", "প্রশ্নোত্তর"],
-              ["ans", "উত্তরপত্র"],
-              ["sug", "সাজেশন"],
-            ]}
-            onChange={(v) => cfg("format", v)}
-          />
-        </section>
-        <section className="my-4 border-t pt-4">
-          {heading("সহায়ক টুলস")}
-          {toggle(
-            "duplicates",
-            "পুনরাবৃত্ত প্রশ্ন শনাক্ত",
-            "একই প্রশ্ন প্রিভিউতে হলুদ রঙে চিহ্নিত হবে।",
-          )}
-          {toggle(
-            "autoSet",
-            "অটো সেট তৈরি",
-            "ক ও খ সেট আলাদা প্রশ্ন ও অপশন ক্রমে একসঙ্গে প্রিন্ট হবে।",
-          )}
-        </section>
-        <LayoutControls s={s} update={update} counts={counts} />
-        <section className="border-t pt-4">
-          {heading("ব্র্যান্ডিং")}
-          {toggle("address", "ঠিকানা")}
-          {toggle("watermark", "জলছাপ")}
-          {s.show.watermark && (
-            <label className="mt-2 block text-sm text-slate-700">
-              <span className="mb-2 block font-medium">জলছাপের নাম / লেখা</span>
-              <input
-                type="text"
-                className={field}
-                value={s.info.watermark}
-                placeholder="যেমন: আপনার প্রতিষ্ঠান বা নিজের নাম"
-                maxLength={10000}
-                onChange={(e) =>
-                  update({
-                    ...s,
-                    info: { ...s.info, watermark: e.target.value },
-                  })
-                }
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3">
+              <Toggle
+                label="এডিটিং মোড"
+                checked={edit}
+                onChange={setEdit}
+                hint="প্রশ্নের লেখা, অপশন ও সংযুক্তি সম্পাদনা করুন"
               />
-              <span className="mt-2 block text-xs leading-relaxed text-slate-500">
-                এখানে নাম লিখলে প্রিভিউ ও প্রিন্টের জলছাপে সঙ্গে সঙ্গে দেখা
-                যাবে।
-              </span>
-            </label>
-          )}
-        </section>
+            </div>
+            {toggle(
+              "divisions",
+              "বিভাগ অনুযায়ী",
+              "CQ বিভাগ শিরোনাম ও ফিল্টার দেখাবে।",
+            )}
+            <section className="my-4 border-t pt-4">
+              {heading("প্রশ্নে সংযুক্তি")}
+              <Toggle
+                label="উত্তরপত্র"
+                checked={s.cfg.ansKey}
+                onChange={(v) => cfg("ansKey", v)}
+              />
+              {toggle("important", "গুরুত্বপূর্ণ প্রশ্ন")}
+              {toggle("tags", "প্রশ্নের তথ্য")}
+              {toggle("examinee", "শিক্ষার্থীর তথ্য")}
+              {toggle("instructor", "ইন্সট্রাক্টরের তথ্য")}
+              {toggle("obtained", "প্রাপ্ত নম্বর ঘর")}
+              {toggle("subjCode", "বিষয় কোড")}
+              {toggle("marks", "প্রশ্নের মার্ক")}
+              {toggle("omr", "OMR যুক্ত")}
+            </section>
+            <section className="border-t pt-4">
+              {quantity("cqAnswer", "সৃজনশীল প্রশ্ন", counts.CQ)}
+              <label className="text-xs text-slate-500">
+                ছবির ডিফল্ট আকার — {s.cfg.imageSize}px
+              </label>
+              <Choices
+                label="ছবির আকার"
+                value={s.cfg.imageSize}
+                options={[
+                  [160, "ছোট"],
+                  [280, "স্বাভাবিক"],
+                  [400, "বড়"],
+                ]}
+                onChange={(v) => cfg("imageSize", v)}
+              />
+              <input
+                aria-label="ছবির ডিফল্ট আকার"
+                className="w-full accent-emerald-500"
+                type="range"
+                min={80}
+                max={600}
+                step={10}
+                value={s.cfg.imageSize}
+                onChange={(e) => cfg("imageSize", +e.target.value)}
+              />
+              <Choices
+                label="ছবির পজিশন"
+                value={s.cfg.imagePosition}
+                options={[
+                  ["left", "বামে (Left)"],
+                  ["center", "মাঝে (Center)"],
+                ]}
+                onChange={(v) => cfg("imagePosition", v)}
+              />
+              <p className="mb-4 rounded-lg bg-slate-100 p-3 text-xs leading-relaxed text-slate-500">
+                এডিটিং মোডে প্রতিটি প্রশ্নে HTTPS ছবির URL যোগ করুন। প্রিভিউতে
+                ছবির + / − / রিসেট দিয়ে আলাদা আকার বদলানো যাবে।
+              </p>
+              {quantity("shortAnswer", "সংক্ষিপ্ত প্রশ্ন", counts.SHORT)}
+              {quantity("mcqAnswer", "বহুনির্বাচনি প্রশ্ন", counts.MCQ)}
+            </section>
+            <section className="my-4 border-t pt-4">
+              {heading("প্রশ্নের মেটাডাটা (হেডার)")}
+              {toggle("title", "প্রতিষ্ঠানের নাম")}
+              {toggle("cls", "শ্রেণির নাম")}
+              {toggle("subject", "বিষয়ের নাম")}
+              {toggle("chapter", "অধ্যায়ের নাম")}
+              {toggle("exam", "প্রোগ্রাম/পরীক্ষার নাম")}
+              {toggle("instr", "নির্দেশনা")}
+              {toggle("setCode", "সেট কোড")}
+            </section>
+            <section className="my-4 border-t pt-4">
+              {heading("ডকুমেন্ট কাস্টমাইজেশন")}
+              <Choices
+                label="টেক্সট এলাইনমেন্ট"
+                value={s.cfg.align}
+                options={[
+                  ["left", "বামে"],
+                  ["center", "মাঝে"],
+                  ["right", "ডানে"],
+                  ["justify", "উভয়"],
+                ]}
+                onChange={(v) => cfg("align", v)}
+              />
+              <Choices
+                label="পেপার সাইজ"
+                value={s.cfg.paper}
+                options={[
+                  ["A4", "A4"],
+                  ["Letter", "Letter"],
+                  ["Legal", "Legal"],
+                  ["A5", "A5"],
+                ]}
+                onChange={(v) => cfg("paper", v)}
+              />
+              <Choices
+                label="অপশন স্টাইল"
+                value={s.cfg.style}
+                options={[
+                  ["circle", "◦"],
+                  ["paren", "(ক)"],
+                  ["dot", "ক."],
+                  ["close", "ক)"],
+                ]}
+                onChange={(v) => cfg("style", v)}
+              />
+              <label className="my-3 block text-xs text-slate-500">
+                ফন্ট পরিবর্তন
+                <select
+                  className={`${field} mt-2`}
+                  value={s.cfg.font}
+                  onChange={(e) =>
+                    cfg("font", e.target.value as PaperSettings["cfg"]["font"])
+                  }
+                >
+                  <option value="adorsho">আদর্শলিপি</option>
+                  <option value="hind">Hind Siliguri</option>
+                  <option value="anek">Anek Bangla</option>
+                  <option value="serif">Tinos + আদর্শলিপি</option>
+                </select>
+              </label>
+              <fieldset>
+                <legend className="text-xs text-slate-500">
+                  ফন্ট সাইজ (pt)
+                </legend>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    aria-label="ফন্ট ছোট করুন"
+                    className="rounded-xl border px-4"
+                    onClick={() =>
+                      cfg("fontSize", Math.max(7, s.cfg.fontSize - 1))
+                    }
+                  >
+                    −
+                  </button>
+                  <input
+                    aria-label="ফন্ট সাইজ"
+                    type="number"
+                    min={7}
+                    max={28}
+                    className={`${field} text-center`}
+                    value={s.cfg.fontSize}
+                    onChange={(e) =>
+                      cfg(
+                        "fontSize",
+                        Math.max(7, Math.min(28, +e.target.value || 14)),
+                      )
+                    }
+                  />
+                  <button
+                    type="button"
+                    aria-label="ফন্ট বড় করুন"
+                    className="rounded-xl border px-4"
+                    onClick={() =>
+                      cfg("fontSize", Math.min(28, s.cfg.fontSize + 1))
+                    }
+                  >
+                    +
+                  </button>
+                </div>
+              </fieldset>
+              <Choices
+                label="কলাম (MCQ)"
+                value={s.cfg.cols}
+                options={[
+                  [1, "▮"],
+                  [2, "▮▮"],
+                  [3, "▮▮▮"],
+                ]}
+                onChange={(v) => cfg("cols", v)}
+              />
+              <Choices
+                label="কলাম (CQ / SQ)"
+                value={s.cfg.cqColumns}
+                options={[
+                  [1, "১ কলাম"],
+                  [2, "২ কলাম"],
+                ]}
+                onChange={(v) => cfg("cqColumns", v)}
+              />
+              {toggle("divider", "কলাম ডিভাইডার")}
+              <Choices
+                label="অপশন কলাম"
+                value={s.cfg.optCols}
+                options={[
+                  [1, "১"],
+                  [2, "২"],
+                  [3, "৩"],
+                  [4, "৪"],
+                ]}
+                onChange={(v) => cfg("optCols", v)}
+              />
+              <Choices
+                label="অপশন লেবেল"
+                value={s.cfg.label}
+                options={[
+                  ["bn", "ক খ"],
+                  ["abc", "a b"],
+                  ["num", "১ ২"],
+                  ["roman", "i ii"],
+                ]}
+                onChange={(v) => cfg("label", v)}
+              />
+              <Choices
+                label="ফাইল ফরম্যাট"
+                value={s.cfg.format}
+                options={[
+                  ["q", "প্রশ্ন"],
+                  ["qa", "প্রশ্নোত্তর"],
+                  ["ans", "উত্তরপত্র"],
+                  ["sug", "সাজেশন"],
+                ]}
+                onChange={(v) => cfg("format", v)}
+              />
+            </section>
+            <section className="my-4 border-t pt-4">
+              {heading("সহায়ক টুলস")}
+              {toggle(
+                "duplicates",
+                "পুনরাবৃত্ত প্রশ্ন শনাক্ত",
+                "একই প্রশ্ন প্রিভিউতে হলুদ রঙে চিহ্নিত হবে।",
+              )}
+              {toggle(
+                "autoSet",
+                "অটো সেট তৈরি",
+                "ক ও খ সেট আলাদা প্রশ্ন ও অপশন ক্রমে একসঙ্গে প্রিন্ট হবে।",
+              )}
+            </section>
+            <LayoutControls s={s} update={update} counts={counts} />
+            <section className="border-t pt-4">
+              {heading("ব্র্যান্ডিং")}
+              {toggle("address", "ঠিকানা")}
+              {toggle("watermark", "জলছাপ")}
+              {s.show.watermark && (
+                <label className="mt-2 block text-sm text-slate-700">
+                  <span className="mb-2 block font-medium">
+                    জলছাপের নাম / লেখা
+                  </span>
+                  <input
+                    type="text"
+                    className={field}
+                    value={s.info.watermark}
+                    placeholder="যেমন: আপনার প্রতিষ্ঠান বা নিজের নাম"
+                    maxLength={10000}
+                    onChange={(e) =>
+                      update({
+                        ...s,
+                        info: { ...s.info, watermark: e.target.value },
+                      })
+                    }
+                  />
+                  <span className="mt-2 block text-xs leading-relaxed text-slate-500">
+                    এখানে নাম লিখলে প্রিভিউ ও প্রিন্টের জলছাপে সঙ্গে সঙ্গে দেখা
+                    যাবে।
+                  </span>
+                </label>
+              )}
+            </section>
+          </>
+        )}
         <a
           href={supportHref || "/contact-us"}
           target={supportHref?.startsWith("https://") ? "_blank" : undefined}
