@@ -11,11 +11,13 @@ export default function PaperPreparation({
   subject,
   topics,
   append,
+  questionType = "ALL",
 }: {
   category: string;
   subject: string;
   topics: string[];
   append: boolean;
+  questionType?: string;
 }) {
   const taskCache = useRef(
     new Map<string, ReturnType<typeof preparePaperTopic>>(),
@@ -39,7 +41,12 @@ export default function PaperPreparation({
       setGenerated(0);
       setMessage("অনুমোদিত প্রশ্নব্যাংক পরীক্ষা হচ্ছে…");
       try {
-        const plan = await checkPaperTopics({ category, subject, topics });
+        const plan = await checkPaperTopics({
+          category,
+          subject,
+          topics,
+          questionType,
+        });
         if (stopped) return;
         if (!plan.ok) {
           setError(plan.error);
@@ -59,11 +66,13 @@ export default function PaperPreparation({
               subject,
               plan.topics[i],
               batch,
+              questionType,
             ]);
             if (!taskCache.current.has(key))
               taskCache.current.set(
                 key,
                 preparePaperTopic({
+                  questionType,
                   category,
                   subject,
                   topics: [plan.topics[i]],
@@ -94,7 +103,7 @@ export default function PaperPreparation({
         }
         if (stopped) return;
         setMessage("প্রশ্ন প্রস্তুত। নির্বাচন পেজ খোলা হচ্ছে…");
-        const params = new URLSearchParams({ category, subject });
+        const params = new URLSearchParams({ category, subject, questionType });
         topics.forEach((t) => params.append("topic", t));
         if (append) params.set("append", "1");
         router.replace(`/question-builder/create?${params}`);
@@ -106,7 +115,7 @@ export default function PaperPreparation({
       stopped = true;
       started.current = false;
     };
-  }, [category, subject, topics, append, router, retry]);
+  }, [category, subject, topics, append, questionType, router, retry]);
   return (
     <main className="paper-preparation">
       <section className="preparation-card" aria-busy={!error}>
@@ -124,9 +133,7 @@ export default function PaperPreparation({
         <ol>
           <li>✓ নির্বাচিত বিষয় ও অধ্যায় পরীক্ষা</li>
           <li>অনুমোদিত প্রশ্ন থাকলে সেখান থেকেই ব্যবহার</li>
-          <li>
-            প্রয়োজনে ধাপে ধাপে নতুন প্রশ্ন প্রস্তুত ও পর্যালোচনার জন্য সংরক্ষণ
-          </li>
+          <li>প্রয়োজনে ধাপে ধাপে নতুন প্রশ্ন প্রস্তুত ও পর্যালোচনার জন্য সংরক্ষণ</li>
         </ol>
         <p role="status" className="preparation-status">
           {message}
@@ -144,9 +151,8 @@ export default function PaperPreparation({
           <p>{generated.toLocaleString("bn-BD")}টি নতুন প্রশ্ন তৈরি হয়েছে।</p>
         )}
         <aside>
-          নতুন প্রশ্ন আপনি এখন ব্যবহার করতে পারবেন। পর্যালোচনা শেষ না হওয়া
-          পর্যন্ত অন্য ব্যবহারকারীরা পাবেন না। ব্যবহারের আগে প্রশ্ন ও উত্তর
-          যাচাই করুন।
+          নতুন প্রশ্ন আপনি এখন ব্যবহার করতে পারবেন। পর্যালোচনা শেষ না হওয়া পর্যন্ত অন্য
+          ব্যবহারকারীরা পাবেন না। ব্যবহারের আগে প্রশ্ন ও উত্তর যাচাই করুন।
         </aside>
         {error && (
           <div role="alert">

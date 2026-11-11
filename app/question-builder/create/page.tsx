@@ -1,3 +1,8 @@
+import { questionTypeWhere } from "@/lib/question-types";
+import {
+  normalizeQuestionType,
+  QUESTION_TYPE_OPTIONS,
+} from "@/lib/question-type-options";
 import { auth } from "@/auth";
 import { visibleQuestions } from "@/lib/paper-generation";
 import ChapterSelector from "@/components/chapter-selector";
@@ -12,6 +17,7 @@ export const metadata = { title: "প্রশ্ন নির্বাচন" }
 
 type SP = {
   append?: string;
+  questionType?: string;
   category?: string;
   subject?: string;
   topic?: string | string[];
@@ -64,12 +70,14 @@ export default async function CreatePage({
   const category = sp.category ?? "";
   const subject = sp.subject ?? "";
   const selectedTopics = normalizeTopics(sp.topic);
+  const questionType = normalizeQuestionType(sp.questionType);
   const q = (sp.q ?? "").trim();
   const page = Math.max(1, Number(sp.page) || 1);
 
   const cats = categoryAliases(category);
 
   const where = {
+    AND: [questionTypeWhere(questionType)],
     ...visibleQuestions(user?.id),
     ...(category ? { category: { in: cats } } : {}),
     ...(subject ? { subject } : {}),
@@ -103,6 +111,7 @@ export default async function CreatePage({
     const m: SP = {
       category,
       subject,
+      questionType,
       topic: selectedTopics,
       q,
       append: sp.append === "1" ? "1" : undefined,
@@ -163,6 +172,16 @@ export default async function CreatePage({
 
       <form method="get" className="mt-4 grid gap-2">
         {sp.append === "1" && <input type="hidden" name="append" value="1" />}
+        <label>
+          প্রশ্নের ধরন
+          <select name="questionType" defaultValue={questionType}>
+            {QUESTION_TYPE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <input type="hidden" name="category" value={category} />
         <input type="hidden" name="subject" value={subject} />
         <ChapterSelector
