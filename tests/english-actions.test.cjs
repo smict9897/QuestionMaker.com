@@ -127,8 +127,10 @@ test("English generation denies unauthorized users before provider or database w
   assert.equal((await h.actions.generateEnglishPaper(selection)).ok, false);
   assert.equal(h.calls, 0);
   assert.equal(h.rows.size, 0);
-  h.setUser({ id: "student", role: "STUDENT" });
+  h.setUser({ id: "", role: "STUDENT" });
   assert.equal((await h.actions.generateEnglishPaper(selection)).ok, false);
+  assert.equal(h.calls, 0);
+  assert.equal(h.rows.size, 0);
 });
 test("private drafts support save/reopen but deny a second teacher; daily quota is enforced", async () => {
   const old = process.env.DEEPSEEK_API_KEY;
@@ -384,6 +386,106 @@ test("partial bank hit sends only missing task to provider and combines validate
       loaded.output.tasks.map((t) => t.id),
       ["articles", "prepositions"],
     );
+  } finally {
+    if (old === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = old;
+  }
+});
+
+test("signed-in STUDENT can generate, save, list and reopen only their own English drafts", async () => {
+  const old = process.env.DEEPSEEK_API_KEY;
+  process.env.DEEPSEEK_API_KEY = "test-only";
+  try {
+    const h = harness();
+    h.setUser({ id: "student:one", role: "STUDENT" });
+    const r = await h.actions.generateEnglishPaper(selection);
+    assert.equal(r.ok, true);
+    assert.equal(h.calls, 1);
+    const draft = await h.actions.loadEnglishPaper(r.key);
+    assert.ok(draft);
+    assert.equal(
+      (
+        await h.actions.saveEnglishPaper(r.key, {
+          ...draft,
+          name: "Student paper",
+        })
+      ).ok,
+      true,
+    );
+    assert.ok(
+      (await h.actions.listEnglishPapers()).some(
+        (p) => p.name === "Student paper",
+      ),
+    );
+    for (const u of [
+      { id: "student:two", role: "STUDENT" },
+      { id: "teacher:other", role: "TEACHER" },
+      null,
+    ]) {
+      h.setUser(u);
+      assert.equal(await h.actions.loadEnglishPaper(r.key), null);
+      assert.equal((await h.actions.saveEnglishPaper(r.key, draft)).ok, false);
+      assert.equal((await h.actions.listEnglishPapers()).length, 0);
+    }
+  } finally {
+    if (old === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = old;
+  }
+});
+test("STUDENT keeps one-generation lock and ten-per-day quota; never gets ADMIN bypass", async () => {
+  const old = process.env.DEEPSEEK_API_KEY;
+  process.env.DEEPSEEK_API_KEY = "test-only";
+  try {
+    const h = harness();
+    h.setUser({ id: "student:quota", role: "STUDENT" });
+    const concurrent = await Promise.all([
+      h.actions.generateEnglishPaper(selection),
+      h.actions.generateEnglishPaper(selection),
+    ]);
+    assert.equal(concurrent.filter((r) => r.ok).length, 1);
+    for (let i = 1; i < 10; i++)
+      assert.equal((await h.actions.generateEnglishPaper(selection)).ok, true);
+    const denied = await h.actions.generateEnglishPaper(selection);
+    assert.equal(denied.ok, false);
+    assert.match(denied.error, /সীমা/);
+    assert.equal(h.calls, 10);
+  } finally {
+    if (old === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = old;
+  }
+});
+test("STUDENT interrupted generation checkpoints remain private and pending approval", async () => {
+  const old = process.env.DEEPSEEK_API_KEY;
+  process.env.DEEPSEEK_API_KEY = "test-only";
+  try {
+    const h = harness();
+    h.setUser({ id: "student:recover", role: "STUDENT" });
+    h.setProvider(async (s, options) => {
+      await options.onContent(
+        JSON.stringify({
+          passages: [],
+          tasks: [
+            {
+              id: "paragraph",
+              instruction: "Write about My school in 120 words.",
+              subitems: [],
+            },
+          ],
+        }),
+      );
+      throw Error("network lost");
+    });
+    const r = await h.actions.generateEnglishPaper(selection);
+    assert.equal(r.ok, false);
+    const records = [...h.rows].filter(([k]) =>
+      k.startsWith("english-review:"),
+    );
+    assert.equal(records.length, 1);
+    const record = JSON.parse(records[0][1]);
+    assert.equal(record.status, "PENDING");
+    assert.ok(await h.actions.loadEnglishPaper(record.draftKey));
+    h.setUser({ id: "student:other", role: "STUDENT" });
+    assert.equal(await h.actions.loadEnglishPaper(record.draftKey), null);
   } finally {
     if (old === undefined) delete process.env.DEEPSEEK_API_KEY;
     else process.env.DEEPSEEK_API_KEY = old;
