@@ -16,6 +16,11 @@ import { applyHeader } from "@/lib/paper-header";
 import { headerFieldDefinitions } from "@/lib/paper-header";
 import "./english-paper.css";
 import "./english-theme.css";
+import {
+  englishBlueprint,
+  englishMarksLabel,
+  type EnglishGrade,
+} from "@/lib/english/blueprints";
 import EnglishDataChart from "@/components/english-data-chart";
 import PaperSettingsPanel from "@/components/paper-builder/settings";
 import { currentHeader } from "@/lib/paper-header";
@@ -390,11 +395,12 @@ export default function EnglishEditor({
                   {sectionStart && (
                     <h2>
                       Part {task.section === "writing" ? "B" : "A"}:{" "}
-                      {task.section[0].toUpperCase() + task.section.slice(1)} —{" "}
+                      {task.section[0].toUpperCase() + task.section.slice(1)}{" "}
+                      (Marks –{" "}
                       {result.tasks
                         .filter((t) => t.section === task.section)
                         .reduce((s, t) => s + t.marks, 0)}{" "}
-                      marks
+                      )
                     </h2>
                   )}
                   {!answerMode && firstGroup && (
@@ -417,7 +423,14 @@ export default function EnglishEditor({
                     <strong>
                       {task.number}. <RichPaperText text={task.instruction} />
                     </strong>
-                    <span>{task.marks}</span>
+                    <span className="english-mark-formula">
+                      {englishMarksLabel(
+                        englishBlueprint(
+                          draft.selection.grade as EnglishGrade,
+                          draft.selection.paper,
+                        ).items.find((i) => i.id === task.id)!,
+                      )}
+                    </span>
                   </div>
                   {task.answerCount && (
                     <p>

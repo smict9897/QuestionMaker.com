@@ -137,6 +137,10 @@ const { chromium } = require("playwright-core"),
             "center",
           );
         }
+        if (grade === 6 && paper === 2) {
+          assert.deepEqual(await page.locator(".english-mark-formula").allTextContents(), ["0.5×10=5","0.5×10=5","1×5=5","1×5=5","1×5=5","0.5×10=5","8","12"]);
+          assert.equal(await page.locator(".english-task").nth(2).locator("tbody tr").count(),5);
+        }
         const count = await page.locator("#paper .english-task").count();
         assert.ok(count >= 8);
         if (grade >= 11 && paper === 1)

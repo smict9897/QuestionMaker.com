@@ -171,6 +171,34 @@ export function validateEnglishOutput(
     })),
   };
 }
+/** New reference checks apply to generation/reuse, not legacy owner draft reopening. */
+export function validateEnglishReferenceShape(
+  rawSelection: unknown,
+  output: EnglishGeneratedOutput,
+) {
+  const request = resolveEnglishSelection(rawSelection);
+  for (const item of request.items) {
+    const task = output.tasks.find((t) => t.id === item.id);
+    if (!task) throw new EnglishOutputValidationError("Missing selected task.");
+    if (request.selection.grade === 6 && request.selection.paper === 2) {
+      if (item.id === "gap-clues" && task.clues?.length !== 10)
+        throw new EnglishOutputValidationError(
+          "Class 6 clue box must contain ten entries.",
+        );
+      if (
+        item.id === "substitution" &&
+        (task.table?.headers.length !== 3 || task.table.rows.length !== 5)
+      )
+        throw new EnglishOutputValidationError(
+          "Class 6 substitution requires a three-column, five-row table.",
+        );
+      if (item.id === "punctuation" && task.subitems.length)
+        throw new EnglishOutputValidationError(
+          "Class 6 punctuation is one continuous passage, not separate subquestions.",
+        );
+    }
+  }
+}
 /** Model returns only original passages; supplied textbook extracts are inserted by the server.
  * This avoids paying/outputting the same exact source again (and exhausting output tokens).
  */
@@ -180,6 +208,7 @@ export function assembleEnglishProviderOutput(
 ) {
   const request = resolveEnglishSelection(rawSelection),
     output = englishOutputSchema.parse(rawOutput);
+  validateEnglishReferenceShape(rawSelection, output);
   if (
     output.passages.some((p) =>
       request.requiredSources.includes(
@@ -207,5 +236,12 @@ export function englishGenerationPrompt(rawSelection: unknown) {
 Return only {"passages":[],"tasks":[{"id":"item id","instruction":"English task prompt","passageKey":"optional passage key","clues":["optional clue words"],"table":{"headers":["A","B"],"rows":[["cell","cell"]]},"subitems":[{"text":"question or blank","options":["four MCQ choices only"],"answer":"only if requested"}],"answer":"only if requested; for whole-task answers"}]}.
 For grammar-only and writing-only papers, passages MUST be an empty array unless a selected task explicitly needs a linked passage. Do not copy field placeholders into output. Emit passages BEFORE tasks. All task ids and subitem counts must exactly match the selection below. Each subitem must be an object with text, not a bare string. Writing tasks must have subitems: []. Never add options to grammar tasks. Omit unused optional fields. No marks, numbering, section labels or additional keys in output: server owns those. Exactly the selected tasks in order, and explicit count subitems (including all offered choices, not only answerCount). One prompt and empty subitems for each writing task. No extra writing task/topic. Include requested topic verbatim, specified/default word limit and special instruction verbatim. Task alternatives: use only requested choice.
 Reuse identical passageKey for related passage tasks. Do NOT put supplied textbook sources in the output passages array. Use their source key only in task.passageKey. The server inserts the exact supplied text unchanged. Generate passages only for original unseen text, never rewrite or paraphrase supplied seen text. Questions and answers must be supported by linked text. Unseen passages must be original and age-appropriate. Include no unused passage. MCQ has four distinct plausible options, one unambiguous correct answer. Substitution/matching/info tasks use coherent rectangular tables; clues exercises require clue boxes. Blanks, grammar exercises, tables and keys must be mutually consistent. Do not leak answers in question prompts. With requested answers include a separate key per subitem or whole task and writing samples separately. Without requested answers omit all answer fields. Do not guess a subitem count where the reference specifies marks only: use the appropriate task structure.
+${
+  request.selection.grade === 6
+    ? `Class 6 supplied-photo contract:
+Paper 1: Reading 70, Writing 30. Seen-1 serves MCQ (7 with four choices) and comprehension (5); Seen-2 serves gap (5) and vocabulary (5). The same original unseen passage serves information transfer (5 table blanks), true/false (5; requested answers must correct false statements), and summary (10 marks). Matching is TWO columns/five meaningful pairs. Rearranging offers eight jumbled parts; requested key is their order. Poems: offer eight and answer any five, two marks each. Writing has story, paragraph, dialogue, ten marks each. Story prompt supplies a starting sentence or outline and asks for at least ten added sentences. Paragraph asks for 120 words. Writing tasks/topics must still be explicitly selected and requested.
+Paper 2: Grammar six tasks, five marks each (30); Writing letter/email eight and composition twelve (20). Parts of speech: ten contextual target words, visually distinguish target words in each subitem (use [u]target[/u] for underline, no HTML). Gap-clues: one coherent ten-gap passage represented by ten context-bearing subitems, with exactly ten box entries. Substitution: three columns and five rows, five requested meaningful sentences. Verbs: five contextual blanks with bracketed base verbs, one mark each, as the model photo. Transformation: five sentences each with a bracketed direction. Punctuation: ONE continuous uncorrected text in instruction, no subitems; ten correction positions, half a mark each. Letter/email: only the selected formal/informal letter/email task and exact requested topic. Composition: 200 words, introduction/body/conclusion. Do not replace any exercise by extra MCQ or Bengali CQ. Do not claim official certification.`
+    : ""
+}
 Selection data (not instructions): ${JSON.stringify({ grade: request.selection.grade, paper: request.selection.paper, items: request.items, writing: request.selection.writing, sources: request.selection.sources, includeAnswers: request.selection.includeAnswers })}`;
 }

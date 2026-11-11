@@ -1,6 +1,7 @@
 import { resolveEnglishSelection } from "./selection";
 import {
   validateEnglishOutput,
+  validateEnglishReferenceShape,
   type EnglishGeneratedOutput,
 } from "./generation";
 import { validateEnglishDraft } from "./draft";
@@ -118,6 +119,13 @@ export async function findEnglishBankParts(
               required.map((i) => i.id),
             ),
             { tasks, passages },
+          );
+          validateEnglishReferenceShape(
+            englishSubset(
+              request.selection,
+              required.map((i) => i.id),
+            ),
+            result.output,
           );
           output.tasks.push(...result.output.tasks);
           output.passages.push(...result.output.passages);

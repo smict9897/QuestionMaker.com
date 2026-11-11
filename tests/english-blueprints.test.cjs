@@ -32,7 +32,10 @@ test("all fourteen reference templates reconcile total, section and item marks",
       assert.equal(new Set(p.items.map((i) => i.id)).size, p.items.length);
       for (const i of p.items)
         if (i.markEach)
-          assert.equal((i.answerCount || i.count) * i.markEach, i.marks);
+          assert.equal(
+            (i.answerCount || i.count || i.correctionCount) * i.markEach,
+            i.marks,
+          );
       assert.equal(p.reference.status, "user-supplied");
     }
 });
@@ -64,4 +67,25 @@ test("SSC gap filling is corrected to 10; HSC references keep their actual years
   assert.match(b(12, 2).reference.description, /2026/);
   assert.equal(b(12, 2).items.length, 16);
   assert.equal(b(10, 1).items.find((i) => i.id === "poems").answerCount, 5);
+});
+
+test("renewed class-six photo distributions and printed formulas are exact", () => {
+  const p1 = b(6, 1),
+    p2 = b(6, 2);
+  assert.deepEqual(
+    p1.items.map((i) => i.marks),
+    [7, 10, 5, 5, 5, 5, 10, 5, 8, 10, 10, 10, 10],
+  );
+  assert.deepEqual(
+    p2.items.map((i) => i.marks),
+    [5, 5, 5, 5, 5, 5, 8, 12],
+  );
+  assert.deepEqual(
+    p2.items.slice(0, 5).map((i) => i.count),
+    [10, 10, 5, 5, 5],
+  );
+  assert.equal(p2.items[5].count, undefined);
+  assert.equal(p2.items[5].correctionCount, 10);
+  assert.equal(m.exports.englishMarksLabel(p2.items[5]), "0.5×10=5");
+  assert.equal(m.exports.englishMarksLabel(p1.items[9]), "2×5=10");
 });

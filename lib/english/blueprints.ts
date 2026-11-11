@@ -10,6 +10,8 @@ export type EnglishItem = {
   count?: number;
   answerCount?: number;
   markEach?: number;
+  /** Correction positions within one passage, not separate questions. */
+  correctionCount?: number;
   words?: number;
   sourceGroup?:
     "seen-1" | "seen-2" | "unseen" | "textbook-poems" | "textbook-stories";
@@ -149,7 +151,12 @@ function juniorSecond(grade: 6 | 7 | 8): EnglishItem[] {
         ];
   return [
     ...items,
-    grammar("punctuation", "Punctuation and capitalization", 5),
+    grammar(
+      "punctuation",
+      "Punctuation and capitalization",
+      5,
+      grade === 6 ? { correctionCount: 10, markEach: 0.5 } : {},
+    ),
     writing("letter-email", "Letter/email: formal or informal", 8, {
       writingChoices: [
         "formal-letter",
@@ -363,4 +370,12 @@ export function englishBlueprint(
       status: "user-supplied",
     },
   };
+}
+
+/** Marks are server-owned, never supplied by model prose. */
+export function englishMarksLabel(item: EnglishItem) {
+  const count = item.answerCount ?? item.count ?? item.correctionCount;
+  return count && item.markEach !== undefined
+    ? `${item.markEach}×${count}=${item.marks}`
+    : String(item.marks);
 }

@@ -40,10 +40,17 @@ const output = {
       ? {
           table: {
             headers: ["A", "B", "C"],
-            rows: [
-              ["Students", "are", "learning English."],
-              ["Teachers", "help", "students."],
-            ],
+            rows:
+              grade === 6 && paper === 2 && i.id === "substitution"
+                ? Array.from({ length: 5 }, () => [
+                    "Students",
+                    "are",
+                    "learning English.",
+                  ])
+                : [
+                    ["Students", "are", "learning English."],
+                    ["Teachers", "help", "students."],
+                  ],
           },
         }
       : {}),
@@ -59,7 +66,23 @@ const output = {
         }
       : {}),
     ...(["gap-clues", "cloze-clues"].includes(i.id)
-      ? { clues: ["learn", "read", "write", "speak", "listen"] }
+      ? {
+          clues:
+            grade === 6 && paper === 2
+              ? [
+                  "learn",
+                  "read",
+                  "write",
+                  "speak",
+                  "listen",
+                  "a",
+                  "the",
+                  "in",
+                  "of",
+                  "and",
+                ]
+              : ["learn", "read", "write", "speak", "listen"],
+        }
       : {}),
     subitems: Array.from(
       { length: i.count || (i.id === "mcq" ? 5 : 0) },
