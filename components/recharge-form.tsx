@@ -1,7 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { submitRecharge } from "@/app/actions/wallet";
 export default function RechargeForm() {
+  const amountRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false),
     [msg, setMsg] = useState("");
   return (
@@ -9,6 +10,7 @@ export default function RechargeForm() {
       className="mt-5 grid gap-3"
       onSubmit={async (e) => {
         e.preventDefault();
+        if (busy) return;
         const form = new FormData(e.currentTarget);
         setBusy(true);
         try {
@@ -25,6 +27,7 @@ export default function RechargeForm() {
         টাকা (কমপক্ষে ৳২০)
         <input
           className="block rounded border p-2"
+          ref={amountRef}
           name="amount"
           type="number"
           min="20"
@@ -33,6 +36,19 @@ export default function RechargeForm() {
           required
         />
       </label>
+      <div className="tw-amounts">
+        {[20, 50, 100, 200, 500].map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => {
+              if (amountRef.current) amountRef.current.value = String(n);
+            }}
+          >
+            ৳{n}
+          </button>
+        ))}
+      </div>
       <label>
         Payment method
         <select name="method" className="block rounded border p-2">

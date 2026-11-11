@@ -1,0 +1,511 @@
+.tw-root {
+  min-height: 100vh;
+  background: #f3f7fa;
+  color: #153246;
+  font-family: var(--qk-body), sans-serif;
+}
+.tw-root * {
+  box-sizing: border-box;
+}
+.tw-root a {
+  text-decoration: none;
+}
+.tw-root button,
+.tw-root input,
+.tw-root select {
+  font: inherit;
+}
+.tw-header {
+  min-height: 80px;
+  padding: 18px max(20px, calc((100vw - 1200px) / 2));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: white;
+  border-bottom: 1px solid #e2e9ee;
+}
+.tw-brand {
+  min-width: 0;
+}
+.tw-header nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tw-recharge,
+.tw-primary {
+  background: #15965f;
+  color: white !important;
+  border-radius: 12px;
+  padding: 11px 19px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.tw-balance {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  border: 1px solid #d5e2ec;
+  border-radius: 12px;
+  background: #f3f8fd;
+  white-space: nowrap;
+}
+.tw-dropdown {
+  position: relative;
+}
+.tw-dropdown summary {
+  list-style: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  width: 43px;
+  height: 43px;
+  border: 1px solid #d5e2ec;
+  border-radius: 50%;
+  background: #f3f8fd;
+  font-weight: 800;
+}
+.tw-dropdown summary::-webkit-details-marker {
+  display: none;
+}
+.tw-appmenu,
+.tw-profile {
+  position: absolute;
+  right: 0;
+  top: 54px;
+  z-index: 40;
+  background: white;
+  border: 1px solid #e0e7ef;
+  border-radius: 18px;
+  box-shadow: 0 20px 55px #132b4724;
+  padding: 18px;
+  width: 340px;
+  max-width: calc(100vw - 28px);
+}
+.tw-appmenu > strong {
+  display: block;
+  text-align: center;
+  margin-bottom: 15px;
+}
+.tw-appmenu > div {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.tw-appmenu a {
+  border: 1px solid #e2e8ef;
+  border-radius: 12px;
+  padding: 14px 5px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 9px;
+  text-align: center;
+  font-size: 0.88rem;
+}
+.tw-profile {
+  width: 300px;
+}
+.tw-profile small {
+  display: block;
+  overflow-wrap: anywhere;
+  color: #6c7985;
+  margin: 5px 0 15px;
+}
+.tw-profile a,
+.tw-profile button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 3px;
+  width: 100%;
+  border: 0;
+  background: white;
+  text-align: left;
+}
+.tw-main {
+  max-width: 1200px;
+  padding: 30px 24px 60px;
+  margin: auto;
+}
+.tw-hero {
+  background:
+    radial-gradient(ellipse at top right, #15534e 0, transparent 65%),
+    linear-gradient(120deg, #122d46, #081a29);
+  border-radius: 28px;
+  padding: 36px;
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+.tw-eyebrow {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9fe3cc;
+}
+.tw-hero h1 {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+  font-weight: 800;
+}
+.tw-hero p {
+  color: #bed0d9;
+  line-height: 1.7;
+}
+.tw-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 24px 0;
+}
+.tw-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 19px;
+  border-radius: 12px;
+  background: #ffe17b;
+  color: #2f301a !important;
+  font-weight: 700;
+}
+.tw-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.tw-stat {
+  padding: 20px;
+  background: #ffffff0d;
+  border: 1px solid #ffffff21;
+  border-radius: 18px;
+}
+.tw-stat small {
+  display: block;
+  color: #b8cdd8;
+}
+.tw-stat strong {
+  display: block;
+  font-size: 1.65rem;
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+.tw-stat span {
+  font-size: 0.8rem;
+  color: #abc6d2;
+}
+.tw-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 30px 0 18px;
+}
+.tw-section-title h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin: 0;
+}
+.tw-section-title a {
+  color: #16855d;
+  font-size: 0.9rem;
+}
+.tw-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.tw-feature {
+  background: white;
+  border: 1px solid #e0e8ee;
+  border-radius: 20px;
+  padding: 25px;
+  box-shadow: 0 4px 10px #183b4c05;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.tw-feature:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 25px #15324612;
+}
+.tw-feature h3 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin: 20px 0 8px;
+}
+.tw-feature p {
+  font-size: 0.92rem;
+  color: #6b7d89;
+  margin: 0;
+  line-height: 1.6;
+}
+.tw-icon {
+  display: grid;
+  place-items: center;
+  width: 53px;
+  height: 53px;
+  border-radius: 16px;
+  background: #e8f6ee;
+  color: #119568;
+}
+.tw-blue .tw-icon {
+  color: #2471c5;
+  background: #eaf3ff;
+}
+.tw-purple .tw-icon {
+  color: #8550bc;
+  background: #f4edff;
+}
+.tw-amber .tw-icon {
+  color: #957021;
+  background: #fff6d8;
+}
+.tw-go {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #14875d;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-top: 22px;
+}
+.tw-panel {
+  padding: 26px;
+  border: 1px solid #e1e8ee;
+  background: white;
+  border-radius: 20px;
+  margin-top: 22px;
+}
+.tw-panel h2 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin: 0 0 16px;
+}
+.tw-panel p {
+  line-height: 1.7;
+}
+.tw-muted {
+  color: #71828e;
+  font-size: 0.9rem;
+}
+.tw-table-wrap {
+  overflow: auto;
+}
+.tw-table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+  font-size: 0.88rem;
+  text-align: left;
+}
+.tw-table th {
+  color: #72828e;
+  font-weight: 500;
+}
+.tw-table th,
+.tw-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #edf1f5;
+}
+.tw-status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #f0f5f9;
+  color: #416077;
+  font-size: 0.8rem;
+}
+.tw-wallet-stats {
+  background: white;
+  border: 1px solid #e0e8ee;
+  border-radius: 20px;
+  padding: 26px;
+}
+.tw-wallet-stats .tw-stat {
+  background: #f3f8fc;
+  border-color: transparent;
+}
+.tw-wallet-stats .tw-stat small,
+.tw-wallet-stats .tw-stat span {
+  color: #617887;
+}
+.tw-wallet-stats .tw-stat strong {
+  color: #153246;
+}
+.tw-payment-number {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #d5e5ec;
+  background: #f5fafc;
+  border-radius: 12px;
+  margin: 10px 0;
+}
+.tw-panel form {
+  display: grid;
+  gap: 16px;
+}
+.tw-panel form label {
+  display: block;
+  font-weight: 600;
+}
+.tw-panel form input,
+.tw-panel form select {
+  display: block;
+  width: 100%;
+  border: 1px solid #d4e0e8;
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 6px;
+  background: white;
+}
+.tw-panel form button {
+  border: 0;
+  border-radius: 12px;
+  background: #12875b;
+  color: white;
+  padding: 13px;
+  font-weight: 700;
+}
+.tw-footer {
+  text-align: center;
+  padding: 24px;
+  color: #738692;
+  font-size: 0.85rem;
+}
+.tw-footer a {
+  margin-left: 15px;
+}
+.tw-root :focus-visible {
+  outline: 3px solid #438deb;
+  outline-offset: 4px;
+}
+.tw-warning {
+  padding: 14px;
+  border-radius: 12px;
+  background: #fff5de;
+  color: #72551b;
+}
+.tw-root .tw-link {
+  color: #1977b9;
+  text-decoration: underline;
+}
+@media (max-width: 760px) {
+  .tw-header {
+    padding: 15px 16px;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .tw-brand {
+    flex: 1;
+    min-width: 200px;
+  }
+  .tw-header nav {
+    gap: 8px;
+  }
+  .tw-recharge {
+    padding: 9px 12px;
+  }
+  .tw-main {
+    padding: 22px 16px 40px;
+  }
+  .tw-hero {
+    padding: 26px 22px;
+    border-radius: 24px;
+  }
+  .tw-stats {
+    gap: 8px;
+  }
+  .tw-stat {
+    padding: 15px 10px;
+  }
+  .tw-stat strong {
+    font-size: 1.2rem;
+  }
+  .tw-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .tw-feature {
+    padding: 20px;
+  }
+  .tw-appmenu {
+    position: fixed;
+    top: 140px;
+    right: 14px;
+  }
+  .tw-panel,
+  .tw-wallet-stats {
+    padding: 20px;
+  }
+  .tw-profile {
+    position: fixed;
+    right: 14px;
+    top: 140px;
+  }
+}
+@media (max-width: 380px) {
+  .tw-cards {
+    grid-template-columns: 1fr;
+  }
+  .tw-stats {
+    grid-template-columns: 1fr;
+  }
+  .tw-balance {
+    padding: 9px;
+  }
+  .tw-header nav {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .tw-hero .tw-stat strong {
+    font-size: 1.5rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tw-feature {
+    transition: none;
+  }
+  .tw-feature:hover {
+    transform: none;
+  }
+}
+@media (min-width: 381px) and (max-width: 760px) {
+  .tw-hero .tw-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tw-hero .tw-stat:last-child {
+    grid-column: 1/-1;
+  }
+  .tw-hero .tw-stat:last-child strong {
+    margin: 6px 0;
+  }
+}
+.tw-copy {
+  border: 1px solid #cbdce6;
+  background: white;
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: #1a617b;
+}
+.tw-amounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tw-panel form .tw-amounts button {
+  background: #f1f7fb;
+  color: #245b76;
+  border: 1px solid #cfdee8;
+  padding: 7px 15px;
+  border-radius: 24px;
+}
