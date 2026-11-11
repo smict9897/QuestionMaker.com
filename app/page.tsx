@@ -1,3 +1,4 @@
+import { visibleQuestions } from "@/lib/paper-generation";
 // প্রশ্নোদয় — নতুন হোমপেজ (সার্ভার কম্পোনেন্ট)
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -175,6 +176,15 @@ export default async function Home() {
     ).catch(() => null),
   ]);
 
+  const starterBank = session?.user?.id
+    ? await db.question
+        .groupBy({
+          by: ["category", "subject", "topic"],
+          where: visibleQuestions(session.user.id),
+          _count: { _all: true },
+        })
+        .catch(() => null)
+    : bank;
   const loggedIn = !!session?.user;
 
   return (
@@ -186,13 +196,13 @@ export default async function Home() {
         <main>
           <div className="hm-hero-stack">
             <HomeStarter
-              rows={(bank || []).map((r) => ({
+              rows={(starterBank || []).map((r) => ({
                 category: r.category,
                 subject: r.subject,
                 topic: r.topic,
                 count: r._count._all,
               }))}
-              unavailable={bank === null}
+              unavailable={starterBank === null}
             />
             <PaperAnimation />
             <HomeStats
@@ -385,8 +395,8 @@ export default async function Home() {
               <div className="qk-band">
                 <h2>এখনই প্রথম প্রশ্নপত্রটি বানিয়ে ফেলুন</h2>
                 <p>
-                  কয়েকটা ক্লিকেই প্রশ্নপত্র তৈরি। শিক্ষার্থীরা চাইলে একই বিষয়ে
-                  কুইজও দিতে পারবে।
+                  কয়েকটা ক্লিকেই প্রশ্নপত্র তৈরি। শিক্ষার্থীরা চাইলে একই বিষয়ে কুইজও
+                  দিতে পারবে।
                 </p>
                 <div className="qk-cta">
                   <Link href="/question-builder" className="qk-btn qk-btn-w">

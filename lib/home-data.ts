@@ -23,3 +23,38 @@ export function summarizeHomeBank(rows: { category: string; count: number }[]) {
     items.push(["অন্যান্য", sorted.slice(4).reduce((sum, r) => sum + r[1], 0)]);
   return { total: rows.reduce((sum, r) => sum + r.count, 0), items };
 }
+
+/** Conservative text matching only: never merge unrelated chapters by number alone. */
+export function homeLabelKey(value: string) {
+  return value
+    .normalize("NFC")
+    .replace(/[\u200b-\u200d\ufeff]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+export function homeChapterKey(value: string) {
+  return homeLabelKey(value)
+    .replace(/[০-৯]/g, (n) => String("০১২৩৪৫৬৭৮৯".indexOf(n)))
+    .replace(
+      /^(?:অধ্যা(?:য়|য়)\s*[0-9]+\s*[:.।\-–]\s*|[0-9]+\s*(?:(?:ম|য়|য়|র্থ|ষ্ঠ|শ)\s*অধ্যা(?:য়|য়))?\s*[:.।\-–]\s*)/u,
+      "",
+    )
+    .trim();
+}
+/** Keep database strings as submitted values, rather than a curriculum-only spelling. */
+export function homeBankOptions(
+  curriculum: string[],
+  stored: string[],
+  chapter = false,
+) {
+  const key = chapter ? homeChapterKey : homeLabelKey;
+  const actual = Array.from(new Set(stored.filter(Boolean)));
+  return Array.from(
+    new Set([
+      ...curriculum.map(
+        (label) => actual.find((value) => key(value) === key(label)) ?? label,
+      ),
+      ...actual,
+    ]),
+  );
+}
