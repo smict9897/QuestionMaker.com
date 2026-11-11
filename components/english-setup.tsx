@@ -326,7 +326,7 @@ export default function EnglishSetup({
         {message}
       </p>
       <p className="text-sm text-slate-600">
-        প্রতিদিন সর্বোচ্চ ১০টি generation চেষ্টা করা যাবে। প্রশ্ন ব্যক্তিগত
+        শিক্ষকদের জন্য প্রতিদিন সর্বোচ্চ ১০টি generation চেষ্টা; অ্যাডমিনের দৈনিক সীমা নেই। প্রশ্ন ব্যক্তিগত
         draft হিসেবে সেভ হবে। ব্যবহারের আগে প্রশ্ন ও উত্তর যাচাই করুন।
       </p>
     </main>

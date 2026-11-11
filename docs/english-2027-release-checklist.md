@@ -45,3 +45,6 @@
 9. Existing saved Bengali papers, normal PDF, explicit booklet and math formatting remain as before. English intentionally lacks booklet/two-column options for now. Header presets use the existing shared header manager.
 
 Deployment/PR outcome is reported in chat after merge; never infer READY merely from build/test success.
+
+
+Admin quota exception: server-authenticated ADMIN users have no daily English generation cap and create no quota reservations. TEACHER users retain ten UTC-day attempts including failures. Both roles retain the per-account concurrency lock, validation and private ownership. Test admin beyond ten attempts, existing exhausted quota and role downgrade; provider capacity/timeouts still apply.
