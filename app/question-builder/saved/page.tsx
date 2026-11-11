@@ -9,8 +9,7 @@ export const metadata = { title: "আমার তৈরি প্রশ্ন" 
 
 export default async function SavedPapers() {
   const session = await auth();
-  const role = session?.user?.role;
-  if (role !== "ADMIN" && role !== "TEACHER") redirect("/");
+  if (!session?.user?.id) redirect("/login?next=/question-builder/saved");
   const papers = await listPapers().catch(() => null);
 
   return (

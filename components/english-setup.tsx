@@ -373,8 +373,8 @@ export default function EnglishSetup({
         Request separate answers / writing samples
       </label>
       <p>
-        শুধু নির্বাচিত writing task ও topic ব্যবহার হবে। আগে অনুমোদিত database
-        থেকে মিল খোঁজা হবে; না-পাওয়া অংশ তৈরি করা হবে।
+        শুধু নির্বাচিত writing task ও topic ব্যবহার হবে। আগে অনুমোদিত database থেকে
+        মিল খোঁজা হবে; না-পাওয়া অংশ তৈরি করা হবে।
       </p>
       <button
         className="english-generate rounded bg-emerald-600 px-5 py-3 text-white"
@@ -390,9 +390,9 @@ export default function EnglishSetup({
         সংরক্ষিত / উদ্ধার করা English draft দেখুন
       </a>
       <p className="text-sm text-slate-600">
-        শিক্ষকদের জন্য প্রতিদিন সর্বোচ্চ ১০টি generation চেষ্টা; অ্যাডমিনের
-        দৈনিক সীমা নেই। প্রশ্ন ব্যক্তিগত draft হিসেবে সেভ হবে। ব্যবহারের আগে
-        প্রশ্ন ও উত্তর যাচাই করুন।
+        অ্যাডমিন ছাড়া সকল ব্যবহারকারীর জন্য প্রতিদিন সর্বোচ্চ ১০টি generation চেষ্টা;
+        অ্যাডমিনের দৈনিক সীমা নেই। প্রশ্ন ব্যক্তিগত draft হিসেবে সেভ হবে। ব্যবহারের
+        আগে প্রশ্ন ও উত্তর যাচাই করুন।
       </p>
     </main>
   );

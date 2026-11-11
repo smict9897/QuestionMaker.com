@@ -12,7 +12,7 @@ export default async function SavedEnglishPage() {
         bank-এ প্রকাশিত নয়।
       </p>
       {!papers.length && (
-        <p>কোনো draft পাওয়া যায়নি। শিক্ষক/অ্যাডমিন হিসেবে লগইন নিশ্চিত করুন।</p>
+        <p>এখনও কোনো draft নেই। লগইন করে নতুন প্রশ্নপত্র তৈরি করুন।</p>
       )}
       {papers.map((p) => (
         <div className="rounded border p-4" key={p.key}>

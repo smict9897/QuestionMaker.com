@@ -20,9 +20,7 @@ import {
 import { paperHeaderSchema } from "@/lib/paper-header";
 async function owner() {
   const user = (await auth())?.user;
-  return user?.id && (user.role === "ADMIN" || user.role === "TEACHER")
-    ? user
-    : null;
+  return user?.id ? user : null;
 }
 
 function makeDraft(
@@ -68,7 +66,7 @@ export async function generateEnglishPaper(raw: unknown) {
   if (!user?.id)
     return {
       ok: false as const,
-      error: "শিক্ষক বা অ্যাডমিন হিসেবে লগইন করুন।",
+      error: "আগে লগইন করুন।",
     };
   const quotaNotice =
     user.role === "ADMIN"
