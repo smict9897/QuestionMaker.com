@@ -42,6 +42,7 @@ const groups = [
       ["এখনই প্রশ্ন তৈরি করুন", "#start", CirclePlus],
       ["সংরক্ষিত প্রশ্নপত্র", "/question-builder/saved", FolderOpen],
       ["মূল্য তালিকা", "#pricing", Tags],
+      ["Balance / Recharge", "/wallet", Wallet],
       ["আমাদের সুবিধা", "#features", Gift],
       ["ব্যবহার নির্দেশিকা", "#how", BookMarked],
     ],
@@ -318,7 +319,7 @@ export function HomeStarter({
         <div className="hm-promo">
           <div>
             <h3>বাছাই থেকে প্রিন্ট — এক জায়গায়</h3>
-            <span>প্রশ্ন বাছুন · নিজের মতো সাজান · PDF নিন</span>
+            <span>প্রথম লগইনে ৳২০ trial bonus · প্রশ্ন বাছুন · PDF নিন</span>
           </div>
           <span className="hm-promo-icon">
             <Printer size={25} aria-hidden="true" />

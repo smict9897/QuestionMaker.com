@@ -5,6 +5,8 @@ import {
   cqDivisionGroups,
 } from "@/lib/paper-sections";
 import RichTextField from "@/components/paper-builder/rich-text-field";
+import WalletCheckout from "@/components/wallet-checkout";
+import { checkQuestionAccess } from "@/app/actions/wallet";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Download, Settings2, Shuffle, Plus, AlertCircle } from "lucide-react";
@@ -262,6 +264,16 @@ export default function QbBuilder({
   const printCleanup = useRef<(() => void) | null>(null);
   useEffect(() => () => printCleanup.current?.(), []);
   async function print(mode: "normal" | "booklet" = "normal") {
+    try {
+      const access = await checkQuestionAccess(data.map((q) => q.id));
+      if (!access.ok) {
+        setActionMessage(access.error);
+        return;
+      }
+    } catch {
+      setActionMessage("Payment যাচাই হয়নি। আবার চেষ্টা করুন।");
+      return;
+    }
     // Never let a cancelled/stale booklet session affect a normal PDF.
     printCleanup.current?.();
     setOpen(false);
@@ -475,6 +487,7 @@ export default function QbBuilder({
     );
   return (
     <div className="paper-builder-root">
+      <WalletCheckout ids={data.map((q) => q.id)} />
       <style>{style}</style>
       {missingCount > 0 && (
         <p

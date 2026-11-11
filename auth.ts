@@ -1,3 +1,4 @@
+import { ensureWallet } from "@/lib/wallet";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
@@ -56,6 +57,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       } else if (user) {
         token.role = user.role;
       }
+      if ((account || user) && token.sub) await ensureWallet(token.sub);
       return token;
     },
   },

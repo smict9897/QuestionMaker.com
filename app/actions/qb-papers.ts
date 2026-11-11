@@ -1,4 +1,5 @@
 "use server";
+import { requirePaidQuestions } from "@/lib/wallet";
 import { visibleQuestions } from "@/lib/paper-generation";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
@@ -7,11 +8,9 @@ import { db } from "@/lib/db";
 
 const PREFIX = "qbpaper:";
 
-async function staff() {
+async function paperUser() {
   const s = await auth();
-  return s?.user?.id && (s.user.role === "ADMIN" || s.user.role === "TEACHER")
-    ? s.user
-    : null;
+  return s?.user?.id ? s.user : null;
 }
 
 const Save = z.object({
@@ -37,14 +36,14 @@ export type SavedPaper = {
 export async function savePaper(
   raw: unknown,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const user = await staff();
-  if (!user)
-    return { ok: false, error: "অ্যাডমিন বা শিক্ষক হিসেবে লগইন করুন।" };
+  const user = await paperUser();
+  if (!user) return { ok: false, error: "লগইন করুন।" };
   const p = Save.safeParse(raw);
   if (!p.success)
     return { ok: false, error: "নাম দিন এবং কমপক্ষে একটি প্রশ্ন রাখুন।" };
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   try {
+    await requirePaidQuestions(user.id!, p.data.ids);
     await db.setting.create({
       data: {
         key: `${PREFIX}${user.id}:${id}`,
@@ -66,7 +65,7 @@ export async function savePaper(
 }
 
 export async function listPapers(): Promise<SavedPaper[]> {
-  const user = await staff();
+  const user = await paperUser();
   if (!user) return [];
   const rows = await db.setting.findMany({
     where: { key: { startsWith: PREFIX } },
@@ -146,7 +145,7 @@ export async function listPapers(): Promise<SavedPaper[]> {
 export async function deletePaper(
   key: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const user = await staff();
+  const user = await paperUser();
   if (!user || !key.startsWith(PREFIX))
     return { ok: false, error: "অনুমতি নেই।" };
   try {

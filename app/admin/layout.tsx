@@ -80,6 +80,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/model-test", label: "মডেল টেস্ট ম্যানেজ", sub: "তৈরি, এডিট, ডিলিট, Leaderboard", Icon: ListChecks },
     { href: "/model-test", label: "পাবলিক ফিড", sub: "ছাত্ররা যা দেখে", Icon: Eye },
     { href: "/model-test/leaderboard", label: "Global Leaderboard", sub: "সব পরীক্ষার সেরারা", Icon: Trophy },
+    { href: "/admin/wallet", label: "Recharge যাচাই", sub: "Balance / TrxID", Icon: Wallet },
     { href: "/admin/package-requests", label: "পেমেন্ট অনুরোধ", sub: "Approve / Reject", Icon: Wallet, badge: pending },
     { href: "/admin/packages", label: "প্যাকেজ ম্যানেজ", sub: "দাম, মেয়াদ, চালু/বন্ধ", Icon: Crown },
     { href: "/packages", label: "ছাত্রের প্যাকেজ পেজ", sub: "ছাত্ররা যা দেখে", Icon: Eye },
