@@ -1,17 +1,81 @@
+import { readGenerationResponse } from "../generation-stream";
+import { resolveEnglishSelection } from "./selection";
+import {
+  validateEnglishOutput,
+  type EnglishGeneratedOutput,
+} from "./generation";
 import { EnglishProviderError } from "./provider-error";
 import {
   englishGenerationPrompt,
   assembleEnglishProviderOutput,
+  EnglishOutputValidationError,
 } from "./generation";
 /** Server-only provider adapter. Called after auth/quota reservation in english-paper action.
  * No database writes or shared-bank publication happen in this adapter.
  */
 export async function requestEnglishPaper(
   selection: unknown,
-  options: { apiKey: string; fetcher?: typeof fetch; timeoutMs?: number },
-) {
+  options: {
+    apiKey: string;
+    fetcher?: typeof fetch;
+    timeoutMs?: number;
+    segmented?: boolean;
+    onContent?: (content: string) => Promise<void>;
+  },
+): Promise<ReturnType<typeof validateEnglishOutput>> {
   const prompt = englishGenerationPrompt(selection); // Validate before spending tokens.
   if (!options.apiKey) throw new EnglishProviderError("CONFIGURATION");
+  if (options.segmented) {
+    const request = resolveEnglishSelection(selection);
+    const groups = new Map<string, typeof request.items>();
+    for (const item of request.items) {
+      const key = item.sourceGroup || item.id;
+      groups.set(key, [...(groups.get(key) || []), item]);
+    }
+    const deadline = Date.now() + (options.timeoutMs ?? 90000);
+    const tasks: EnglishGeneratedOutput["tasks"] = [],
+      passages: EnglishGeneratedOutput["passages"] = [];
+    for (const items of groups.values()) {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) throw new EnglishProviderError("TIMEOUT");
+      const ids = new Set(items.map((i) => i.id));
+      const sources = new Set(items.map((i) => i.sourceGroup));
+      const part = await requestEnglishPaper(
+        {
+          ...request.selection,
+          mode: "selected",
+          itemIds: [...ids],
+          writing: Object.fromEntries(
+            Object.entries(request.selection.writing).filter(([id]) =>
+              ids.has(id),
+            ),
+          ),
+          sources: Object.fromEntries(
+            Object.entries(request.selection.sources).filter(([key]) =>
+              sources.has(key as any),
+            ),
+          ),
+        },
+        { ...options, segmented: false, timeoutMs: remaining },
+      ).catch((error) => {
+        if (
+          error instanceof EnglishProviderError &&
+          error.code === "INVALID_OUTPUT"
+        )
+          throw new EnglishProviderError(
+            error.code,
+            `${items.map((i) => i.id).join(",")}: ${error.rule || "Invalid task"}`,
+          );
+        throw error;
+      });
+      tasks.push(...part.output.tasks);
+      passages.push(...part.output.passages);
+    }
+    return validateEnglishOutput(selection, {
+      tasks: request.items.map((item) => tasks.find((t) => t.id === item.id)),
+      passages,
+    });
+  }
   const controller = new AbortController();
   const timer = setTimeout(
     () => controller.abort(),
@@ -29,6 +93,7 @@ export async function requestEnglishPaper(
         },
         body: JSON.stringify({
           model: "deepseek-chat",
+          stream: !!options.onContent,
           messages: [
             {
               role: "system",
@@ -53,46 +118,34 @@ export async function requestEnglishPaper(
               ? "RATE_LIMIT"
               : "PROVIDER",
       );
-    // Bound parser input; never log source extracts, provider content or credentials.
-    const reader = response.body?.getReader();
-    if (!reader) throw new EnglishProviderError("INVALID_OUTPUT");
-    const chunks: Uint8Array[] = [];
-    let bytes = 0;
-    while (true) {
-      const next = await reader.read();
-      if (next.done) break;
-      bytes += next.value.byteLength;
-      if (bytes > 1000000) {
-        await reader.cancel();
-        throw new EnglishProviderError("TOO_LARGE");
-      }
-      chunks.push(next.value);
-    }
-    const buffer = new Uint8Array(bytes);
-    let offset = 0;
-    for (const chunk of chunks) {
-      buffer.set(chunk, offset);
-      offset += chunk.length;
-    }
-    let envelope;
+    let content: string, finish: string | null;
     try {
-      envelope = JSON.parse(new TextDecoder().decode(buffer));
-    } catch {
-      throw new EnglishProviderError("INVALID_OUTPUT");
+      const result = await readGenerationResponse(
+        response,
+        options.onContent ?? (async () => {}),
+      );
+      content = result.content;
+      finish = result.finish;
+    } catch (error) {
+      if (error instanceof EnglishProviderError) throw error;
+      if (controller.signal.aborted) throw new EnglishProviderError("TIMEOUT");
+      if (error instanceof Error && error.message === "TOO_LARGE")
+        throw new EnglishProviderError("TOO_LARGE");
+      throw new EnglishProviderError(
+        error instanceof SyntaxError ? "INVALID_OUTPUT" : "PROVIDER",
+      );
     }
-    const choice = envelope?.choices?.[0];
-    if (
-      choice?.finish_reason !== "stop" ||
-      typeof choice?.message?.content !== "string"
-    )
+    if (finish !== "stop" || !content)
       throw new EnglishProviderError("INCOMPLETE");
     try {
-      return assembleEnglishProviderOutput(
-        selection,
-        JSON.parse(choice.message.content),
+      return assembleEnglishProviderOutput(selection, JSON.parse(content));
+    } catch (error) {
+      throw new EnglishProviderError(
+        "INVALID_OUTPUT",
+        error instanceof EnglishOutputValidationError
+          ? error.message
+          : "JSON schema mismatch",
       );
-    } catch {
-      throw new EnglishProviderError("INVALID_OUTPUT");
     }
   } catch (error) {
     if (error instanceof EnglishProviderError) throw error;

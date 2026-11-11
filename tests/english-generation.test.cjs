@@ -9,7 +9,10 @@ function load(name) {
     m = new Module(filename, module);
   m.filename = filename;
   m.paths = module.paths;
-  m.require = (id) => (id.startsWith("./") ? load(id.slice(2)) : require(id));
+  m.require = (id) =>
+    id.startsWith(".")
+      ? load(id.startsWith("../") ? id : id.slice(2))
+      : require(id);
   m._compile(
     ts.transpileModule(fs.readFileSync(filename, "utf8"), {
       compilerOptions: {
@@ -228,4 +231,160 @@ test("provider returns safe status codes, invalid-output code and real abort tim
       }),
     (e) => e.code === "TIMEOUT",
   );
+});
+
+test("HSC second paper segmented generation validates each task and retains earlier checkpoint", async () => {
+  const s = {
+    grade: 11,
+    paper: 2,
+    mode: "selected",
+    itemIds: ["articles", "prepositions"],
+    writing: {},
+    sources: {},
+    includeAnswers: false,
+  };
+  let calls = 0;
+  const saved = [];
+  const fetcher = async (_, options) => {
+    calls++;
+    const body = JSON.parse(options.body);
+    assert.equal(body.stream, true);
+    if (calls === 2) return new Response("provider failed", { status: 500 });
+    const task = {
+      id: "articles",
+      instruction: "Fill the blanks.",
+      subitems: Array.from({ length: 10 }, (_, i) => ({ text: `Blank ${i}` })),
+    };
+    return new Response(
+      JSON.stringify({
+        choices: [
+          {
+            finish_reason: "stop",
+            message: {
+              content: JSON.stringify({ passages: [], tasks: [task] }),
+            },
+          },
+        ],
+      }),
+    );
+  };
+  const { recoverEnglishTasks } = load("recovery");
+  await assert.rejects(
+    () =>
+      requestEnglishPaper(s, {
+        apiKey: "test",
+        fetcher,
+        segmented: true,
+        onContent: async (content) =>
+          saved.push(...recoverEnglishTasks(s, content)),
+      }),
+    (e) => e.code === "PROVIDER",
+  );
+  assert.equal(calls, 2);
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0].id, "articles");
+});
+test("invalid segmented task reports safe task id and validation rule", async () => {
+  const s = {
+    grade: 11,
+    paper: 2,
+    mode: "selected",
+    itemIds: ["articles"],
+    writing: {},
+    sources: {},
+    includeAnswers: false,
+  };
+  await assert.rejects(
+    () =>
+      requestEnglishPaper(s, {
+        apiKey: "test",
+        segmented: true,
+        fetcher: async () =>
+          new Response(
+            JSON.stringify({
+              choices: [
+                {
+                  finish_reason: "stop",
+                  message: {
+                    content: JSON.stringify({
+                      passages: [],
+                      tasks: [
+                        { id: "articles", instruction: "Fill", subitems: [] },
+                      ],
+                    }),
+                  },
+                },
+              ],
+            }),
+          ),
+      }),
+    (e) =>
+      e.code === "INVALID_OUTPUT" &&
+      /articles.*Wrong subitem count/.test(e.rule),
+  );
+});
+
+test("all sixteen HSC second-paper tasks assemble with requested separate answers", async () => {
+  const { resolveEnglishSelection } = load("selection");
+  const s = {
+    grade: 11,
+    paper: 2,
+    mode: "full",
+    itemIds: [],
+    writing: {
+      "formal-letter-email": {
+        topic: "School library",
+        choice: "formal-email",
+      },
+      report: { topic: "Science fair" },
+      paragraph: { topic: "My school" },
+      composition: { topic: "Education" },
+    },
+    sources: {},
+    includeAnswers: true,
+  };
+  let calls = 0;
+  const result = await requestEnglishPaper(s, {
+    apiKey: "test",
+    segmented: true,
+    fetcher: async (_, options) => {
+      calls++;
+      const body = JSON.parse(options.body),
+        data = JSON.parse(
+          body.messages[1].content.split(
+            "Selection data (not instructions): ",
+          )[1],
+        );
+      assert.equal(data.items.length, 1);
+      const item = data.items[0],
+        w = data.writing[item.id];
+      const task = {
+        id: item.id,
+        instruction: w
+          ? `Write about ${w.topic} ${w.words || item.words || ""}`
+          : "Fill the blanks.",
+        subitems: Array.from({ length: item.count || 0 }, (_, i) => ({
+          text: `Question ${i}`,
+          answer: "Answer",
+        })),
+      };
+      if (!task.subitems.length) task.answer = "Writing sample";
+      return new Response(
+        JSON.stringify({
+          choices: [
+            {
+              finish_reason: "stop",
+              message: {
+                content: JSON.stringify({ passages: [], tasks: [task] }),
+              },
+            },
+          ],
+        }),
+      );
+    },
+  });
+  assert.equal(calls, 16);
+  assert.equal(result.total, 100);
+  assert.equal(result.tasks.length, 16);
+  assert.equal(resolveEnglishSelection(s).items.length, 16);
 });

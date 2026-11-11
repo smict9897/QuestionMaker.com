@@ -1,3 +1,5 @@
+> Latest generation recovery behaviour and tests: see [checkpoint recovery](generation-checkpoint-recovery.md). This supersedes earlier all-or-nothing generation notes; whole-paper success validation remains strict.
+
 # English 2027 flow — implementation in progress
 
 User approved grades 6–12; Full Model Test / Selected Items / Writing Only, English-specific passage/grammar/writing generation and strict requested writing topics. Keep existing Bengali builder, shared editor/save/PDF, private pending/admin sharing controls and Live Online Model Test unchanged. User explicitly forbids guessing NCTB marks and supplied all reference images after official attachments could not be retrieved.

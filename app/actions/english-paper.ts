@@ -1,8 +1,10 @@
 "use server";
+
 import {
   EnglishProviderError,
   englishProviderMessage,
 } from "@/lib/english/provider-error";
+import { recoverEnglishTasks } from "@/lib/english/recovery";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { createHash, randomUUID } from "crypto";
@@ -20,6 +22,45 @@ async function owner() {
     ? user
     : null;
 }
+
+function makeDraft(
+  selection: ReturnType<typeof resolveEnglishSelection>["selection"],
+  generated: Awaited<ReturnType<typeof requestEnglishPaper>>,
+) {
+  const header = paperHeaderSchema.parse({});
+  for (const f of Object.values(header.fields)) f.enabled = false;
+  Object.assign(header, { enabled: true });
+  Object.assign(header.fields.institute, {
+    enabled: true,
+    value: "Your institution",
+  });
+  Object.assign(header.fields.program, {
+    enabled: true,
+    value: "Practice examination 2027",
+  });
+  Object.assign(header.fields.class, {
+    enabled: true,
+    value: `Class ${selection.grade}`,
+  });
+  Object.assign(header.fields.subject, {
+    enabled: true,
+    value: `English ${selection.paper === 1 ? "1st" : "2nd"} Paper`,
+  });
+  Object.assign(header.fields.fullMarks, {
+    enabled: true,
+    value: String(generated.total),
+  });
+  return validateEnglishDraft({
+    version: 1,
+    name: `English ${selection.grade} — Paper ${selection.paper}`,
+    selection: selection,
+    output: generated.output,
+    header,
+    fontSize: 12,
+    font: "serif",
+    updatedAt: new Date().toISOString(),
+  });
+}
 export async function generateEnglishPaper(raw: unknown) {
   const user = await owner();
   if (!user?.id)
@@ -33,6 +74,8 @@ export async function generateEnglishPaper(raw: unknown) {
       : " আবার চেষ্টা করলে দৈনিক সীমা থেকে আরেকবার গণনা হবে।";
   let stage = "selection";
   let acquired = false;
+  let recoveredCount = 0;
+  const recoveredIds = new Set<string>();
   const token = randomUUID(),
     lock = `englishai:lock:${createHash("sha256").update(user.id).digest("hex")}`;
   try {
@@ -82,63 +125,86 @@ export async function generateEnglishPaper(raw: unknown) {
     stage = "generation";
     const generated = await requestEnglishPaper(request.selection, {
       apiKey: process.env.DEEPSEEK_API_KEY,
+      segmented: true,
+      onContent: async (content) => {
+        for (const part of recoverEnglishTasks(request.selection, content)) {
+          if (recoveredIds.has(part.id)) continue;
+          const hash = createHash("sha256")
+            .update(
+              JSON.stringify([user.id, part.selection, part.result.output]),
+            )
+            .digest("hex");
+          const recoveryId = `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
+          const recoveryKey = englishOwnerPrefix(user.id!) + recoveryId;
+          const reviewKey = `english-review:${recoveryId}`;
+          if (
+            await db.setting
+              .findUnique({ where: { key: reviewKey } })
+              .catch(() => {
+                throw new EnglishProviderError("STORAGE");
+              })
+          ) {
+            recoveredIds.add(part.id);
+            recoveredCount++;
+            continue;
+          }
+          const recovered = {
+            ...makeDraft(part.selection, part.result),
+            name: `Recovered — English ${request.selection.grade}/${request.selection.paper} — ${part.id}`,
+          };
+          // Durable private checkpoint first. Review snapshot is separate from editable owner draft.
+          try {
+            await db.$transaction([
+              db.setting.create({
+                data: { key: recoveryKey, value: JSON.stringify(recovered) },
+              }),
+              db.setting.create({
+                data: {
+                  key: reviewKey,
+                  value: JSON.stringify({
+                    status: "PENDING",
+                    draftKey: recoveryKey,
+                    draft: recovered,
+                  }),
+                },
+              }),
+            ]);
+          } catch {
+            throw new EnglishProviderError("STORAGE");
+          }
+          recoveredIds.add(part.id);
+          recoveredCount++;
+        }
+      },
     });
-    const header = paperHeaderSchema.parse({});
-    for (const f of Object.values(header.fields)) f.enabled = false;
-    Object.assign(header, { enabled: true });
-    Object.assign(header.fields.institute, {
-      enabled: true,
-      value: "Your institution",
-    });
-    Object.assign(header.fields.program, {
-      enabled: true,
-      value: "Practice examination 2027",
-    });
-    Object.assign(header.fields.class, {
-      enabled: true,
-      value: `Class ${request.selection.grade}`,
-    });
-    Object.assign(header.fields.subject, {
-      enabled: true,
-      value: `English ${request.selection.paper === 1 ? "1st" : "2nd"} Paper`,
-    });
-    Object.assign(header.fields.fullMarks, {
-      enabled: true,
-      value: String(generated.total),
-    });
-    const draft = validateEnglishDraft({
-      version: 1,
-      name: `English ${request.selection.grade} — Paper ${request.selection.paper}`,
-      selection: request.selection,
-      output: generated.output,
-      header,
-      fontSize: 12,
-      font: "serif",
-      updatedAt: new Date().toISOString(),
-    });
+    const draft = makeDraft(request.selection, generated);
     const key = englishOwnerPrefix(user.id) + randomUUID();
     stage = "storage";
     await db.setting.create({ data: { key, value: JSON.stringify(draft) } });
     return { ok: true as const, key };
   } catch (error) {
+    const recoveryNotice = recoveredCount
+      ? ` ${recoveredCount}টি সম্পূর্ণ অংশ ব্যক্তিগত recovered draft ও অ্যাডমিনের অনুমোদন তালিকায় সংরক্ষিত আছে। আমার draft পাতা দেখুন।`
+      : "";
     if (error instanceof EnglishProviderError)
       return {
         ok: false as const,
         stage: "generation",
         code: error.code,
-        error: `${englishProviderMessage(error.code)} [${error.code}]${quotaNotice}`,
+        error: `${englishProviderMessage(error.code)} [${error.code}]${error.rule ? ` নিয়ম: ${error.rule}` : ""}${quotaNotice}${recoveryNotice}`,
       };
     return {
       ok: false as const,
       stage,
       error:
-        stage === "selection"
+        recoveryNotice +
+        (stage === "selection"
           ? "শ্রেণি, পত্র, নির্বাচিত task, writing topic এবং প্রয়োজনীয় textbook source/reference যাচাই করুন। সংযোগ বা দৈনিক সীমা যাচাইও ব্যর্থ হয়ে থাকতে পারে।"
           : stage === "storage"
             ? "প্রশ্ন তৈরি হয়েছে কিন্তু draft সেভ হয়নি। Database সংযোগ যাচাই করতে হবে।" +
               quotaNotice
             : "Generation ব্যর্থ হয়েছে: provider সংযোগ, সময়সীমা অথবা output validation সমস্যা হতে পারে। অসম্পূর্ণ paper সেভ করা হয়নি। শ্রেণি/পত্র ও এই error-এর screenshot দিন।" +
-              quotaNotice,
+              quotaNotice),
     };
   } finally {
     if (acquired)

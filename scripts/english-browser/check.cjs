@@ -22,6 +22,24 @@ const { chromium } = require("playwright-core"),
     await page.waitForFunction(() =>
       window.lastRoute?.includes("/build?englishKey=mock"),
     );
+    await page.evaluate(() => {
+      window.mockGenerationFailure = true;
+      window.lastRoute = null;
+    });
+    await page.getByRole("button", { name: "প্রশ্নপত্র তৈরি করুন" }).click();
+    await page
+      .getByRole("status")
+      .filter({ hasText: "১টি সম্পূর্ণ অংশ" })
+      .waitFor();
+    assert.equal(await page.evaluate(() => window.lastRoute), null);
+    assert.equal(
+      await page
+        .getByRole("link", {
+          name: "সংরক্ষিত / উদ্ধার করা English draft দেখুন",
+        })
+        .getAttribute("href"),
+      "/question-builder/english/saved",
+    );
     for (const grade of [6, 7, 8, 9, 10, 11, 12])
       for (const paper of [1, 2]) {
         await page.goto(
