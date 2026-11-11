@@ -5,8 +5,8 @@ import { contact as defContact, social as defSocial } from "@/lib/social";
 // সাইটের নাম ও ট্যাগলাইন: এক জায়গায় বদলালেই পুরো সাইটে বদলে যাবে।
 // অ্যাডমিনে "site.name" ও "site.tagline" কী সেভ করলে সেটি এই ডিফল্টের উপরে জিতবে।
 export const identity = {
-  siteName: "প্রশ্নোদয়",
-  tagline: "অনলাইনে প্রশ্নপত্র তৈরি করুন",
+  siteName: "QuestionMakerBd.com",
+  tagline: "Empowering Assessments with AI",
 };
 
 export const defaults = {

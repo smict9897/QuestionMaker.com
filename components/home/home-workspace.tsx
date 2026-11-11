@@ -88,7 +88,7 @@ export function WorkspaceShell({
           </button>
           <Link href="/">
             {siteName}
-            <span>প্রশ্ন তৈরির স্মার্ট সমাধান</span>
+            <span>Empowering Assessments with AI</span>
           </Link>
         </div>
         <div className="hm-account">

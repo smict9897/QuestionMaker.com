@@ -1,8 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import { 
-  Mail, Phone, FileText, PenTool, 
-  Users, LayoutDashboard, Trophy, LogIn, 
+import {
+  Mail, Phone, FileText, PenTool,
+  Users, LayoutDashboard, Trophy, LogIn,
   Home, Sparkles, ShieldCheck, HelpCircle, Library
 } from "lucide-react";
 
@@ -12,27 +12,27 @@ import { getSite } from "@/lib/site";
 type Item = [label: string, href: string, icon: any];
 
 const groups: { title: string; items: Item[] }[] = [
-  { 
-    title: "প্রশ্নোদয়", 
+  {
+    title: "QuestionMakerBd.com",
     items: [
       ["হোম", "/", Home],
       ["প্রশ্নপত্র তৈরি", "/question-builder", PenTool],
       ["কুইজ", "/quiz", Sparkles],
       ["ব্লগ", "/blog", FileText],
       ["প্যাকেজ", "/packages", Library],
-    ] 
+    ]
   },
-  { 
-    title: "শিক্ষক ও শিক্ষার্থী", 
+  {
+    title: "শিক্ষক ও শিক্ষার্থী",
     items: [
       ["ড্যাশবোর্ড", "/dashboard", LayoutDashboard],
       ["লাইভ মডেল টেস্ট", "/model-test", Sparkles],
       ["লিডারবোর্ড", "/model-test/leaderboard", Trophy],
       ["লগইন", "/login", LogIn],
-    ] 
+    ]
   },
-  { 
-    title: "নীতিমালা ও সহায়তা", 
+  {
+    title: "নীতিমালা ও সহায়তা",
     items: [
       ["আমাদের সম্পর্কে", "/about-us", Users],
       ["যোগাযোগ", "/contact-us", Mail],
@@ -40,7 +40,7 @@ const groups: { title: string; items: Item[] }[] = [
       ["ব্যবহারের শর্ত", "/terms", FileText],
       ["দাবিত্যাগ", "/disclaimer", HelpCircle],
       ["DMCA নীতি", "/dmca", FileText],
-    ] 
+    ]
   },
 ];
 
@@ -59,13 +59,13 @@ export default async function SiteFooter() {
         {/* Top Info Section */}
         <div className="mb-12 pb-10 border-b border-white/10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
           <div className="max-w-md">
-            <Link href="/" aria-label="প্রশ্নোদয় হোম" className="flex items-center gap-3 group">
+            <Link href="/" aria-label="QuestionMakerBd.com হোম" className="flex items-center gap-3 group">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#f43f8e] shadow-lg shadow-fuchsia-500/20 group-hover:scale-105 transition-transform">
                 <PenTool size={20} className="text-white" />
               </div>
               <div>
-                <span className="block font-extrabold text-xl text-white tracking-tight">প্রশ্নোদয়</span>
-                <span className="block text-[10px] text-violet-400 font-semibold mt-0.5">অনলাইনে প্রশ্নপত্র তৈরি করুন</span>
+                <span className="block font-extrabold text-xl text-white tracking-tight">QuestionMakerBd.com</span>
+                <span className="block text-[10px] text-violet-400 font-semibold mt-0.5">Empowering Assessments with AI</span>
               </div>
             </Link>
             <p className="mt-4 text-slate-400 leading-relaxed text-sm">
@@ -97,8 +97,8 @@ export default async function SiteFooter() {
               <ul className={g.title === "নীতিমালা ও সহায়তা" ? "grid grid-cols-2 items-start gap-x-4 gap-y-3 sm:grid-cols-1" : "space-y-3"}>
                 {g.items.map(([label, href, Icon]) => (
                   <li key={href}>
-                    <Link 
-                      href={href} 
+                    <Link
+                      href={href}
                       className="group flex min-h-9 items-center gap-2 break-words text-slate-400 hover:text-white transition-colors"
                     >
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 border border-white/5 group-hover:bg-violet-500/20 group-hover:border-violet-500/30 group-hover:text-violet-300 transition-all">
@@ -108,12 +108,12 @@ export default async function SiteFooter() {
                     </Link>
                   </li>
                 ))}
-                
+
                 {/* Custom Pages from DB (if any) */}
                 {g.title === "নীতিমালা ও সহায়তা" && Array.isArray(pages) && pages.map((pg) => (
                   <li key={pg.slug}>
-                    <Link 
-                      href={`/p/${pg.slug}`} 
+                    <Link
+                      href={`/p/${pg.slug}`}
                       className="group flex min-h-9 items-center gap-2 break-words text-slate-400 hover:text-white transition-colors"
                     >
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 border border-white/5 group-hover:bg-violet-500/20 group-hover:border-violet-500/30 group-hover:text-violet-300 transition-all">
@@ -127,8 +127,8 @@ export default async function SiteFooter() {
                 {/* Contact Info */}
                 {g.title === "নীতিমালা ও সহায়তা" && contact?.phone && (
                   <li>
-                    <a 
-                      href={`tel:${contact.phone}`} 
+                    <a
+                      href={`tel:${contact.phone}`}
                       className="group flex min-h-9 items-center gap-2 break-words text-slate-400 hover:text-white transition-colors"
                     >
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-all">
@@ -141,8 +141,8 @@ export default async function SiteFooter() {
 
                 {g.title === "নীতিমালা ও সহায়তা" && contact?.email && (
                   <li>
-                    <a 
-                      href={`mailto:${contact.email}`} 
+                    <a
+                      href={`mailto:${contact.email}`}
                       className="group flex min-h-9 items-center gap-2 break-words text-slate-400 hover:text-white transition-colors"
                     >
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 group-hover:bg-sky-500/20 transition-all">
@@ -160,7 +160,7 @@ export default async function SiteFooter() {
 
       {/* Copyright */}
       <div className="border-t border-white/10 py-6 text-center text-xs text-slate-500">
-        © {new Date().getFullYear()} প্রশ্নোদয়। সর্বস্বত্ব সংরক্ষিত।
+        © {new Date().getFullYear()} QuestionMakerBd.com। সর্বস্বত্ব সংরক্ষিত।
       </div>
     </footer>
   );

@@ -106,17 +106,17 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
               <Menu size={22} />
             </button>
 
-            <Link href="/" aria-label="প্রশ্নোদয় হোম" className="flex items-center gap-2.5 group shrink-0">
+            <Link href="/" aria-label="QuestionMakerBd.com হোম" className="flex items-center gap-2.5 group shrink-0">
               {/* হোমপেজের মতো গ্লাসমরফিক লোগো আইকন */}
               <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#f43f8e] shadow-md shadow-fuchsia-500/20 group-hover:scale-105 transition-transform">
-                <PenTool size={18} className="text-white sm:w-5 sm:h-5" />
+                <img src="/questionmaker-icon.png" width={40} height={40} alt="" className="rounded-xl" />
               </div>
               <div className="flex flex-col justify-center">
-                <span className="font-extrabold text-base sm:text-lg tracking-tight leading-none text-[#16112e] dark:text-white">
-                  প্রশ্নোদয়
+                <span className="font-extrabold text-[13px] sm:text-lg tracking-tight leading-none text-[#16112e] dark:text-white">
+                  QuestionMakerBd.com
                 </span>
                 <span className="text-[10px] sm:text-xs font-semibold text-violet-500 dark:text-violet-300 mt-0.5">
-                  অনলাইনে প্রশ্নপত্র তৈরি করুন
+                  Empowering Assessments with AI
                 </span>
               </div>
             </Link>
