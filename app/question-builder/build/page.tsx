@@ -1,3 +1,4 @@
+import PaidBuilderGate from "@/components/paid-builder-gate";
 import { loadEnglishPaper } from "@/app/actions/english-paper";
 import EnglishEditor from "@/components/english-editor";
 import { notFound } from "next/navigation";
@@ -24,14 +25,18 @@ export default async function BuildPage({
   const support = site.social.find((s) => s.name === "WhatsApp")?.url;
   const tutorial = site.social.find((s) => s.name === "YouTube")?.url;
   return (
-    <main className="mx-auto max-w-[1440px] px-4 py-6">
-      <div data-noprint className="mb-4">
-        <QbSavePaper />
-      </div>
-      <QbBuilder
-        supportHref={support?.startsWith("https://") ? support : "/contact-us"}
-        tutorialHref={tutorial?.startsWith("https://") ? tutorial : undefined}
-      />
-    </main>
+    <PaidBuilderGate>
+      <main className="mx-auto max-w-[1440px] px-4 py-6">
+        <div data-noprint className="mb-4">
+          <QbSavePaper />
+        </div>
+        <QbBuilder
+          supportHref={
+            support?.startsWith("https://") ? support : "/contact-us"
+          }
+          tutorialHref={tutorial?.startsWith("https://") ? tutorial : undefined}
+        />
+      </main>
+    </PaidBuilderGate>
   );
 }

@@ -18,10 +18,7 @@ test("mixed papers follow MCQ CQ SQ order regardless of selection order", () =>
   assert.deepEqual(lib.PAPER_SECTION_ORDER, ["MCQ", "CQ", "SHORT"]));
 test("CQ and SQ have requested Bengali division headings", () => {
   assert.equal(lib.paperSectionTitle("CQ", "MCQ"), "ক-বিভাগ: সৃজনশীল অংশ");
-  assert.equal(
-    lib.paperSectionTitle("SHORT", "MCQ"),
-    "খ-বিভাগ: সংক্ষিপ্ত প্রশ্ন",
-  );
+  assert.equal(lib.paperSectionTitle("SHORT", "MCQ"), "খ-বিভাগ: সংক্ষিপ্ত প্রশ্ন");
   assert.equal(lib.paperSectionTitle("MCQ", "Custom MCQ"), "Custom MCQ");
   assert.equal(
     lib.paperSectionTitle("CQ", "MCQ", "Algebra"),
@@ -53,6 +50,7 @@ test("mixed ID API does not silently truncate later types at 200", async () => {
   mod.require = (n) =>
     ({
       "@/auth": { auth: async () => ({ user: { id: "owner" } }) },
+      "@/lib/wallet": { requirePaidQuestions: async () => {} },
       "@/lib/paper-generation": {
         visibleQuestions: () => ({ approved: true }),
       },
