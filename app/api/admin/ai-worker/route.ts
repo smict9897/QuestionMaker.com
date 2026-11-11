@@ -1,19 +1,19 @@
+import {
+  completeArrayObjects,
+  readGenerationResponse,
+} from "@/lib/generation-stream";
+import { workerQuestion } from "@/lib/worker-question";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { NCTB_CLASSES } from "@/lib/nctb-data";
 import { checkAdminOrCron } from "@/lib/route-guard";
 
-export const maxDuration = 60; 
+export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 // CQ-তে সময় বাঁচাতে প্রতি অংশে ৩টি (ai-agent ফাইলেও একই সংখ্যা থাকবে)
 const CQ_PER_PART = 3;
 const SQ_PER_PART = 10;
-
-function cleanOptionText(text: string) {
-  if (!text) return "";
-  return text.replace(/[✓✔☑]/g, "").replace(/\[?(উত্তর|Ans|সঠিক|Correct).*?\]?/gi, "").replace(/\s+/g, " ").trim();
-}
 
 function normDifficulty(d: unknown): "EASY" | "MEDIUM" | "HARD" {
   const v = String(d ?? "").toUpperCase();
@@ -25,7 +25,10 @@ function s(v: unknown): string {
 }
 
 // NCTB ডাটা থেকে বিষয়ের অধ্যায়/টপিকের তালিকা বের করা
-function chapterListFor(category?: string | null, subject?: string | null): string[] {
+function chapterListFor(
+  category?: string | null,
+  subject?: string | null,
+): string[] {
   if (!category || !subject) return [];
   const classes = NCTB_CLASSES as any[];
   const cls =
@@ -35,7 +38,9 @@ function chapterListFor(category?: string | null, subject?: string | null): stri
   if (!sub) return [];
   const direct: string[] = Array.isArray(sub.chapters) ? sub.chapters : [];
   if (direct.length) return direct;
-  const groups: any[] = Array.isArray(sub.subCategories) ? sub.subCategories : [];
+  const groups: any[] = Array.isArray(sub.subCategories)
+    ? sub.subCategories
+    : [];
   return groups.flatMap((g) => (Array.isArray(g.topics) ? g.topics : []));
 }
 
@@ -55,32 +60,47 @@ export async function GET(req: Request) {
   if (denied) return denied;
 
   let currentTaskId = null;
+  let checkpointCount = 0;
+  let generationTimer: ReturnType<typeof setTimeout> | undefined;
 
   try {
     // ১. আটকে থাকা টাস্ক রিসেট
     const oneMinAgo = new Date(Date.now() - 1 * 60 * 1000);
     await db.aiTask.updateMany({
       where: { status: "PROCESSING", updatedAt: { lt: oneMinAgo } },
-      data: { status: "PENDING" }
+      data: { status: "PENDING" },
     });
 
     // ২. নতুন টাস্ক খোঁজা
     const task = await db.aiTask.findFirst({
       where: { status: "PENDING" },
-      orderBy: { createdAt: "asc" }
+      orderBy: { createdAt: "asc" },
     });
 
     if (!task) return new NextResponse("No Task", { status: 200 });
 
     currentTaskId = task.id;
-    await db.aiTask.update({ where: { id: task.id }, data: { status: "PROCESSING" } });
+    const claim = await db.aiTask.updateMany({
+      where: { id: task.id, status: "PENDING" },
+      data: { status: "PROCESSING" },
+    });
+    if (!claim.count) {
+      currentTaskId = null;
+      return new NextResponse("Task already claimed", { status: 200 });
+    }
 
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) throw new Error("DEEPSEEK_API_KEY সেট করা নেই!");
 
     // টাস্কের ধরন: BLOG / CQ / SQ / (বাকি সব = MCQ)
     const kind: "BLOG" | "CQ" | "SQ" | "MCQ" =
-      task.type === "BLOG" ? "BLOG" : task.type === "CQ" ? "CQ" : task.type === "SQ" ? "SQ" : "MCQ";
+      task.type === "BLOG"
+        ? "BLOG"
+        : task.type === "CQ"
+          ? "CQ"
+          : task.type === "SQ"
+            ? "SQ"
+            : "MCQ";
 
     // 🎯 গণিত/উচ্চতর গণিতের সৃজনশীলে ৩ অংশ (ক, খ, গ); বাকি বিষয়ে ৪ অংশ
     const isMath = /গণিত|math/i.test(task.subject || "");
@@ -91,7 +111,7 @@ export async function GET(req: Request) {
     const chapters = isAll ? chapterListFor(task.category, task.subject) : [];
 
     let systemPrompt = "";
-    let existingQs: any[] = []; 
+    let existingQs: any[] = [];
     const contextText = `Class: ${task.category || "Not specified"}, Subject: ${task.subject || "Not specified"}, Topic: ${task.topic || task.prompt}`;
 
     // 🎯 বাড়তি নির্দেশনা (অধ্যায় বাছা থাকলেও এখন কাজ করবে)
@@ -113,27 +133,33 @@ export async function GET(req: Request) {
     if (kind === "BLOG") {
       // ব্লগের জন্য প্রম্পট
       let partInstruction = "";
-      if (task.part === 1) partInstruction = `Write Part 1 (approx 700 words): Introduction, basic concepts.`;
-      else if (task.part === 2) partInstruction = `Write Part 2 (approx 700 words): Techniques and examples.`;
-      else partInstruction = `Write Part 3 (approx 600 words): Practice problems and conclusion.`;
+      if (task.part === 1)
+        partInstruction = `Write Part 1 (approx 700 words): Introduction, basic concepts.`;
+      else if (task.part === 2)
+        partInstruction = `Write Part 2 (approx 700 words): Techniques and examples.`;
+      else
+        partInstruction = `Write Part 3 (approx 600 words): Practice problems and conclusion.`;
 
       systemPrompt = `You are an expert Bengali blogger. Write a detailed blog post for: "${contextText}". ${partInstruction} Return ONLY a valid JSON object: { "title": "...", "slug": "...", "body": "<h2>...</h2><p>...</p>", "tags": "tag1, tag2", "focusKeyword": "...", "keywords": "kw1, kw2", "metaTitle": "...", "metaDescription": "..." }`;
     } else {
       // 🎯 আগের প্রশ্নগুলো ফেচ করা (একই ধরনের প্রশ্ন)
       existingQs = await db.question.findMany({
-        where: { 
-          topic: isAll ? undefined : task.topic || undefined, 
-          subject: task.subject || undefined, 
+        where: {
+          topic: isAll ? undefined : task.topic || undefined,
+          subject: task.subject || undefined,
           category: task.category || undefined,
-          ...(kind === "MCQ" ? { correct: { not: "" } } : { correct: "" })
+          ...(kind === "MCQ" ? { correct: { not: "" } } : { correct: "" }),
         },
-        select: { text: true }, take: kind === "MCQ" ? 150 : 80, orderBy: { createdAt: "desc" }
+        select: { text: true },
+        take: kind === "MCQ" ? 150 : 80,
+        orderBy: { createdAt: "desc" },
       });
 
       if (kind === "MCQ") {
-        const avoidText = existingQs.length > 0 
-          ? `CRITICAL WARNING: The following questions ALREADY EXIST in our database. You MUST NOT generate any of them again. Generate completely new and different questions:\n${existingQs.map(q => q.text).join("\n")}` 
-          : "";
+        const avoidText =
+          existingQs.length > 0
+            ? `CRITICAL WARNING: The following questions ALREADY EXIST in our database. You MUST NOT generate any of them again. Generate completely new and different questions:\n${existingQs.map((q) => q.text).join("\n")}`
+            : "";
 
         // 🎯 ৩ ধরনের প্রশ্ন তৈরির কড়াকড়ি নির্দেশনা
         systemPrompt = `You are an expert Bangladeshi teacher. Generate exactly 10 high-quality MCQs for: "${contextText}". 
@@ -158,9 +184,10 @@ export async function GET(req: Request) {
       
       Return ONLY a valid JSON object: { "questions": [ { "text": "প্রশ্ন", "options": { "A": "ক", "B": "খ", "C": "গ", "D": "ঘ" }, "correct": "A", "explanation": "ব্যাখ্যা", "difficulty": "EASY" | "MEDIUM" | "HARD"${chapterJson} } ] }`;
       } else if (kind === "CQ") {
-        const avoidText = existingQs.length > 0
-          ? `The following questions ALREADY EXIST. Do NOT repeat them or use the same stimulus. Create completely new ones:\n${existingQs.map(q => q.text.slice(0, 120)).join("\n")}`
-          : "";
+        const avoidText =
+          existingQs.length > 0
+            ? `The following questions ALREADY EXIST. Do NOT repeat them or use the same stimulus. Create completely new ones:\n${existingQs.map((q) => q.text.slice(0, 120)).join("\n")}`
+            : "";
 
         if (cqThree) {
           // 🎯 গণিত: ৩ অংশ (ক-২, খ-৪, গ-৪)
@@ -215,9 +242,10 @@ export async function GET(req: Request) {
       Return ONLY a valid JSON object: { "questions": [ { "stimulus": "উদ্দীপক", "k": "ক-এর প্রশ্ন", "kh": "খ-এর প্রশ্ন", "g": "গ-এর প্রশ্ন", "gh": "ঘ-এর প্রশ্ন", "answers": { "k": "...", "kh": "...", "g": "...", "gh": "..." }, "difficulty": "EASY" | "MEDIUM" | "HARD"${chapterJson} } ] }`;
         }
       } else {
-        const avoidText = existingQs.length > 0
-          ? `The following questions ALREADY EXIST. Do NOT repeat them. Create completely new and different questions:\n${existingQs.map(q => q.text.slice(0, 120)).join("\n")}`
-          : "";
+        const avoidText =
+          existingQs.length > 0
+            ? `The following questions ALREADY EXIST. Do NOT repeat them. Create completely new and different questions:\n${existingQs.map((q) => q.text.slice(0, 120)).join("\n")}`
+            : "";
 
         systemPrompt = `You are an expert Bangladeshi teacher. Generate exactly ${SQ_PER_PART} short-answer questions (সংক্ষিপ্ত প্রশ্ন) for: "${contextText}".
       This is part ${task.part} of ${task.totalParts}.
@@ -240,212 +268,198 @@ export async function GET(req: Request) {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), kind === "CQ" ? 50000 : 45000); 
+    const timeoutId = (generationTimer = setTimeout(
+      () => controller.abort(),
+      kind === "CQ" ? 50000 : 45000,
+    ));
 
     const res = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
       body: JSON.stringify({
         model: "deepseek-chat",
-        messages: [{ role: "system", content: "Output ONLY valid JSON." }, { role: "user", content: systemPrompt }],
+        stream: kind !== "BLOG",
+        messages: [
+          { role: "system", content: "Output ONLY valid JSON." },
+          { role: "user", content: systemPrompt },
+        ],
         response_format: { type: "json_object" },
         temperature: 0.8, // ভ্যারাইটি বাড়ানোর জন্য
-        max_tokens: kind === "CQ" ? 6500 : 5000
+        max_tokens: kind === "CQ" ? 6500 : 5000,
       }),
-      signal: controller.signal
+      signal: controller.signal,
     });
 
+    if (!res.ok) {
+      clearTimeout(timeoutId);
+      throw new Error("Generation provider failed");
+    }
+
+    if (kind !== "BLOG") {
+      const known = new Set(
+        existingQs.map((q) =>
+          s(q.text).normalize("NFKC").replace(/\s+/g, " ").toLowerCase(),
+        ),
+      );
+      let processed = 0;
+      try {
+        const result = await readGenerationResponse(res, async (content) => {
+          const objects = completeArrayObjects(content, "questions");
+          for (; processed < objects.length; processed++) {
+            if (
+              checkpointCount >=
+              (kind === "CQ" ? CQ_PER_PART : kind === "SQ" ? SQ_PER_PART : 10)
+            )
+              break;
+            const raw = objects[processed] as any;
+            const question = workerQuestion(raw, kind, cqThree);
+            if (!question) continue;
+            const fingerprint = question.text
+              .normalize("NFKC")
+              .replace(/\s+/g, " ")
+              .toLowerCase();
+            if (known.has(fingerprint)) continue;
+            await db.question.create({
+              data: {
+                ...question,
+                category: task.category || "সাধারণ",
+                subject: task.subject || "সাধারণ",
+                topic: isAll
+                  ? pickChapter(raw.chapter, chapters, "সাধারণ")
+                  : (task.topic as string),
+                difficulty: normDifficulty(raw.difficulty),
+                lang: /english/i.test(task.subject || "")
+                  ? "English"
+                  : "Bangla",
+                approved: false,
+                source: "AI_GENERATOR",
+              },
+            });
+            known.add(fingerprint);
+            checkpointCount++;
+          }
+        });
+        if (
+          result.finish !== "stop" ||
+          checkpointCount <
+            (kind === "CQ" ? CQ_PER_PART : kind === "SQ" ? SQ_PER_PART : 10)
+        )
+          throw new Error("Incomplete generation");
+        await db.aiTask.update({
+          where: { id: task.id },
+          data: { status: "COMPLETED" },
+        });
+        return new NextResponse(
+          `${checkpointCount}টি প্রশ্ন অনুমোদনের জন্য সংরক্ষিত।`,
+          { status: 200 },
+        );
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
     clearTimeout(timeoutId);
-
-    if (!res.ok) throw new Error(`DeepSeek API Error: ${await res.text()}`);
-
     const data = await res.json();
     let content = data?.choices?.[0]?.message?.content;
     if (!content) throw new Error("AI থেকে কোনো উত্তর পাওয়া যায়নি।");
 
-    content = content.replace(/```json/g, "").replace(/```/g, "").trim();
+    content = content
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
     const parsed = JSON.parse(content);
 
     let categoryId = null;
     if (task.category) {
-      const existingCategory = await db.category.findFirst({ where: { name: task.category } });
+      const existingCategory = await db.category.findFirst({
+        where: { name: task.category },
+      });
       if (existingCategory) categoryId = existingCategory.id;
       else {
-        const newCategory = await db.category.create({ data: { name: task.category, slug: task.category.toLowerCase().replace(/\s+/g, '-') + "-" + Date.now() } });
+        const newCategory = await db.category.create({
+          data: {
+            name: task.category,
+            slug:
+              task.category.toLowerCase().replace(/\s+/g, "-") +
+              "-" +
+              Date.now(),
+          },
+        });
         categoryId = newCategory.id;
       }
     }
 
     if (kind === "BLOG") {
       // ব্লগ সেভ
-      const tagsArray = typeof parsed.tags === 'string' ? parsed.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [];
-      const keywordsArray = typeof parsed.keywords === 'string' ? parsed.keywords.split(',').map((k: string) => k.trim()).filter(Boolean) : [];
+      const tagsArray =
+        typeof parsed.tags === "string"
+          ? parsed.tags
+              .split(",")
+              .map((t: string) => t.trim())
+              .filter(Boolean)
+          : [];
+      const keywordsArray =
+        typeof parsed.keywords === "string"
+          ? parsed.keywords
+              .split(",")
+              .map((k: string) => k.trim())
+              .filter(Boolean)
+          : [];
 
       let savedPostId = task.postId;
       if (task.part === 1) {
         const newPost = await db.post.create({
-          data: { title: parsed.title, slug: parsed.slug + "-" + Date.now(), body: parsed.body, tags: tagsArray, keywords: keywordsArray, categoryId: categoryId, focusKeyword: parsed.focusKeyword, metaTitle: parsed.metaTitle, metaDescription: parsed.metaDescription, published: false }
+          data: {
+            title: parsed.title,
+            slug: parsed.slug + "-" + Date.now(),
+            body: parsed.body,
+            tags: tagsArray,
+            keywords: keywordsArray,
+            categoryId: categoryId,
+            focusKeyword: parsed.focusKeyword,
+            metaTitle: parsed.metaTitle,
+            metaDescription: parsed.metaDescription,
+            published: false,
+          },
         });
         savedPostId = newPost.id;
         if (task.batchId) {
-          await db.aiTask.updateMany({ where: { batchId: task.batchId, status: "PENDING" }, data: { postId: savedPostId } });
+          await db.aiTask.updateMany({
+            where: { batchId: task.batchId, status: "PENDING" },
+            data: { postId: savedPostId },
+          });
         }
       } else if (savedPostId) {
-        const existingPost = await db.post.findUnique({ where: { id: savedPostId } });
+        const existingPost = await db.post.findUnique({
+          where: { id: savedPostId },
+        });
         if (existingPost) {
-          await db.post.update({ where: { id: savedPostId }, data: { body: existingPost.body + "\n" + parsed.body } });
+          await db.post.update({
+            where: { id: savedPostId },
+            data: { body: existingPost.body + "\n" + parsed.body },
+          });
         }
       }
-    } else if (kind === "MCQ") {
-      // 🎯 MCQ সেভ
-      const questionsList = parsed.questions || parsed.mcqs || [];
-      if (!Array.isArray(questionsList) || questionsList.length === 0) throw new Error("AI সঠিকভাবে কোনো প্রশ্ন তৈরি করতে পারেনি।");
-
-      const existingTexts = new Set(existingQs.map(q => q.text.trim().toLowerCase()));
-      
-      const uniqueQuestions = questionsList.filter((q: any) => {
-        const qText = (q.text || q.question || "").trim().toLowerCase();
-        if (existingTexts.has(qText)) return false;
-        existingTexts.add(qText);
-        return true;
-      });
-
-      if (uniqueQuestions.length === 0) throw new Error("AI শুধু পুরোনো প্রশ্নই দিয়েছে। নতুন প্রশ্ন পেতে আবার চেষ্টা করুন।");
-
-      await (db.question.createMany as any)({
-        data: uniqueQuestions.map((q: any) => ({
-          text: q.text || q.question || "প্রশ্ন",
-          options: { 
-            A: cleanOptionText(q.options?.A || ""), 
-            B: cleanOptionText(q.options?.B || ""), 
-            C: cleanOptionText(q.options?.C || ""), 
-            D: cleanOptionText(q.options?.D || "") 
-          },
-          correct: q.correct || "A",
-          explanation: q.explanation || "",
-          category: task.category || "সাধারণ", 
-          subject: task.subject || "সাধারণ", 
-          topic: isAll ? pickChapter(q.chapter, chapters, "সাধারণ") : (task.topic as string),
-          difficulty: (q.difficulty && ["EASY", "MEDIUM", "HARD"].includes(String(q.difficulty).toUpperCase())) ? String(q.difficulty).toUpperCase() : "MEDIUM", 
-          lang: "Bangla", 
-          approved: false, 
-          source: "AI_GENERATOR"
-        }))
-      });
-    } else if (kind === "CQ") {
-      // 🎯 CQ (সৃজনশীল) সেভ
-      const rawList = parsed.questions || parsed.cqs || [];
-      if (!Array.isArray(rawList) || rawList.length === 0) throw new Error("AI সঠিকভাবে কোনো সৃজনশীল প্রশ্ন তৈরি করতে পারেনি।");
-
-      const existingTexts = new Set(existingQs.map(q => q.text.trim().toLowerCase()));
-
-      const valid = rawList
-        .map((q: any) => {
-          const a = q.answers || q.ans || {};
-          return {
-            stimulus: s(q.stimulus ?? q.text),
-            k: s(q.k ?? q["ক"]),
-            kh: s(q.kh ?? q["খ"]),
-            g: s(q.g ?? q["গ"]),
-            gh: s(q.gh ?? q["ঘ"]),
-            ak: s(a.k ?? a["ক"]),
-            akh: s(a.kh ?? a["খ"]),
-            ag: s(a.g ?? a["গ"]),
-            agh: s(a.gh ?? a["ঘ"]),
-            difficulty: q.difficulty,
-            chapter: q.chapter,
-          };
-        })
-        .filter((v: any) => {
-          // গণিতে ঘ লাগে না; বাকি বিষয়ে চারটিই লাগবে
-          if (!v.stimulus || !v.k || !v.kh || !v.g) return false;
-          if (!cqThree && !v.gh) return false;
-          const key = v.stimulus.toLowerCase();
-          if (existingTexts.has(key)) return false;
-          existingTexts.add(key);
-          return true;
-        });
-
-      if (valid.length === 0) throw new Error("AI সম্পূর্ণ সৃজনশীল প্রশ্ন দিতে পারেনি। আবার চেষ্টা করুন।");
-
-      await (db.question.createMany as any)({
-        data: valid.map((v: any) => ({
-          text: v.stimulus,
-          options: cqThree
-            ? {
-                stimulus: v.stimulus,
-                "ক": v.k,
-                "খ": v.kh,
-                "গ": v.g,
-                ans: { "ক": v.ak, "খ": v.akh, "গ": v.ag },
-              }
-            : {
-                stimulus: v.stimulus,
-                "ক": v.k,
-                "খ": v.kh,
-                "গ": v.g,
-                "ঘ": v.gh,
-                ans: { "ক": v.ak, "খ": v.akh, "গ": v.ag, "ঘ": v.agh },
-              },
-          correct: "",
-          explanation: "",
-          category: task.category || "সাধারণ",
-          subject: task.subject || "সাধারণ",
-          topic: isAll ? pickChapter(v.chapter, chapters, "সাধারণ") : (task.topic as string),
-          difficulty: normDifficulty(v.difficulty),
-          lang: "Bangla",
-          approved: false,
-          source: "AI_GENERATOR",
-        })),
-      });
-    } else {
-      // 🎯 SQ (সংক্ষিপ্ত) সেভ
-      const rawList = parsed.questions || parsed.sqs || [];
-      if (!Array.isArray(rawList) || rawList.length === 0) throw new Error("AI সঠিকভাবে কোনো সংক্ষিপ্ত প্রশ্ন তৈরি করতে পারেনি।");
-
-      const existingTexts = new Set(existingQs.map(q => q.text.trim().toLowerCase()));
-
-      const valid = rawList
-        .map((q: any) => ({
-          text: s(q.text ?? q.question),
-          answer: s(q.answer ?? q.ans),
-          difficulty: q.difficulty,
-          chapter: q.chapter,
-        }))
-        .filter((v: any) => {
-          if (!v.text) return false;
-          const key = v.text.toLowerCase();
-          if (existingTexts.has(key)) return false;
-          existingTexts.add(key);
-          return true;
-        });
-
-      if (valid.length === 0) throw new Error("AI শুধু পুরোনো প্রশ্নই দিয়েছে। নতুন প্রশ্ন পেতে আবার চেষ্টা করুন।");
-
-      await (db.question.createMany as any)({
-        data: valid.map((v: any) => ({
-          text: v.text,
-          options: { answer: v.answer },
-          correct: "",
-          explanation: v.answer,
-          category: task.category || "সাধারণ",
-          subject: task.subject || "সাধারণ",
-          topic: isAll ? pickChapter(v.chapter, chapters, "সাধারণ") : (task.topic as string),
-          difficulty: normDifficulty(v.difficulty),
-          lang: "Bangla",
-          approved: false,
-          source: "AI_GENERATOR",
-        })),
-      });
     }
 
-    await db.aiTask.update({ where: { id: task.id }, data: { status: "COMPLETED" } });
-    return new NextResponse("সফলভাবে কাজ সম্পন্ন হয়েছে!", { status: 200 }); 
-
+    await db.aiTask.update({
+      where: { id: task.id },
+      data: { status: "COMPLETED" },
+    });
+    return new NextResponse("সফলভাবে কাজ সম্পন্ন হয়েছে!", { status: 200 });
   } catch (error: any) {
-    console.error("Worker Error:", error.message);
-    if (currentTaskId) await db.aiTask.update({ where: { id: currentTaskId }, data: { status: "FAILED" } }).catch(() => {});
-    return new NextResponse(`Error: ${error.message}`, { status: 500 }); 
+    if (generationTimer) clearTimeout(generationTimer);
+    console.error("Worker generation failed; checkpoints:", checkpointCount);
+    if (currentTaskId)
+      await db.aiTask
+        .update({ where: { id: currentTaskId }, data: { status: "FAILED" } })
+        .catch(() => {});
+    return new NextResponse(
+      `Generation অসম্পূর্ণ। ${checkpointCount}টি সম্পূর্ণ প্রশ্ন অনুমোদনের জন্য সংরক্ষিত আছে।`,
+      { status: 500 },
+    );
   }
 }
 

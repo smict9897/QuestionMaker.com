@@ -19,6 +19,7 @@ type QuickLink = {
 };
 
 const QB_LINKS: QuickLink[] = [
+  { href: "/admin/english-review", label: "English উদ্ধার/অনুমোদন", sub: "সংরক্ষিত সম্পূর্ণ অংশ যাচাই", Icon: ListChecks },
   { href: "/admin/questions", label: "প্রশ্ন ব্যাংক", sub: "প্রশ্ন যোগ ও ইমপোর্ট", Icon: Database },
   { href: "/admin/questions/manage", label: "প্রশ্ন ম্যানেজ", sub: "গণনা, ফিল্টার, অনুমোদন, মোছা", Icon: SlidersHorizontal },
   { href: "/admin/questions/extract", label: "PDF/ছবি থেকে প্রশ্ন", sub: "AI দিয়ে প্রশ্ন তোলা", Icon: FileUp },

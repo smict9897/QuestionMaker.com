@@ -1,5 +1,6 @@
 /** Safe diagnostics only: never expose provider bodies, prompts, keys or source extracts. */
 export type EnglishProviderCode =
+  | "STORAGE"
   | "CONFIGURATION"
   | "AUTHENTICATION"
   | "BALANCE"
@@ -10,13 +11,18 @@ export type EnglishProviderCode =
   | "INCOMPLETE"
   | "INVALID_OUTPUT";
 export class EnglishProviderError extends Error {
-  constructor(public readonly code: EnglishProviderCode) {
+  constructor(
+    public readonly code: EnglishProviderCode,
+    public readonly rule?: string,
+  ) {
     super(`English generation: ${code}`);
     this.name = "EnglishProviderError";
   }
 }
 export function englishProviderMessage(code: EnglishProviderCode): string {
   const messages: Record<EnglishProviderCode, string> = {
+    STORAGE:
+      "সম্পূর্ণ অংশ database-এ সংরক্ষণ করা যায়নি। আগে রাখা draft থাকলে আমার draft পাতায় পাবেন।",
     CONFIGURATION: "Generation সংযোগ কনফিগার করা নেই। অ্যাডমিনকে জানান।",
     AUTHENTICATION:
       "Generation provider-এর সংযোগ অনুমোদিত হচ্ছে না। অ্যাডমিনকে API configuration যাচাই করতে হবে।",

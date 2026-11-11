@@ -1,4 +1,8 @@
 "use server";
+import {
+  completeArrayObjects,
+  readGenerationResponse,
+} from "@/lib/generation-stream";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
@@ -85,6 +89,7 @@ export async function preparePaperTopic(
     ...visibleQuestions(user.id),
   };
   let lock = "";
+  let recovered = 0;
   try {
     const count = await db.question.count({ where });
     if (count >= PREPARATION_TARGET)
@@ -156,6 +161,7 @@ export async function preparePaperTopic(
       },
       body: JSON.stringify({
         model: "deepseek-chat",
+        stream: true,
         messages: [
           {
             role: "system",
@@ -177,44 +183,24 @@ export async function preparePaperTopic(
         ok: false,
         error: "প্রশ্ন প্রস্তুতির সার্ভার উত্তর দেয়নি। আবার চেষ্টা করুন।",
       };
-    const json = await res.json();
-    const content = json.choices?.[0]?.message?.content;
-    const result = generatedSchema.safeParse(
-      JSON.parse(
-        typeof content === "string"
-          ? content.replace(/^```(?:json)?\s*|\s*```$/g, "")
-          : "null",
-      ),
-    );
-    if (!result.success)
-      return {
-        ok: false,
-        error: "প্রশ্নের ফরম্যাট সঠিক নয়। আবার চেষ্টা করুন।",
-      };
-    const unique = [
-      ...new Map(
-        result.data.questions.map((q) => [
-          questionFingerprint(q.type === "CQ" ? q.stimulus : q.text),
-          q,
-        ]),
-      ).values(),
-    ]
-      .filter(
-        (q) =>
-          !known.has(
-            questionFingerprint(q.type === "CQ" ? q.stimulus : q.text),
-          ),
-      )
-      .slice(0, batchCount);
-    if (!unique.length)
-      return {
-        ok: false,
-        error:
-          "নতুন স্বতন্ত্র প্রশ্ন পাওয়া যায়নি। আগে তৈরি প্রশ্ন রাখা আছে; আবার চেষ্টা করুন।",
-      };
-    await db.$transaction(
-      unique.map((q) =>
-        db.question.create({
+    let processed = 0;
+    const checkpoint = async (content: string) => {
+      const objects = completeArrayObjects(content, "questions");
+      for (
+        ;
+        processed < objects.length && recovered < batchCount;
+        processed++
+      ) {
+        const result = generatedSchema.safeParse({
+          questions: [objects[processed]],
+        });
+        if (!result.success) continue;
+        const q = result.data.questions[0];
+        const fingerprint = questionFingerprint(
+          q.type === "CQ" ? q.stimulus : q.text,
+        );
+        if (known.has(fingerprint)) continue;
+        await db.question.create({
           data: {
             category,
             subject,
@@ -233,21 +219,32 @@ export async function preparePaperTopic(
             approved: false,
             source,
           },
-        }),
-      ),
-    );
+        });
+        known.add(fingerprint);
+        recovered++;
+      }
+    };
+    await readGenerationResponse(res, checkpoint);
+    if (!recovered)
+      return {
+        ok: false,
+        error: "সম্পূর্ণ ও সঠিক কাঠামোর নতুন প্রশ্ন পাওয়া যায়নি।",
+      };
+    // Any complete checkpoints survive even if the remaining response is truncated.
     revalidatePath("/admin/questions");
     revalidatePath("/admin/questions/manage");
     return {
       ok: true,
       generated: true,
-      count: checked + unique.length,
-      added: unique.length,
+      count: checked + recovered,
+      added: recovered,
     };
   } catch {
     return {
       ok: false,
-      error: "প্রশ্ন তৈরি বা সংরক্ষণ হয়নি। আবার চেষ্টা করুন।",
+      error: recovered
+        ? `সংযোগ বা সংরক্ষণে সমস্যা হয়েছে; ${recovered}টি সম্পূর্ণ প্রশ্ন অনুমোদনের জন্য সংরক্ষিত আছে। আবার চালালে আগে রাখা প্রশ্ন বাদ দেওয়া হবে।`
+        : "সম্পূর্ণ প্রশ্ন সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।",
     };
   } finally {
     if (lock)

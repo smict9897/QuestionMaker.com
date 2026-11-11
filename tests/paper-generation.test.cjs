@@ -54,6 +54,7 @@ function api({
     "@/lib/db": { db },
     "next/cache": { revalidatePath: () => {} },
     "@/lib/paper-generation": lib,
+    "@/lib/generation-stream": load("lib/generation-stream.ts"),
     "@/lib/home-data": home,
     "@/lib/nctb-data": { NCTB_CLASSES: [] },
   });
@@ -96,36 +97,36 @@ test("new AI questions stay pending and are correctly encoded for the creator", 
   const oldFetch = global.fetch,
     oldKey = process.env.DEEPSEEK_API_KEY;
   process.env.DEEPSEEK_API_KEY = "test-only";
-  global.fetch = async () => ({
-    ok: true,
-    json: async () => ({
-      choices: [
-        {
-          message: {
-            content: JSON.stringify({
-              questions: [
-                {
-                  type: "SHORT",
-                  text: "Define algebra",
-                  explanation: "A branch of mathematics",
-                },
-                {
-                  type: "CQ",
-                  stimulus: "A field has length 4.",
-                  subQuestions: {
-                    k: "Define length",
-                    kh: "Explain",
-                    g: "Calculate",
-                    gh: "Analyze",
+  global.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                questions: [
+                  {
+                    type: "SHORT",
+                    text: "Define algebra",
+                    explanation: "A branch of mathematics",
                   },
-                },
-              ],
-            }),
+                  {
+                    type: "CQ",
+                    stimulus: "A field has length 4.",
+                    subQuestions: {
+                      k: "Define length",
+                      kh: "Explain",
+                      g: "Calculate",
+                      gh: "Analyze",
+                    },
+                  },
+                ],
+              }),
+            },
           },
-        },
-      ],
-    }),
-  });
+        ],
+      }),
+    );
   try {
     const a = api();
     const result = await a.actions.preparePaperTopic(input);
@@ -185,24 +186,24 @@ test("an incomplete chapter is topped up and response reports cumulative count",
   const oldFetch = global.fetch,
     oldKey = process.env.DEEPSEEK_API_KEY;
   process.env.DEEPSEEK_API_KEY = "test";
-  global.fetch = async () => ({
-    ok: true,
-    json: async () => ({
-      choices: [
-        {
-          message: {
-            content: JSON.stringify({
-              questions: [
-                { type: "SHORT", text: "New one", explanation: "Answer one" },
-                { type: "SHORT", text: "New two", explanation: "Answer two" },
-                { type: "SHORT", text: "Extra", explanation: "Answer" },
-              ],
-            }),
+  global.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                questions: [
+                  { type: "SHORT", text: "New one", explanation: "Answer one" },
+                  { type: "SHORT", text: "New two", explanation: "Answer two" },
+                  { type: "SHORT", text: "Extra", explanation: "Answer" },
+                ],
+              }),
+            },
           },
-        },
-      ],
-    }),
-  });
+        ],
+      }),
+    );
   try {
     const a = api({ counts: [28, 28] });
     const result = await a.actions.preparePaperTopic(input);
@@ -220,26 +221,26 @@ test("repeated questions are not saved across batches", async () => {
   const oldFetch = global.fetch,
     oldKey = process.env.DEEPSEEK_API_KEY;
   process.env.DEEPSEEK_API_KEY = "test";
-  global.fetch = async () => ({
-    ok: true,
-    json: async () => ({
-      choices: [
-        {
-          message: {
-            content: JSON.stringify({
-              questions: [
-                {
-                  type: "SHORT",
-                  text: " ALREADY   EXISTS ",
-                  explanation: "Answer",
-                },
-              ],
-            }),
+  global.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                questions: [
+                  {
+                    type: "SHORT",
+                    text: " ALREADY   EXISTS ",
+                    explanation: "Answer",
+                  },
+                ],
+              }),
+            },
           },
-        },
-      ],
-    }),
-  });
+        ],
+      }),
+    );
   try {
     const a = api({ counts: [6, 6], existing: [{ text: "already exists" }] });
     const result = await a.actions.preparePaperTopic(input);
@@ -257,4 +258,49 @@ test("preparation does not advance before 30 and uses bounded sequential batches
   assert.match(source, /result.count\s*>=\s*30/);
   assert.match(source, /if\s*\(!ready\)/);
   assert.doesNotMatch(source, /AI তৈরি করবে/);
+});
+
+test("interrupted streamed preparation keeps only validated pending questions", async () => {
+  const old = global.fetch,
+    key = process.env.DEEPSEEK_API_KEY;
+  process.env.DEEPSEEK_API_KEY = "test";
+  let step = 0;
+  global.fetch = async () =>
+    new Response(
+      new ReadableStream({
+        pull(c) {
+          if (step++ === 0)
+            c.enqueue(
+              new TextEncoder().encode(
+                "data: " +
+                  JSON.stringify({
+                    choices: [
+                      {
+                        delta: {
+                          content:
+                            '{"questions":[{"type":"SHORT","text":"Saved question","explanation":"Answer"},{"type":"MCQ","text":"incomplete"},',
+                        },
+                      },
+                    ],
+                  }) +
+                  "\n\n",
+              ),
+            );
+          else c.error(new Error("network lost"));
+        },
+      }),
+      { headers: { "content-type": "text/event-stream" } },
+    );
+  try {
+    const a = api();
+    const result = await a.actions.preparePaperTopic(input);
+    assert.equal(result.ok, false);
+    assert.match(result.error, /1টি সম্পূর্ণ প্রশ্ন/);
+    assert.equal(a.created.length, 1);
+    assert.equal(a.created[0].approved, false);
+  } finally {
+    global.fetch = old;
+    if (key === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = key;
+  }
 });

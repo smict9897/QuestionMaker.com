@@ -7,13 +7,15 @@ const { test } = require("node:test"),
 function harness() {
   const rows = new Map();
   let user = { id: "teacher:one", role: "TEACHER" },
-    calls = 0;
+    calls = 0,
+    provider = null;
   const code = () => {
     const e = new Error();
     e.code = "P2002";
     throw e;
   };
   const db = {
+    $transaction: async (operations) => Promise.all(operations),
     setting: {
       create: async ({ data }) => {
         if (rows.has(data.key)) code();
@@ -66,8 +68,9 @@ function harness() {
       if (id === "@/lib/db") return { db };
       if (id === "@/lib/english/provider")
         return {
-          requestEnglishPaper: async (s) => {
+          requestEnglishPaper: async (s, options) => {
             calls++;
+            if (provider) return provider(s, options);
             return {
               total: 10,
               output: {
@@ -103,6 +106,7 @@ function harness() {
     actions: load("app/actions/english-paper.ts"),
     rows,
     setUser: (u) => (user = u),
+    setProvider: (p) => (provider = p),
     get calls() {
       return calls;
     },
@@ -239,6 +243,44 @@ test("admin bypasses daily quota including existing full quota, but retains gene
     assert.equal(results.filter((r) => r.ok).length, 1);
     h.setUser({ id: "teacher:one", role: "TEACHER" });
     assert.equal((await h.actions.generateEnglishPaper(selection)).ok, false);
+  } finally {
+    if (old === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = old;
+  }
+});
+
+test("English action durably checkpoints valid tasks before later provider failure and denies other owner", async () => {
+  const old = process.env.DEEPSEEK_API_KEY;
+  process.env.DEEPSEEK_API_KEY = "test";
+  try {
+    const h = harness();
+    h.setProvider(async (s, options) => {
+      const content = JSON.stringify({
+        passages: [],
+        tasks: [
+          {
+            id: "paragraph",
+            instruction: "Write about My school in 120 words.",
+            subitems: [],
+          },
+        ],
+      });
+      await options.onContent(content);
+      await options.onContent(content);
+      throw new Error("network lost");
+    });
+    const result = await h.actions.generateEnglishPaper(selection);
+    assert.equal(result.ok, false);
+    assert.match(result.error, /1টি সম্পূর্ণ অংশ/);
+    await h.actions.generateEnglishPaper(selection);
+    const keys = [...h.rows.keys()],
+      review = keys.filter((k) => k.startsWith("english-review:"));
+    assert.equal(review.length, 1);
+    const record = JSON.parse(h.rows.get(review[0]));
+    assert.equal(record.status, "PENDING");
+    assert.ok(await h.actions.loadEnglishPaper(record.draftKey));
+    h.setUser({ id: "other", role: "TEACHER" });
+    assert.equal(await h.actions.loadEnglishPaper(record.draftKey), null);
   } finally {
     if (old === undefined) delete process.env.DEEPSEEK_API_KEY;
     else process.env.DEEPSEEK_API_KEY = old;

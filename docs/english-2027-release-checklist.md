@@ -1,3 +1,5 @@
+> Latest generation recovery behaviour and tests: see [checkpoint recovery](generation-checkpoint-recovery.md). This supersedes earlier all-or-nothing generation notes; whole-paper success validation remains strict.
+
 # English printable paper flow — release record
 
 ## Implemented

@@ -325,9 +325,13 @@ export default function EnglishSetup({
       <p role="status" aria-live="polite">
         {message}
       </p>
+      <a className="block underline" href="/question-builder/english/saved">
+        সংরক্ষিত / উদ্ধার করা English draft দেখুন
+      </a>
       <p className="text-sm text-slate-600">
-        শিক্ষকদের জন্য প্রতিদিন সর্বোচ্চ ১০টি generation চেষ্টা; অ্যাডমিনের দৈনিক সীমা নেই। প্রশ্ন ব্যক্তিগত
-        draft হিসেবে সেভ হবে। ব্যবহারের আগে প্রশ্ন ও উত্তর যাচাই করুন।
+        শিক্ষকদের জন্য প্রতিদিন সর্বোচ্চ ১০টি generation চেষ্টা; অ্যাডমিনের
+        দৈনিক সীমা নেই। প্রশ্ন ব্যক্তিগত draft হিসেবে সেভ হবে। ব্যবহারের আগে
+        প্রশ্ন ও উত্তর যাচাই করুন।
       </p>
     </main>
   );
