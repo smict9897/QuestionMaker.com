@@ -11,6 +11,7 @@ import {
   HomeStarter,
   HomeGuide,
 } from "@/components/home/home-workspace";
+import BrandIntro from "@/components/brand-intro";
 import PaperAnimation from "@/components/home/paper-animation";
 import HomeStats from "@/components/home/home-stats";
 import "@/components/home/workspace.css";
@@ -185,6 +186,7 @@ export default async function Home() {
       >
         <main>
           <div className="hm-hero-stack">
+            <BrandIntro />
             <HomeStarter
               rows={(bank || []).map((r) => ({
                 category: r.category,
