@@ -11,6 +11,7 @@ export default async function PreparePage({
     subject?: string;
     topic?: string | string[];
     append?: string;
+    questionType?: string;
   }>;
 }) {
   const p = await searchParams;
@@ -30,6 +31,7 @@ export default async function PreparePage({
             ? [p.topic]
             : []
       }
+      questionType={typeof p.questionType === "string" ? p.questionType : "ALL"}
       append={p.append === "1"}
     />
   );

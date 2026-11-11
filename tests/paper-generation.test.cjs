@@ -4,7 +4,8 @@ const fs = require("node:fs");
 const Module = require("node:module");
 const ts = require("typescript");
 function load(file, mocks = {}) {
-  const m = new Module(file);
+  const m = new Module(file, module);
+  m.paths = module.paths;
   m.require = (n) => mocks[n] || require(n);
   m._compile(
     ts.transpileModule(fs.readFileSync(file, "utf8"), {
@@ -50,6 +51,10 @@ function api({
     $transaction: async (tasks) => Promise.all(tasks),
   };
   const actions = load("app/actions/prepare-paper.ts", {
+    "@/lib/question-type-options": load("lib/question-type-options.ts"),
+    "@/lib/question-types": load("lib/question-types.ts", {
+      "./question-type-options": load("lib/question-type-options.ts"),
+    }),
     "@/auth": { auth: async () => ({ user }) },
     "@/lib/db": { db },
     "next/cache": { revalidatePath: () => {} },
@@ -303,4 +308,64 @@ test("interrupted streamed preparation keeps only validated pending questions", 
     if (key === undefined) delete process.env.DEEPSEEK_API_KEY;
     else process.env.DEEPSEEK_API_KEY = key;
   }
+});
+
+test("selected SHORT generation filters bank counts and drops wrong provider types before save", async () => {
+  const old = global.fetch,
+    key = process.env.DEEPSEEK_API_KEY;
+  process.env.DEEPSEEK_API_KEY = "test";
+  let prompt = "";
+  global.fetch = async (url, opts) => {
+    prompt = opts.body;
+    return new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                questions: [
+                  {
+                    type: "SHORT",
+                    text: "Define algebra",
+                    explanation: "Mathematics",
+                  },
+                  {
+                    type: "MCQ",
+                    text: "Which number?",
+                    options: { A: "1", B: "2", C: "3", D: "4" },
+                    correct: "A",
+                    explanation: "One",
+                  },
+                ],
+              }),
+            },
+          },
+        ],
+      }),
+    );
+  };
+  try {
+    const a = api();
+    const r = await a.actions.preparePaperTopic({
+      ...input,
+      questionType: "SHORT",
+    });
+    assert.equal(r.ok, true);
+    assert.equal(a.created.length, 1);
+    assert.equal(a.created[0].correct, "");
+    assert.match(prompt, /ONLY these types: SHORT/);
+    assert.ok(a.queries.every((w) => w.AND?.length));
+  } finally {
+    global.fetch = old;
+    if (key === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = key;
+  }
+});
+test("invalid question type cannot invoke generation or database checks", async () => {
+  const a = api();
+  assert.equal(
+    (await a.actions.preparePaperTopic({ ...input, questionType: "FAKE" })).ok,
+    false,
+  );
+  assert.equal(a.queries.length, 0);
 });

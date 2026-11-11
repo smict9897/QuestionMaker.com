@@ -4,7 +4,8 @@ const fs = require("node:fs");
 const Module = require("node:module");
 const ts = require("typescript");
 function load(file, mocks = {}) {
-  const mod = new Module(file);
+  const mod = new Module(file, module);
+  mod.paths = module.paths;
   mod.require = (n) => mocks[n] || require(n);
   mod._compile(
     ts.transpileModule(fs.readFileSync(file, "utf8"), {
@@ -71,6 +72,10 @@ test("question picker applies OR chapter membership to both rows and count", asy
     },
   };
   const Page = load("app/question-builder/create/page.tsx", {
+    "@/lib/question-type-options": load("lib/question-type-options.ts"),
+    "@/lib/question-types": load("lib/question-types.ts", {
+      "./question-type-options": load("lib/question-type-options.ts"),
+    }),
     "@/auth": { auth: async () => null },
     "@/lib/paper-generation": { visibleQuestions: () => ({ approved: true }) },
     "@/lib/db": { db },

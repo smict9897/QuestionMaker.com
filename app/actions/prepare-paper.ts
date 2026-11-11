@@ -17,6 +17,8 @@ import {
   visibleQuestions,
   generatedSchema,
 } from "@/lib/paper-generation";
+import { questionTypeWhere } from "@/lib/question-types";
+import { selectedQuestionTypes } from "@/lib/question-type-options";
 import { NCTB_CLASSES } from "@/lib/nctb-data";
 import { homeCategoryMatches } from "@/lib/home-data";
 
@@ -38,6 +40,7 @@ export async function checkPaperTopics(
         where: {
           category: { in: categoryAliases(p.data.category) },
           subject: p.data.subject,
+          AND: [questionTypeWhere(p.data.questionType)],
           ...visibleQuestions(user.id),
         },
       });
@@ -86,6 +89,7 @@ export async function preparePaperTopic(
     category: { in: categoryAliases(category) },
     subject,
     topic,
+    AND: [questionTypeWhere(p.data.questionType)],
     ...visibleQuestions(user.id),
   };
   let lock = "";
@@ -142,8 +146,7 @@ export async function preparePaperTopic(
     if (!reserved)
       return {
         ok: false,
-        error:
-          "আজকের প্রশ্ন প্রস্তুতির সীমা (৬০টি ব্যাচ) শেষ। পরে চেষ্টা করুন।",
+        error: "আজকের প্রশ্ন প্রস্তুতির সীমা (৬০টি ব্যাচ) শেষ। পরে চেষ্টা করুন।",
       };
     const existing = await db.question.findMany({
       where,
@@ -170,7 +173,7 @@ export async function preparePaperTopic(
           },
           {
             role: "user",
-            content: `Generate exactly ${batchCount} NEW educational sample questions in Bangla (English for English subject), balanced across MCQ, SHORT, CQ. Never repeat or paraphrase these existing questions: ${JSON.stringify(existing.map((q) => q.text.slice(0, 500)))}. Selection: ${JSON.stringify({ category, subject, topic })}. Return {"questions":[...]}. MCQ: type,text,options:{A,B,C,D},correct:A|B|C|D,explanation. SHORT: type,text,explanation. CQ: type,stimulus,subQuestions:{k,kh,g,gh},explanation. Questions must match this chapter. Include no HTML.`,
+            content: `Generate exactly ${batchCount} NEW educational sample questions in Bangla (English for English subject), ONLY these types: ${selectedQuestionTypes(p.data.questionType).join(", ")}. Balance across the requested types only. Never repeat or paraphrase these existing questions: ${JSON.stringify(existing.map((q) => q.text.slice(0, 500)))}. Selection: ${JSON.stringify({ category, subject, topic })}. Return {"questions":[...]}. MCQ: type,text,options:{A,B,C,D},correct:A|B|C|D,explanation. SHORT: type,text,explanation. CQ: type,stimulus,subQuestions:{k,kh,g,gh},explanation. Questions must match this chapter. Include no HTML.`,
           },
         ],
         response_format: { type: "json_object" },
@@ -196,6 +199,8 @@ export async function preparePaperTopic(
         });
         if (!result.success) continue;
         const q = result.data.questions[0];
+        if (!selectedQuestionTypes(p.data.questionType).includes(q.type))
+          continue;
         const fingerprint = questionFingerprint(
           q.type === "CQ" ? q.stimulus : q.text,
         );

@@ -3,6 +3,9 @@ import { z } from "zod";
 export const selectionSchema = z.object({
   category: z.string().trim().min(1).max(100),
   subject: z.string().trim().min(1).max(200),
+  questionType: z
+    .enum(["ALL", "MCQ", "SHORT", "CQ", "MCQ_SHORT", "MCQ_SHORT_CQ"])
+    .default("ALL"),
   topics: z.array(z.string().trim().min(1).max(500)).max(12).default([]),
 });
 export function pendingSource(userId: string) {

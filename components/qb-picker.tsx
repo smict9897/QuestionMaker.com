@@ -20,7 +20,9 @@ export default function QbPicker({
   const router = useRouter();
 
   // 🎯 ট্যাব ফিল্টার: MCQ, SHORT, CQ
-  const [activeTab, setActiveTab] = useState<"MCQ" | "SHORT" | "CQ">("MCQ");
+  const [activeTab, setActiveTab] = useState<"MCQ" | "SHORT" | "CQ">(
+    items[0]?.type || "MCQ",
+  );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const typeOf = (q: any) =>
@@ -117,8 +119,7 @@ export default function QbPicker({
         একাধিক ট্যাব থেকে একসঙ্গে প্রশ্ন বাছুন। সেটআপে ক্রম হবে MCQ → CQ → SQ।
       </p>
       <p className="mb-3 text-xs text-slate-500">
-        প্রশ্নগুলো ধরন অনুযায়ী আলাদা ট্যাবে আছে। বন্ধনীর সংখ্যা এই পাতার
-        প্রশ্নসংখ্যা।
+        প্রশ্নগুলো ধরন অনুযায়ী আলাদা ট্যাবে আছে। বন্ধনীর সংখ্যা এই পাতার প্রশ্নসংখ্যা।
       </p>
       <div className="space-y-4">
         {/* সার্চ বার */}

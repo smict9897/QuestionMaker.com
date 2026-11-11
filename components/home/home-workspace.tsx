@@ -2,6 +2,7 @@
 
 import "@/components/chapter-selector.css";
 import "./starter-card.css";
+import { QUESTION_TYPE_OPTIONS } from "@/lib/question-type-options";
 import HomeChapterDropdown from "./chapter-dropdown";
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -217,8 +218,8 @@ export function HomeStarter({
       <div className="hm-panel-title">
         <h1>১ মিনিটে প্রশ্ন তৈরি করুন</h1>
         <p>
-          শ্রেণি, বিষয় ও অধ্যায় নির্বাচন করে আপনার প্রয়োজন অনুযায়ী প্রশ্ন
-          তৈরি শুরু করুন। এক বা একাধিক অধ্যায় একসাথে নির্বাচন করা যাবে।
+          শ্রেণি, বিষয় ও অধ্যায় নির্বাচন করে আপনার প্রয়োজন অনুযায়ী প্রশ্ন তৈরি শুরু করুন।
+          এক বা একাধিক অধ্যায় একসাথে নির্বাচন করা যাবে।
         </p>
       </div>
       <form action="/question-builder/prepare" className="hm-start-form">
@@ -287,13 +288,30 @@ export function HomeStarter({
           onChange={setSelectedTopics}
           disabled={!subject}
         />
+        <label>
+          <span className="hm-field-caption">প্রশ্নের ধরন</span>
+          <span className="hm-select-wrap">
+            <select
+              name="questionType"
+              defaultValue="ALL"
+              aria-label="প্রশ্নের ধরন"
+            >
+              {QUESTION_TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={20} aria-hidden="true" />
+          </span>
+        </label>
         <p className="hm-info" role="status">
           <Info size={20} aria-hidden="true" />{" "}
           <span>
             {unavailable
               ? "প্রশ্নসংখ্যা এখন লোড করা যায়নি। বিষয় বেছে প্রশ্ন খুঁজতে পারেন।"
               : subject
-                ? `নির্বাচিত অংশে ${count.toLocaleString("bn-BD")}টি প্রশ্ন পাওয়া গেছে।`
+                ? `নির্বাচিত অংশে সব ধরন মিলিয়ে ${count.toLocaleString("bn-BD")}টি প্রশ্ন পাওয়া গেছে।`
                 : "এখনও কোনো নির্বাচন করা হয়নি।"}
           </span>
         </p>
