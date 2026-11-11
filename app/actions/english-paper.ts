@@ -4,6 +4,8 @@ import {
   EnglishProviderError,
   englishProviderMessage,
 } from "@/lib/english/provider-error";
+import { englishSubset, findEnglishBankParts } from "@/lib/english/bank";
+import { validateEnglishOutput } from "@/lib/english/generation";
 import { recoverEnglishTasks } from "@/lib/english/recovery";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
@@ -82,8 +84,6 @@ export async function generateEnglishPaper(raw: unknown) {
     const request = resolveEnglishSelection(raw);
     if (JSON.stringify(raw).length > 150000)
       return { ok: false as const, error: "নির্বাচিত পাঠ্যাংশ অত্যন্ত বড়।" };
-    if (!process.env.DEEPSEEK_API_KEY)
-      return { ok: false as const, error: "Generation সংযোগ কনফিগার করা নেই।" };
     await db.setting.deleteMany({
       where: { key: lock, value: { lt: String(Date.now() - 180000) } },
     });
@@ -99,6 +99,37 @@ export async function generateEnglishPaper(raw: unknown) {
         error: "আপনার একটি generation চলছে। কিছুক্ষণ অপেক্ষা করুন।",
       };
     }
+    const bank = await findEnglishBankParts(request.selection, async (after) =>
+      db.setting.findMany({
+        where: {
+          key: {
+            startsWith: "english-review:",
+            ...(after ? { gt: after } : {}),
+          },
+          value: { contains: '"status":"APPROVED"' },
+        },
+        orderBy: { key: "asc" },
+        take: 100,
+      }),
+    );
+    if (!bank.missingIds.length) {
+      const generated = validateEnglishOutput(request.selection, bank.output);
+      const key = englishOwnerPrefix(user.id) + randomUUID();
+      stage = "storage";
+      await db.setting.create({
+        data: {
+          key,
+          value: JSON.stringify(makeDraft(request.selection, generated)),
+        },
+      });
+      return { ok: true as const, key };
+    }
+    if (!process.env.DEEPSEEK_API_KEY)
+      return {
+        ok: false as const,
+        error:
+          "অনুমোদিত database-এ সব নির্বাচিত অংশ নেই এবং Generation সংযোগ কনফিগার করা নেই।",
+      };
     if (user.role !== "ADMIN") {
       const day = new Date().toISOString().slice(0, 10);
       let reserved = false;
@@ -123,60 +154,73 @@ export async function generateEnglishPaper(raw: unknown) {
         };
     }
     stage = "generation";
-    const generated = await requestEnglishPaper(request.selection, {
-      apiKey: process.env.DEEPSEEK_API_KEY,
-      segmented: true,
-      onContent: async (content) => {
-        for (const part of recoverEnglishTasks(request.selection, content)) {
-          if (recoveredIds.has(part.id)) continue;
-          const hash = createHash("sha256")
-            .update(
-              JSON.stringify([user.id, part.selection, part.result.output]),
-            )
-            .digest("hex");
-          const recoveryId = `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
-          const recoveryKey = englishOwnerPrefix(user.id!) + recoveryId;
-          const reviewKey = `english-review:${recoveryId}`;
-          if (
-            await db.setting
-              .findUnique({ where: { key: reviewKey } })
-              .catch(() => {
-                throw new EnglishProviderError("STORAGE");
-              })
-          ) {
+    const fresh = await requestEnglishPaper(
+      englishSubset(request.selection, bank.missingIds),
+      {
+        apiKey: process.env.DEEPSEEK_API_KEY,
+        segmented: true,
+        onContent: async (content) => {
+          for (const part of recoverEnglishTasks(request.selection, content)) {
+            if (recoveredIds.has(part.id)) continue;
+            const hash = createHash("sha256")
+              .update(
+                JSON.stringify([user.id, part.selection, part.result.output]),
+              )
+              .digest("hex");
+            const recoveryId = `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20, 32)}`;
+            const recoveryKey = englishOwnerPrefix(user.id!) + recoveryId;
+            const reviewKey = `english-review:${recoveryId}`;
+            if (
+              await db.setting
+                .findUnique({ where: { key: reviewKey } })
+                .catch(() => {
+                  throw new EnglishProviderError("STORAGE");
+                })
+            ) {
+              recoveredIds.add(part.id);
+              recoveredCount++;
+              continue;
+            }
+            const recovered = {
+              ...makeDraft(part.selection, part.result),
+              name: `Recovered — English ${request.selection.grade}/${request.selection.paper} — ${part.id}`,
+            };
+            // Durable private checkpoint first. Review snapshot is separate from editable owner draft.
+            try {
+              await db.$transaction([
+                db.setting.create({
+                  data: { key: recoveryKey, value: JSON.stringify(recovered) },
+                }),
+                db.setting.create({
+                  data: {
+                    key: reviewKey,
+                    value: JSON.stringify({
+                      status: "PENDING",
+                      draftKey: recoveryKey,
+                      draft: recovered,
+                    }),
+                  },
+                }),
+              ]);
+            } catch {
+              throw new EnglishProviderError("STORAGE");
+            }
             recoveredIds.add(part.id);
             recoveredCount++;
-            continue;
           }
-          const recovered = {
-            ...makeDraft(part.selection, part.result),
-            name: `Recovered — English ${request.selection.grade}/${request.selection.paper} — ${part.id}`,
-          };
-          // Durable private checkpoint first. Review snapshot is separate from editable owner draft.
-          try {
-            await db.$transaction([
-              db.setting.create({
-                data: { key: recoveryKey, value: JSON.stringify(recovered) },
-              }),
-              db.setting.create({
-                data: {
-                  key: reviewKey,
-                  value: JSON.stringify({
-                    status: "PENDING",
-                    draftKey: recoveryKey,
-                    draft: recovered,
-                  }),
-                },
-              }),
-            ]);
-          } catch {
-            throw new EnglishProviderError("STORAGE");
-          }
-          recoveredIds.add(part.id);
-          recoveredCount++;
-        }
+        },
       },
-    });
+    );
+    const combined = {
+      tasks: [...bank.output.tasks, ...fresh.output.tasks],
+      passages: [...bank.output.passages, ...fresh.output.passages],
+    };
+    combined.tasks.sort(
+      (a, b) =>
+        request.items.findIndex((i) => i.id === a.id) -
+        request.items.findIndex((i) => i.id === b.id),
+    );
+    const generated = validateEnglishOutput(request.selection, combined);
     const draft = makeDraft(request.selection, generated);
     const key = englishOwnerPrefix(user.id) + randomUUID();
     stage = "storage";

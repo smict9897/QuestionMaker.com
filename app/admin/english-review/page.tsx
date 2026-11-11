@@ -16,8 +16,9 @@ export default async function EnglishReview() {
     <main className="space-y-5 p-5">
       <h1 className="text-2xl font-bold">English — উদ্ধার করা অংশের অনুমোদন</h1>
       <p>
-        সর্বোচ্চ ১০০টি সংরক্ষিত snapshot। অনুমোদন review status বদলায়; public
-        question bank-এ প্রকাশ করে না। মালিকের private draft আলাদা থাকে।
+        সর্বোচ্চ ১০০টি সংরক্ষিত snapshot। অনুমোদিত অংশ অন্য English paper তৈরিতে
+        database থেকে ব্যবহার করা যাবে। Live test-এ স্বয়ংক্রিয় প্রকাশ হবে না।
+        মালিকের private draft আলাদা থাকে।
       </p>
       {rows.map((row) => {
         try {
