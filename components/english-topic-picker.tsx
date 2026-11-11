@@ -3,11 +3,13 @@ import { useState } from "react";
 import { searchWritingTopics } from "@/lib/english/writing-topics";
 
 export default function EnglishTopicPicker({
+  grade,
   topics,
   title,
   value,
   onSelect,
 }: {
+  grade: number;
   topics: readonly string[];
   title: string;
   value: string;
@@ -21,7 +23,9 @@ export default function EnglishTopicPicker({
     <details className="english-topic-library">
       <summary>
         <span>Browse reference topics</span>
-        <small>{topics.length} topics · Class 6</small>
+        <small>
+          {topics.length} topics · Class {grade}
+        </small>
       </summary>
       <div className="english-topic-library-body">
         <label className="block">

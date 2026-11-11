@@ -1,6 +1,7 @@
 const { chromium } = require("playwright-core"),
   binary = require("@sparticuz/chromium").default,
   assert = require("node:assert/strict");
+const grade = Number(process.env.TOPIC_GRADE || 6);
 (async () => {
   const browser = await chromium.launch({
     executablePath: await binary.executablePath(),
@@ -11,18 +12,20 @@ const { chromium } = require("playwright-core"),
     const page = await browser.newPage({
       viewport: { width: 390, height: 844 },
     });
-    await page.goto("http://127.0.0.1:5173/");
+    await page.goto(`http://127.0.0.1:5173/?grade=${grade}`);
     await page
       .getByText("Paper mode", { exact: false })
       .locator("select")
       .selectOption("writing");
     await page.locator("input[type=checkbox]").first().check();
     await page.locator(".english-topic-library summary").click();
-    await page.locator("input[type=search]").fill("tortoise");
+    await page
+      .locator("input[type=search]")
+      .fill(grade === 8 ? "thirsty crow" : "tortoise");
     await page.locator(".english-topic-option").click();
     assert.match(
       await page.getByLabel("Requested topic (required)").inputValue(),
-      /Tortoise/,
+      grade === 8 ? /Thirsty Crow/ : /Tortoise/,
     );
     await page.getByLabel("Requested topic (required)").fill("My custom story");
     await page.locator("input[type=search]").fill("no-topic-matches-this");
@@ -31,7 +34,7 @@ const { chromium } = require("playwright-core"),
       await page.getByLabel("Requested topic (required)").inputValue(),
       "My custom story",
     );
-    await page.goto("http://127.0.0.1:5173/?grade=6&paper=2");
+    await page.goto(`http://127.0.0.1:5173/?grade=${grade}&paper=2`);
     await page
       .getByText("Paper mode", { exact: false })
       .locator("select")
@@ -44,7 +47,7 @@ const { chromium } = require("playwright-core"),
     await page.locator(".english-topic-library summary").click();
     assert.match(
       await page.locator(".english-topic-library").innerText(),
-      /34 topics/,
+      grade === 8 ? /27 topics/ : /34 topics/,
     );
     await page.locator(".english-topic-option").first().click();
     await choices.selectOption("informal-email");
@@ -55,7 +58,7 @@ const { chromium } = require("playwright-core"),
     await page.locator(".english-topic-library summary").click();
     assert.match(
       await page.locator(".english-topic-library").innerText(),
-      /24 topics/,
+      grade === 8 ? /34 topics/ : /24 topics/,
     );
     assert.ok(
       await page.evaluate(
