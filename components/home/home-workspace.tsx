@@ -2,12 +2,14 @@
 
 import "@/components/chapter-selector.css";
 import "./starter-card.css";
-import ChapterSelector from "@/components/chapter-selector";
+import HomeChapterDropdown from "./chapter-dropdown";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import BrandWordmark from "@/components/brand-wordmark";
 import { signOut } from "next-auth/react";
 import {
+  Info,
+  ChevronDown,
   BookOpen,
   LayoutDashboard,
   House,
@@ -213,117 +215,159 @@ export function HomeStarter({
   return (
     <section id="start" className="hm-panel hm-starter">
       <div className="hm-panel-title">
-        <span className="hm-starter-badge">
-          <BookOpen size={14} aria-hidden="true" /> প্রশ্ন তৈরির কর্মক্ষেত্র
-        </span>
-        <h1>
-          আপনার প্রশ্নপত্র,
-          <br className="hm-title-break" /> <em>আপনার মতো করে।</em>
-        </h1>
+        <h1>১ মিনিটে প্রশ্ন তৈরি করুন</h1>
         <p>
           শ্রেণি, বিষয় ও অধ্যায় নির্বাচন করে আপনার প্রয়োজন অনুযায়ী প্রশ্ন
-          তৈরি শুরু করুন।
+          তৈরি শুরু করুন। এক বা একাধিক অধ্যায় একসাথে নির্বাচন করা যাবে।
         </p>
       </div>
-      <ol className="hm-starter-progress" aria-label="প্রশ্ন তৈরির প্রস্তুতি">
-        {["শ্রেণি", "বিষয়", "অধ্যায়"].map((label, index) => {
-          const current = !category ? 0 : !subject ? 1 : 2;
-          const done = index < current;
-          return (
-            <li
-              key={label}
-              className={
-                done ? "is-done" : index === current ? "is-current" : ""
-              }
-              aria-current={index === current ? "step" : undefined}
-            >
-              <span className="hm-progress-number" aria-hidden="true">
-                {done ? (
-                  <CheckCircle2 size={16} />
-                ) : (
-                  (index + 1).toLocaleString("bn-BD")
-                )}
-              </span>
-              <span>{label}</span>
-            </li>
-          );
-        })}
-      </ol>
       <form action="/question-builder/prepare" className="hm-start-form">
         <div className="hm-starter-fields">
           <label>
             <span className="hm-field-caption">
-              <GraduationCap size={17} aria-hidden="true" /> শ্রেণি <b>*</b>
+              শ্রেণি <b>*</b>
             </span>
-            <select
-              required
-              name="category"
-              value={category}
-              onChange={(e) => {
-                setCategory(e.target.value);
-                setSubject("");
-                setSelectedTopics([]);
-              }}
-            >
-              <option value="">শ্রেণি নির্বাচন করুন</option>
-              {classes.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
+            <span className="hm-select-wrap">
+              <GraduationCap size={20} aria-hidden="true" />
+              <select
+                required
+                name="category"
+                value={category}
+                onChange={(e) => {
+                  setCategory(e.target.value);
+                  setSubject("");
+                  setSelectedTopics([]);
+                }}
+              >
+                <option value="">শ্রেণি নির্বাচন করুন</option>
+                {classes.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </select>
+              <ChevronDown
+                size={20}
+                aria-hidden="true"
+                className="hm-select-chevron"
+              />
+            </span>
           </label>
           <label>
             <span className="hm-field-caption">
-              <BookMarked size={17} aria-hidden="true" /> বিষয় <b>*</b>
+              বিষয় <b>*</b>
             </span>
-            <select
-              required
-              disabled={!category}
-              name="subject"
-              value={subject}
-              onChange={(e) => {
-                setSubject(e.target.value);
-                setSelectedTopics([]);
-              }}
-            >
-              <option value="">বিষয় নির্বাচন করুন</option>
-              {subjects.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
+            <span className="hm-select-wrap">
+              <BookOpen size={20} aria-hidden="true" />
+              <select
+                required
+                disabled={!category}
+                name="subject"
+                value={subject}
+                onChange={(e) => {
+                  setSubject(e.target.value);
+                  setSelectedTopics([]);
+                }}
+              >
+                <option value="">বিষয় নির্বাচন করুন</option>
+                {subjects.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+              <ChevronDown
+                size={20}
+                aria-hidden="true"
+                className="hm-select-chevron"
+              />
+            </span>
           </label>
         </div>
-        {!subject && (
-          <p className="hm-starter-help">
-            {category
-              ? "এবার বিষয় বেছে নিন — তারপর অধ্যায় নির্বাচন করতে পারবেন।"
-              : "প্রথমে শ্রেণি বেছে নিন — আপনার বিষয়গুলো এখানে দেখা যাবে।"}
-          </p>
-        )}
-        <ChapterSelector
+        <HomeChapterDropdown
+          key={`${category}-${subject}`}
           topics={topics}
           value={selectedTopics}
           onChange={setSelectedTopics}
           disabled={!subject}
         />
         <p className="hm-info" role="status">
-          ⓘ{" "}
-          {unavailable
-            ? "প্রশ্নসংখ্যা এখন লোড করা যায়নি। বিষয় বেছে প্রশ্ন খুঁজতে পারেন।"
-            : subject
-              ? `নির্বাচিত অংশে ${count.toLocaleString("bn-BD")}টি প্রশ্ন পাওয়া গেছে।`
-              : "এখনও কোনো বিষয় নির্বাচন করা হয়নি।"}
+          <Info size={20} aria-hidden="true" />{" "}
+          <span>
+            {unavailable
+              ? "প্রশ্নসংখ্যা এখন লোড করা যায়নি। বিষয় বেছে প্রশ্ন খুঁজতে পারেন।"
+              : subject
+                ? `নির্বাচিত অংশে ${count.toLocaleString("bn-BD")}টি প্রশ্ন পাওয়া গেছে।`
+                : "এখনও কোনো নির্বাচন করা হয়নি।"}
+          </span>
         </p>
         <button className="hm-primary hm-next" disabled={!category || !subject}>
-          প্রশ্ন বাছাইয়ে এগিয়ে যান <ArrowRight size={18} aria-hidden="true" />
+          পরবর্তী <ArrowRight size={18} aria-hidden="true" />
         </button>
         <div className="hm-promo">
           <div>
-            <h3>বাছাই থেকে প্রিন্ট — এক জায়গায়</h3>
-            <span>প্রথম লগইনে ৳২০ trial bonus · প্রশ্ন বাছুন · PDF নিন</span>
+            <small>আজই তৈরি করুন</small>
+            <h3>আপনার প্রশ্নপত্র</h3>
+            <strong className="hm-bonus-pill">প্রথম লগইনে ৳২০ বোনাস</strong>
+            <span>সহজে · দ্রুত · অনলাইনে</span>
           </div>
-          <span className="hm-promo-icon">
-            <Printer size={25} aria-hidden="true" />
-          </span>
+          <svg
+            className="hm-promo-art"
+            viewBox="0 0 130 140"
+            fill="none"
+            aria-hidden="true"
+          >
+            <circle cx="68" cy="78" r="52" fill="#bad7fa" />
+            <path
+              d="m15 67-10-4m14 21H5m18-36-8-8"
+              stroke="#23b692"
+              strokeWidth="4"
+              strokeLinecap="round"
+            />
+            <rect
+              x="39"
+              y="23"
+              width="77"
+              height="108"
+              rx="12"
+              fill="#8eb9ec"
+              transform="rotate(6 39 23)"
+            />
+            <rect
+              x="31"
+              y="16"
+              width="78"
+              height="108"
+              rx="12"
+              fill="white"
+              transform="rotate(-5 31 16)"
+            />
+            <path
+              d="M49 37c0-8 13-8 13 0 0 5-6 5-6 10m0 5v1"
+              stroke="#2177d7"
+              strokeWidth="3.8"
+              strokeLinecap="round"
+            />
+            <path
+              d="m76 34 18-1m-18 10 12-1"
+              stroke="#c1d6ed"
+              strokeWidth="5"
+              strokeLinecap="round"
+            />
+            {[68, 86, 104].map((y) => (
+              <g key={y}>
+                <circle
+                  cx="51"
+                  cy={y}
+                  r="4.5"
+                  stroke="#2177d7"
+                  strokeWidth="2.4"
+                />
+                <path
+                  d={`M65 ${y}h28`}
+                  stroke="#2177d7"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                />
+              </g>
+            ))}
+          </svg>
         </div>
       </form>
     </section>
