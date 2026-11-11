@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 export default function PathGate({ children }: { children: React.ReactNode }) {
   const path = usePathname() ?? "";
-  const hide = path === "/" || path === "/dashboard" || path.startsWith("/dashboard/");
+  const hide = path === "/" || path === "/login" || path === "/dashboard" || path.startsWith("/dashboard/");
   if (hide) return null;
   return <>{children}</>;
 }
