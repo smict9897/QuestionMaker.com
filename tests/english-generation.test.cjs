@@ -447,3 +447,113 @@ test("class-six photo contract rejects extra clues, wrong substitution layout an
     /five-row/,
   );
 });
+
+const correspondence = {
+  grade: 6,
+  paper: 2,
+  mode: "writing",
+  itemIds: ["letter-email"],
+  writing: { "letter-email": { topic: "My school", choice: "formal-email" } },
+  sources: {},
+  includeAnswers: false,
+};
+function emailOutput(extra = {}) {
+  return {
+    passages: [],
+    tasks: [
+      {
+        id: "letter-email",
+        instruction: "Write a formal email about My school.",
+        ...extra,
+      },
+    ],
+  };
+}
+const { assembleEnglishProviderOutput: assemble, englishSchemaDiagnostic } =
+  load("generation");
+test("provider writing boundary accepts missing/null empty structure without inventing content", () => {
+  for (const extra of [
+    {},
+    {
+      subitems: null,
+      answer: null,
+      table: null,
+      passageKey: null,
+      clues: null,
+    },
+    { subitems: [] },
+  ]) {
+    const raw = emailOutput(extra),
+      before = JSON.stringify(raw);
+    const result = assemble(correspondence, raw);
+    assert.deepEqual(result.output.tasks[0].subitems, []);
+    assert.equal(JSON.stringify(raw), before);
+  }
+  assert.throws(() => v(correspondence, emailOutput())); // saved drafts remain strict
+});
+test("writing compatibility never hides substantive schema/semantic failures", () => {
+  for (const extra of [
+    { answer: { body: "private provider text" } },
+    { subitems: [{ text: "Extra task" }] },
+    { topic: "extra field" },
+    { instruction: "Other topic" },
+    { instruction: null },
+    { subitems: "" },
+  ])
+    assert.throws(() => assemble(correspondence, emailOutput(extra)));
+  assert.throws(() =>
+    assemble({ ...correspondence, includeAnswers: true }, emailOutput()),
+  );
+  assert.throws(() =>
+    assemble(selection, {
+      passages: [],
+      tasks: [
+        {
+          id: "paragraph",
+          instruction: "My school 120",
+          answer: "Leaked sample",
+        },
+      ],
+    }),
+  );
+});
+test("email provider integration normalizes safe empty fields and diagnoses malformed answer without exposing text", async () => {
+  const fetcherFor = (output) => async () =>
+    new Response(
+      JSON.stringify({
+        choices: [
+          {
+            finish_reason: "stop",
+            message: { content: JSON.stringify(output) },
+          },
+        ],
+      }),
+    );
+  const result = await requestEnglishPaper(correspondence, {
+    apiKey: "test-only",
+    fetcher: fetcherFor(emailOutput()),
+  });
+  assert.equal(result.total, 8);
+  await assert.rejects(
+    requestEnglishPaper(correspondence, {
+      apiKey: "test-only",
+      fetcher: fetcherFor(emailOutput({ answer: { body: "PRIVATE_SECRET" } })),
+    }),
+    (error) => {
+      assert.equal(error.code, "INVALID_OUTPUT");
+      assert.match(error.rule, /tasks.0.answer.*invalid_type/);
+      assert.ok(!error.rule.includes("PRIVATE_SECRET"));
+      return true;
+    },
+  );
+});
+test("schema diagnostics redact unknown field names and custom messages", () => {
+  const { z } = require("zod");
+  const error = new z.ZodError([
+    { code: "custom", path: ["PRIVATE_SECRET"], message: "PRIVATE_BODY" },
+  ]);
+  assert.equal(
+    englishSchemaDiagnostic(error),
+    "JSON schema mismatch: field (custom)",
+  );
+});

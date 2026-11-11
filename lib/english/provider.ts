@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { readGenerationResponse } from "../generation-stream";
 import { resolveEnglishSelection } from "./selection";
 import {
@@ -9,6 +10,7 @@ import {
   englishGenerationPrompt,
   assembleEnglishProviderOutput,
   EnglishOutputValidationError,
+  englishSchemaDiagnostic,
 } from "./generation";
 /** Server-only provider adapter. Called after auth/quota reservation in english-paper action.
  * No database writes or shared-bank publication happen in this adapter.
@@ -144,7 +146,9 @@ export async function requestEnglishPaper(
         "INVALID_OUTPUT",
         error instanceof EnglishOutputValidationError
           ? error.message
-          : "JSON schema mismatch",
+          : error instanceof z.ZodError
+            ? englishSchemaDiagnostic(error)
+            : "Invalid JSON response",
       );
     }
   } catch (error) {
