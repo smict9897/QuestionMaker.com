@@ -32,7 +32,11 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { homeCategoryMatches } from "@/lib/home-data";
+import {
+  homeCategoryMatches,
+  homeBankOptions,
+  homeLabelKey,
+} from "@/lib/home-data";
 import { NCTB_CLASSES } from "@/lib/nctb-data";
 
 type Row = { category: string; subject: string; topic: string; count: number };
@@ -184,27 +188,24 @@ export function HomeStarter({
   const curriculum = NCTB_CLASSES.find((c) =>
     homeCategoryMatches(category, c.class),
   );
-  const subjects = Array.from(
-    new Set([
-      ...(curriculum?.subjects.map((s) => s.name) || []),
-      ...rows
-        .filter((r) => homeCategoryMatches(category, r.category))
-        .map((r) => r.subject),
-    ]),
+  const categoryRows = rows.filter((r) =>
+    homeCategoryMatches(category, r.category),
   );
-  const data = curriculum?.subjects.find((s) => s.name === subject);
-  const topics = Array.from(
-    new Set([
+  const subjects = homeBankOptions(
+    curriculum?.subjects.map((s) => s.name) || [],
+    categoryRows.map((r) => r.subject),
+  );
+  const data = curriculum?.subjects.find(
+    (s) => homeLabelKey(s.name) === homeLabelKey(subject),
+  );
+  const topics = homeBankOptions(
+    [
       ...(data?.chapters || []),
       ...(data?.subCategories?.flatMap((g) => g.topics) || []),
-      ...rows
-        .filter(
-          (r) =>
-            homeCategoryMatches(category, r.category) && r.subject === subject,
-        )
-        .map((r) => r.topic),
-    ]),
-  ).filter(Boolean);
+    ],
+    categoryRows.filter((r) => r.subject === subject).map((r) => r.topic),
+    true,
+  );
   const count = rows
     .filter(
       (r) =>
