@@ -286,3 +286,106 @@ test("English action durably checkpoints valid tasks before later provider failu
     else process.env.DEEPSEEK_API_KEY = old;
   }
 });
+
+test("approved bank is checked before provider configuration/quota; pending and mismatched records never cross owners", async () => {
+  const old = process.env.DEEPSEEK_API_KEY;
+  process.env.DEEPSEEK_API_KEY = "test";
+  try {
+    const h = harness();
+    const initial = await h.actions.generateEnglishPaper(selection);
+    const draft = await h.actions.loadEnglishPaper(initial.key);
+    h.rows.set(
+      "english-review:bank-test",
+      JSON.stringify({ status: "PENDING", draft }),
+    );
+    h.setUser({ id: "teacher:two", role: "TEACHER" });
+    delete process.env.DEEPSEEK_API_KEY;
+    assert.equal((await h.actions.generateEnglishPaper(selection)).ok, false);
+    h.rows.set(
+      "english-review:bank-test",
+      JSON.stringify({ status: "APPROVED", draft }),
+    );
+    const result = await h.actions.generateEnglishPaper(selection);
+    assert.equal(result.ok, true);
+    assert.equal(h.calls, 1);
+    assert.ok(await h.actions.loadEnglishPaper(result.key));
+    assert.equal(
+      [...h.rows.keys()].filter((k) => k.startsWith("englishai:quota:")).length,
+      1,
+    );
+    assert.equal(
+      (
+        await h.actions.generateEnglishPaper({
+          ...selection,
+          includeAnswers: true,
+        })
+      ).ok,
+      false,
+    );
+    assert.equal(
+      (
+        await h.actions.generateEnglishPaper({
+          ...selection,
+          writing: { paragraph: { topic: "Different topic" } },
+        })
+      ).ok,
+      false,
+    );
+  } finally {
+    if (old === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = old;
+  }
+});
+test("partial bank hit sends only missing task to provider and combines validated output", async () => {
+  const old = process.env.DEEPSEEK_API_KEY;
+  process.env.DEEPSEEK_API_KEY = "test";
+  try {
+    const h = harness();
+    let requested = [];
+    h.setProvider(async (s) => {
+      requested.push(s.itemIds);
+      return {
+        total: 5,
+        output: {
+          passages: [],
+          tasks: s.itemIds.map((id) => ({
+            id,
+            instruction: "Fill blanks.",
+            subitems: Array.from({ length: 10 }, (_, i) => ({
+              text: `Item ${i}`,
+            })),
+          })),
+        },
+      };
+    });
+    const s = {
+      grade: 11,
+      paper: 2,
+      mode: "selected",
+      itemIds: ["articles"],
+      writing: {},
+      sources: {},
+      includeAnswers: false,
+    };
+    const first = await h.actions.generateEnglishPaper(s);
+    const draft = await h.actions.loadEnglishPaper(first.key);
+    h.rows.set(
+      "english-review:approved",
+      JSON.stringify({ status: "APPROVED", draft }),
+    );
+    const result = await h.actions.generateEnglishPaper({
+      ...s,
+      itemIds: ["articles", "prepositions"],
+    });
+    assert.equal(result.ok, true);
+    assert.deepEqual(requested, [["articles"], ["prepositions"]]);
+    const loaded = await h.actions.loadEnglishPaper(result.key);
+    assert.deepEqual(
+      loaded.output.tasks.map((t) => t.id),
+      ["articles", "prepositions"],
+    );
+  } finally {
+    if (old === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = old;
+  }
+});

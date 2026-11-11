@@ -365,3 +365,131 @@ test("linked English recovered tasks retain exact supplied passage and omit unre
     1,
   ); // server still inserts original, never provider rewrite
 });
+
+test("bank matching respects approval, topics, answer requirements and strips unrequested answers", async () => {
+  const { findEnglishBankParts: find } = load("lib/english/bank.ts");
+  const s = {
+    grade: 6,
+    paper: 1,
+    mode: "writing",
+    itemIds: ["paragraph"],
+    writing: { paragraph: { topic: "My school" } },
+    sources: {},
+    includeAnswers: false,
+  };
+  const draft = {
+    version: 1,
+    name: "Bank",
+    selection: { ...s, includeAnswers: true },
+    output: {
+      passages: [],
+      tasks: [
+        {
+          id: "paragraph",
+          instruction: "Write about My school in 120 words.",
+          subitems: [],
+          answer: "Sample",
+        },
+      ],
+    },
+    header: load("lib/paper-header.ts").paperHeaderSchema.parse({}),
+    fontSize: 12,
+    font: "serif",
+    updatedAt: new Date().toISOString(),
+  };
+  const row = (status) => ({
+    key: "english-review:x",
+    value: JSON.stringify({ status, draft }),
+  });
+  assert.equal(
+    (await find(s, async () => [row("PENDING")])).missingIds.length,
+    1,
+  );
+  const result = await find(s, async () => [row("APPROVED")]);
+  assert.equal(result.missingIds.length, 0);
+  assert.equal(result.output.tasks[0].answer, undefined);
+  assert.equal(
+    (
+      await find(
+        { ...s, writing: { paragraph: { topic: "Other" } } },
+        async () => [row("APPROVED")],
+      )
+    ).missingIds.length,
+    1,
+  );
+  assert.equal(
+    (await find({ ...s, grade: 7 }, async () => [row("APPROVED")])).missingIds
+      .length,
+    1,
+  );
+});
+
+test("bank never mixes unrelated unseen passages and paginates past first hundred records", async () => {
+  const { findEnglishBankParts: find } = load("lib/english/bank.ts");
+  const base = {
+    grade: 6,
+    paper: 1,
+    mode: "selected",
+    itemIds: ["true-false", "summary"],
+    writing: {},
+    sources: {},
+    includeAnswers: false,
+  };
+  function row(id, text, key) {
+    return {
+      key,
+      value: JSON.stringify({
+        status: "APPROVED",
+        draft: {
+          version: 1,
+          name: "Bank",
+          selection: { ...base, itemIds: [id] },
+          output: {
+            passages: [{ key: "unseen", text }],
+            tasks: [
+              {
+                id,
+                instruction: "Read the passage.",
+                passageKey: "unseen",
+                subitems:
+                  id === "true-false"
+                    ? Array.from({ length: 5 }, (_, i) => ({
+                        text: `Item ${i}`,
+                      }))
+                    : [],
+              },
+            ],
+          },
+          header: load("lib/paper-header.ts").paperHeaderSchema.parse({}),
+          fontSize: 12,
+          font: "serif",
+          updatedAt: new Date().toISOString(),
+        },
+      }),
+    };
+  }
+  const a = row("true-false", "Original A", "a"),
+    b = row("summary", "Original B", "b"),
+    c = row("summary", "Original A", "c");
+  assert.equal((await find(base, async () => [a, b])).missingIds.length, 2);
+  const match = await find(base, async () => [a, b, c]);
+  assert.equal(match.missingIds.length, 0);
+  assert.equal(match.output.passages.length, 1);
+  assert.equal(match.output.passages[0].text, "Original A");
+  let pages = 0;
+  const result = await find(
+    { ...base, itemIds: ["summary"] },
+    async (after) => {
+      pages++;
+      if (!after)
+        return Array.from({ length: 100 }, (_, i) => ({
+          key: String(i).padStart(3, "0"),
+          value: "invalid",
+        }));
+      assert.equal(after, "099");
+      return [c];
+    },
+  );
+  assert.equal(pages, 2);
+  assert.equal(result.missingIds.length, 0);
+});

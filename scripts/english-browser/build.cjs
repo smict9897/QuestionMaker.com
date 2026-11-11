@@ -8,6 +8,7 @@ fs.mkdirSync(out, { recursive: true });
 esbuild.buildSync({
   entryPoints: [__dirname + "/fixture.jsx"],
   bundle: true,
+  external: ["/fonts/*"],
   outfile: out + "/app.js",
   jsx: "automatic",
   alias: {
@@ -37,4 +38,10 @@ execFileSync(
 fs.writeFileSync(
   out + "/index.html",
   '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="global.css"><link rel="stylesheet" href="app.css"><div id="root"></div><script src="app.js"></script>',
+);
+
+fs.mkdirSync(out + "/fonts", { recursive: true });
+fs.copyFileSync(
+  root + "/public/fonts/HindSiliguri-Regular.ttf",
+  out + "/fonts/HindSiliguri-Regular.ttf",
 );

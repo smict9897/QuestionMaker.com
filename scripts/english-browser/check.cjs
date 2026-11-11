@@ -40,6 +40,57 @@ const { chromium } = require("playwright-core"),
         .getAttribute("href"),
       "/question-builder/english/saved",
     );
+    await page.goto("http://127.0.0.1:5173/?grade=11&paper=2");
+    await page.locator(".english-task-card").first().waitFor();
+    assert.equal(
+      await page.locator(".english-task-card.is-selected").count(),
+      16,
+    );
+    assert.equal(
+      await page.locator(".english-total > strong").innerText(),
+      "100",
+    );
+    await page
+      .getByText("Paper mode", { exact: false })
+      .locator("select")
+      .selectOption("selected");
+    await page
+      .getByRole("button", { name: "Select all parts", exact: true })
+      .click();
+    assert.equal(
+      await page.locator(".english-task-card.is-selected").count(),
+      16,
+    );
+    await page
+      .getByRole("button", { name: "Clear selection", exact: true })
+      .click();
+    assert.equal(
+      await page.locator(".english-total > strong").innerText(),
+      "0",
+    );
+    await page
+      .locator(".english-task-card input[type=checkbox]")
+      .first()
+      .check();
+    assert.equal(
+      await page.locator(".english-total > strong").innerText(),
+      "5",
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    assert.ok(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    );
+    await page.screenshot({
+      path: "/home/user/english-browser/setup-mobile.png",
+      fullPage: true,
+    });
+    await page.setViewportSize({ width: 1200, height: 900 });
+    await page.screenshot({
+      path: "/home/user/english-browser/setup-desktop.png",
+      fullPage: true,
+    });
     for (const grade of [6, 7, 8, 9, 10, 11, 12])
       for (const paper of [1, 2]) {
         await page.goto(

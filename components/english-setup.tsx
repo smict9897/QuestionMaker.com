@@ -80,7 +80,9 @@ export default function EnglishSetup({
         ),
         includeAnswers: answers,
       });
-      setMessage("প্রশ্ন তৈরি হচ্ছে। এই পেজ বন্ধ করবেন না।");
+      setMessage(
+        "আগে অনুমোদিত database পরীক্ষা করা হচ্ছে; না-পাওয়া অংশ তৈরি করা হবে। এই পেজ বন্ধ করবেন না।",
+      );
       const generated = await generateEnglishPaper(result.selection);
       if (!generated.ok) setMessage(generated.error);
       else
@@ -99,14 +101,13 @@ export default function EnglishSetup({
     "w-full rounded border border-slate-300 bg-white p-2 text-slate-900";
   return (
     <main className="english-setup mx-auto max-w-4xl space-y-6 px-4 py-8">
-      <header>
+      <header className="english-setup-header">
         <a href="/question-builder/english/saved">আমার English draft</a>
-        <h1 className="text-2xl font-bold">
-          English printable paper — 2027 practice
-        </h1>
+        <span className="english-eyebrow">PAPER STUDIO · 2027</span>
+        <h1 className="text-2xl font-bold">Build your English paper</h1>
         <p>এটি printable paper তৈরির আলাদা flow; Live Online Model Test নয়।</p>
       </header>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="english-config grid gap-4 sm:grid-cols-2">
         <label>
           Class
           <select
@@ -139,7 +140,7 @@ export default function EnglishSetup({
           </select>
         </label>
       </div>
-      <aside className="rounded border bg-amber-50 p-4">
+      <aside className="english-reference rounded border bg-amber-50 p-4">
         <strong>Reference:</strong> {blueprint.reference.description}.
         User-approved practice template; not independently certified as the
         official 2027 pattern.
@@ -159,20 +160,51 @@ export default function EnglishSetup({
           <option value="writing">Writing Only</option>
         </select>
       </label>
-      <section className="space-y-3">
-        <h2 className="text-xl font-semibold">Template / marks preview</h2>
-        <p>
-          Full paper:{" "}
-          {blueprint.sections.map((s) => `${s.id} ${s.marks}`).join(" + ")} ={" "}
-          {blueprint.total}. Selected:{" "}
-          <strong>{selected.reduce((sum, i) => sum + i.marks, 0)} marks</strong>
-          .
-        </p>
+      <section className="english-selection space-y-3">
+        <div className="english-selection-heading">
+          <div>
+            <span className="english-eyebrow">QUESTION SELECTION</span>
+            <h2 className="text-xl font-semibold">Template / marks preview</h2>
+            <p>
+              Choose the parts you need. Marks follow the practice template.
+            </p>
+          </div>
+          <div className="english-total">
+            <strong>{selected.reduce((sum, i) => sum + i.marks, 0)}</strong>
+            <span>of {blueprint.total} marks</span>
+            <small>{selected.length} parts selected</small>
+          </div>
+        </div>
+        {mode !== "full" && (
+          <div className="english-bulk-actions">
+            <button
+              type="button"
+              onClick={() =>
+                setIds(
+                  blueprint.items
+                    .filter(
+                      (i) => mode !== "writing" || i.section === "writing",
+                    )
+                    .map((i) => i.id),
+                )
+              }
+            >
+              Select all parts
+            </button>
+            <button type="button" onClick={() => setIds([])}>
+              Clear selection
+            </button>
+          </div>
+        )}
         {blueprint.items
           .filter((i) => mode !== "writing" || i.section === "writing")
           .map((i) => (
-            <div className="rounded border p-3" key={i.id}>
-              <label>
+            <div
+              className={`english-task-card ${selected.some((s) => s.id === i.id) ? "is-selected" : ""}`}
+              key={i.id}
+            >
+              <div className="english-section-tag">{i.section}</div>
+              <label className="english-task-choice">
                 <input
                   type="checkbox"
                   checked={selected.some((s) => s.id === i.id)}
@@ -186,16 +218,27 @@ export default function EnglishSetup({
                     setMessage("");
                   }}
                 />{" "}
-                {blueprint.items.indexOf(i) + 1}. {i.title} — {i.marks} marks{" "}
-                {i.answerCount
-                  ? `(answer ${i.answerCount} of ${i.count})`
-                  : i.count
-                    ? `(${i.count} items)`
-                    : ""}
+                <span className="english-task-number">
+                  {String(blueprint.items.indexOf(i) + 1).padStart(2, "0")}
+                </span>
+                <span className="english-task-copy">
+                  <strong>{i.title}</strong>
+                  <small>
+                    {i.answerCount
+                      ? `Answer ${i.answerCount} of ${i.count} questions`
+                      : i.count
+                        ? `${i.count} items`
+                        : "Writing task · your topic"}
+                  </small>
+                </span>
+                <span className="english-marks-badge">
+                  <strong>{i.marks}</strong>
+                  <small>marks</small>
+                </span>
               </label>
               {i.section === "writing" &&
                 selected.some((s) => s.id === i.id) && (
-                  <div className="mt-3 space-y-2">
+                  <div className="english-writing-fields mt-3 space-y-2">
                     {i.writingChoices && (
                       <label className="block">
                         Task type
@@ -303,7 +346,7 @@ export default function EnglishSetup({
           </label>
         </fieldset>
       ))}
-      <label className="block">
+      <label className="english-answer-option block">
         <input
           type="checkbox"
           checked={answers}
@@ -312,11 +355,11 @@ export default function EnglishSetup({
         Request separate answers / writing samples
       </label>
       <p>
-        Only selected writing tasks and requested topics will be used. No extra
-        topic is requested.
+        শুধু নির্বাচিত writing task ও topic ব্যবহার হবে। আগে অনুমোদিত database
+        থেকে মিল খোঁজা হবে; না-পাওয়া অংশ তৈরি করা হবে।
       </p>
       <button
-        className="rounded bg-emerald-600 px-5 py-3 text-white"
+        className="english-generate rounded bg-emerald-600 px-5 py-3 text-white"
         disabled={busy}
         onClick={validate}
       >
