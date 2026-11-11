@@ -39,6 +39,7 @@
     "tailwindcss": "^3.4",
     "postcss": "^8",
     "autoprefixer": "^10",
-    "prisma": "^6"
+    "prisma": "^6",
+    "@types/react-dom": "^19.3.0"
   }
 }

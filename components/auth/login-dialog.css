@@ -1,0 +1,218 @@
+.qm-login-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: calc(100% - 32px);
+  max-width: 440px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 0;
+  border-radius: 24px;
+  background: #fff;
+  color: #132033;
+  padding: 32px 28px 28px;
+  text-align: center;
+  box-shadow: 0 24px 80px #06162f55;
+  font-family: var(--qk-body), "Hind Siliguri", system-ui, sans-serif;
+  animation: qm-login-enter 0.22s ease-out;
+}
+.qm-login-dialog::backdrop {
+  background: #15223699;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+.qm-login-dialog * {
+  box-sizing: border-box;
+}
+.qm-login-dialog button,
+.qm-login-dialog input {
+  font: inherit;
+}
+.qm-login-dialog button {
+  cursor: pointer;
+  transition:
+    background 0.18s,
+    box-shadow 0.18s;
+}
+.qm-login-dialog button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+.qm-login-close {
+  position: absolute;
+  right: 13px;
+  top: 13px;
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  border: 0;
+  border-radius: 50%;
+  background: #f0f3f7;
+  color: #536170;
+}
+.qm-login-close:hover {
+  background: #e4eaf2;
+}
+.qm-login-lock {
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: #eaf3ff;
+  color: #1776dc;
+  margin: 0 auto 17px;
+}
+.qm-login-dialog h1 {
+  font-family: var(--qk-head), "Anek Bangla", system-ui, sans-serif;
+  font-size: 30px;
+  font-weight: 650;
+  line-height: 1.4;
+  color: #101826;
+  margin: 0 0 9px;
+}
+.qm-login-description {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #667180;
+  margin: 0;
+}
+.qm-login-bonus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: #e7f7ef;
+  color: #17784e;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+  padding: 8px 14px;
+  margin: 19px 0 22px;
+}
+.qm-login-google-form {
+  margin: 0 0 11px;
+}
+.qm-login-google,
+.qm-login-dialog .qm-login-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  border-radius: 12px;
+  min-height: 51px;
+  padding: 12px 16px;
+  font-size: 17px;
+  line-height: 1.5;
+  font-weight: 600;
+}
+.qm-login-google {
+  border: 1px solid #cfd6df;
+  background: #fff;
+  color: #222c38;
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+}
+.qm-login-google:hover {
+  background: #f8fafc;
+}
+.qm-login-dialog .qm-login-primary {
+  border: 1px solid #176de0;
+  background: #1672ed;
+  color: #fff;
+}
+.qm-login-dialog .qm-login-primary:hover {
+  background: #095fcf;
+}
+.qm-login-footnote {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #7a8492;
+  margin: 17px 0 0;
+}
+.qm-login-credentials {
+  display: grid;
+  gap: 12px;
+  text-align: left;
+  margin-top: 16px;
+}
+.qm-login-credentials label {
+  font-size: 13px;
+  color: #43566b;
+}
+.qm-login-credentials input:not([type="hidden"]) {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  margin-top: 5px;
+  padding: 10px 12px;
+  border: 1px solid #d3dce6;
+  border-radius: 10px;
+  background: #fff;
+  color: #172b44;
+}
+.qm-login-credentials small {
+  color: #7a8492;
+  font-size: 11px;
+}
+.qm-login-error {
+  margin: 0;
+  padding: 10px;
+  background: #fff1f2;
+  color: #ae263f;
+  font-size: 13px;
+  border-radius: 8px;
+}
+.qm-login-switch {
+  border: 0;
+  background: transparent;
+  color: #1769be;
+  font-size: 12px;
+  margin-top: 14px;
+  padding: 6px;
+}
+.qm-login-dialog :is(button, input):focus-visible {
+  outline: 3px solid #6aa8ff;
+  outline-offset: 3px;
+}
+@keyframes qm-login-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 380px) {
+  .qm-login-dialog {
+    width: calc(100% - 26px);
+    padding: 29px 22px 24px;
+    border-radius: 21px;
+  }
+  .qm-login-dialog h1 {
+    font-size: 27px;
+  }
+  .qm-login-description {
+    font-size: 14px;
+  }
+  .qm-login-bonus {
+    font-size: 12px;
+  }
+  .qm-login-footnote {
+    font-size: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qm-login-dialog,
+  .qm-login-dialog * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
