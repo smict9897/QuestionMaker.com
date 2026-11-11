@@ -1,0 +1,331 @@
+.prep-popup {
+  box-sizing: border-box;
+  width: min(600px, calc(100vw - 24px));
+  max-height: calc(100dvh - 28px);
+  overflow: auto;
+  border: 1px solid #d8d9cf;
+  border-radius: 32px;
+  background: #fffffff9;
+  color: #152d20;
+  padding: 32px 36px;
+  font-family: var(--qk-body), sans-serif;
+  box-shadow: 0 28px 85px #39452f30;
+  text-align: center;
+}
+.prep-popup * {
+  box-sizing: border-box;
+}
+.prep-popup::backdrop {
+  background: linear-gradient(130deg, #f4eedde8, #e2e8dce8);
+  backdrop-filter: blur(5px);
+}
+.prep-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 18px;
+  border-radius: 30px;
+  background: #e5ede7;
+  color: #125337;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.prep-art {
+  position: relative;
+  width: 235px;
+  height: 235px;
+  margin: 28px auto;
+}
+.prep-ring {
+  position: absolute;
+  inset: 0;
+  border: 3px dashed #bbccc1;
+  border-radius: 50%;
+  animation: prep-orbit 35s linear infinite;
+}
+.prep-glow {
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    #73a58c,
+    #eef2e7,
+    #dab35f,
+    #f4f7ee,
+    #73a58c
+  );
+  opacity: 0.8;
+}
+.prep-document {
+  position: absolute;
+  inset: 43px;
+  border-radius: 24px;
+  background: linear-gradient(140deg, #075431, #427756);
+  color: #fffbe7;
+  display: grid;
+  place-items: center;
+  box-shadow:
+    0 -12px 25px #739b8233,
+    0 14px 32px #2b66423a;
+  overflow: hidden;
+  animation: prep-float 4s ease-in-out infinite;
+}
+.prep-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: linear-gradient(transparent, #d2edd933, transparent);
+  animation: prep-scan 3.5s ease-in-out infinite;
+}
+.prep-satellite {
+  position: absolute;
+  width: 49px;
+  height: 49px;
+  border: 1px solid #d6d8ca;
+  background: #fffefb;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #115536;
+  box-shadow: 0 5px 10px #3e412a20;
+  animation: prep-float 4s ease-in-out infinite;
+}
+.prep-book {
+  top: 30px;
+  right: 6px;
+}
+.prep-image {
+  left: 0;
+  bottom: 53px;
+  animation-delay: -1.3s;
+}
+.prep-brain {
+  right: 23px;
+  bottom: 10px;
+  animation-delay: -2.6s;
+}
+.prep-popup h1 {
+  font-family: var(--qk-head), var(--qk-body), sans-serif;
+  font-size: 1.8rem;
+  font-weight: 750;
+  line-height: 1.35;
+  margin: 24px 0 30px;
+}
+.prep-dots {
+  animation: prep-fade 1.7s ease-in-out infinite;
+}
+.prep-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  display: grid;
+  gap: 12px;
+}
+.prep-steps li {
+  display: flex;
+  gap: 13px;
+  align-items: center;
+  font-size: 1.04rem;
+  line-height: 1.6;
+  transition:
+    opacity 0.4s,
+    color 0.4s;
+}
+.prep-steps li > span {
+  flex: 0 0 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #f0f3ed;
+}
+.prep-steps .done {
+  color: #647169;
+}
+.prep-steps .done > span {
+  background: #daf5e9;
+  color: #159c72;
+}
+.prep-steps .active {
+  color: #123d28;
+  font-weight: 700;
+}
+.prep-steps .active > span {
+  background: #dceade;
+  color: #105b3d;
+}
+.prep-steps .waiting {
+  opacity: 0.35;
+}
+.prep-progress {
+  margin: 32px 0;
+}
+.prep-progress progress {
+  display: block;
+  width: 100%;
+  height: 11px;
+  border: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  appearance: none;
+  background: #dce8e0;
+  accent-color: #186d4a;
+}
+.prep-progress progress::-webkit-progress-bar {
+  background: #dce8e0;
+  border-radius: 20px;
+}
+.prep-progress progress::-webkit-progress-value {
+  background: linear-gradient(90deg, #075736, #9fbba2, #d4a335);
+  border-radius: 20px;
+  transition: width 0.7s;
+}
+.prep-progress progress::-moz-progress-bar {
+  background: linear-gradient(90deg, #075736, #9fbba2, #d4a335);
+  border-radius: 20px;
+}
+.prep-progress progress:indeterminate {
+  background: linear-gradient(90deg, #dce8e0 25%, #509476 50%, #dce8e0 75%);
+  background-size: 200% 100%;
+  animation: prep-shimmer 2s linear infinite;
+}
+.prep-progress progress:indeterminate::-webkit-progress-bar {
+  background: inherit;
+}
+.prep-progress > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: #5e6e63;
+  margin-top: 10px;
+}
+.prep-popup aside {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px dashed #adc3b3;
+  background: #f0f5ef;
+  border-radius: 24px;
+  text-align: left;
+  line-height: 1.7;
+  font-size: 0.98rem;
+}
+.prep-popup aside svg {
+  flex-shrink: 0;
+  color: #c79a39;
+}
+.prep-error {
+  margin-top: 20px;
+  color: #a03440;
+  line-height: 1.7;
+}
+.prep-error button,
+.prep-error a {
+  display: inline-block;
+  padding: 10px 14px;
+  margin: 12px 6px 0;
+  border-radius: 10px;
+  border: 0;
+  background: #145b3d;
+  color: white;
+  font: inherit;
+  text-decoration: none;
+}
+.prep-failed * {
+  animation: none !important;
+}
+@keyframes prep-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes prep-float {
+  50% {
+    transform: translateY(-7px);
+  }
+}
+@keyframes prep-scan {
+  0%,
+  100% {
+    top: 0;
+    opacity: 0;
+  }
+  20%,
+  80% {
+    opacity: 1;
+  }
+  90% {
+    top: 95%;
+  }
+}
+@keyframes prep-fade {
+  50% {
+    opacity: 0.25;
+  }
+}
+@keyframes prep-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (max-width: 480px) {
+  .prep-popup {
+    padding: 24px 20px;
+    border-radius: 26px;
+  }
+  .prep-art {
+    width: 190px;
+    height: 190px;
+    margin: 22px auto;
+  }
+  .prep-document {
+    inset: 34px;
+    border-radius: 20px;
+  }
+  .prep-satellite {
+    width: 43px;
+    height: 43px;
+  }
+  .prep-book {
+    right: 0;
+    top: 20px;
+  }
+  .prep-brain {
+    right: 16px;
+    bottom: 0;
+  }
+  .prep-image {
+    bottom: 40px;
+  }
+  .prep-popup h1 {
+    font-size: 1.5rem;
+    margin: 20px 0 24px;
+  }
+  .prep-steps li {
+    font-size: 0.91rem;
+    gap: 10px;
+  }
+  .prep-progress {
+    margin: 25px 0;
+  }
+  .prep-popup aside {
+    font-size: 0.88rem;
+    padding: 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .prep-popup * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@media print {
+  .prep-popup {
+    display: none !important;
+  }
+}

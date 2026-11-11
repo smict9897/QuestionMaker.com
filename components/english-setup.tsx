@@ -1,4 +1,5 @@
 "use client";
+import PreparationPopup from "./preparation-popup";
 import "./english-theme.css";
 import EnglishTopicPicker from "@/components/english-topic-picker";
 import { writingTopicSuggestions } from "@/lib/english/writing-topics";
@@ -103,6 +104,7 @@ export default function EnglishSetup({
     "w-full rounded border border-slate-300 bg-white p-2 text-slate-900";
   return (
     <main className="english-setup mx-auto max-w-4xl space-y-6 px-4 py-8">
+      {busy && <PreparationPopup subject="English" stage={1} />}
       <header className="english-setup-header">
         <a href="/question-builder/english/saved">আমার English draft</a>
         <span className="english-eyebrow">PAPER STUDIO · 2027</span>
