@@ -1,0 +1,87 @@
+/* Strong static fallback; animations use only opacity/transform, never layout. */
+.qm-wordmark {
+  display: inline-flex;
+  flex-direction: column;
+  min-width: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  text-align: left;
+}
+.qm-wordmark .qm-wordmark-title {
+  display: block;
+  margin: 0;
+  color: #123452;
+  font-size: clamp(17px, 2.2vw, 27px);
+  font-weight: 850;
+  letter-spacing: -0.055em;
+  line-height: 1.15;
+  white-space: nowrap;
+  animation: qm-header-enter 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition:
+    filter 0.25s ease,
+    transform 0.25s ease;
+}
+.qm-wordmark .qm-wordmark-bd {
+  display: inline;
+  margin: 0;
+  font: inherit;
+  color: #174965;
+}
+.qm-wordmark .qm-wordmark-domain {
+  display: inline-block;
+  margin: 0;
+  font: inherit;
+  color: #228c83;
+  animation: qm-header-pulse 2.2s ease-in-out 0.8s 2;
+}
+.qm-wordmark .qm-wordmark-tagline {
+  display: block;
+  margin: 5px 0 0;
+  font-size: 9px;
+  font-weight: 450;
+  letter-spacing: 0.025em;
+  line-height: 1.3;
+  color: #718095;
+  white-space: nowrap;
+  animation: qm-header-enter 0.65s ease 0.15s both;
+}
+a:hover .qm-wordmark-title,
+a:focus-visible .qm-wordmark-title {
+  filter: drop-shadow(0 2px 6px #4db8ac28);
+  transform: translateY(-1px);
+}
+@keyframes qm-header-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes qm-header-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+@media (max-width: 640px) {
+  .qm-wordmark .qm-wordmark-title {
+    font-size: clamp(13px, 3.45vw, 22px);
+  }
+  .qm-wordmark .qm-wordmark-tagline {
+    font-size: clamp(6px, 1.55vw, 9px);
+    letter-spacing: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qm-wordmark,
+  .qm-wordmark * {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
