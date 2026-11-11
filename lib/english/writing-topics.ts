@@ -1,3 +1,4 @@
+import { classEightWritingTopics } from "./class-eight-writing-topics";
 /** Topic headings transcribed from the user's class-6 contents photos (pages 3–11).
  * These are selectable suggestions, not full passages, official syllabus certification or mandatory topics.
  * Source aliases separated by / stay one selectable heading. Story openings were truncated and are not invented.
@@ -300,11 +301,12 @@ export function writingTopicSuggestions(
   taskId: string,
   choice?: string,
 ): readonly string[] {
-  if (grade !== 6) return [];
+  if (grade !== 6 && grade !== 8) return [];
+  const catalogue =
+    grade === 8 ? classEightWritingTopics : classSixWritingTopics;
   if (paper === 1 && ["story", "paragraph", "dialogue"].includes(taskId))
-    return classSixWritingTopics[taskId];
-  if (paper === 2 && taskId === "composition")
-    return classSixWritingTopics.composition;
+    return catalogue[taskId];
+  if (paper === 2 && taskId === "composition") return catalogue.composition;
   if (
     paper === 2 &&
     taskId === "letter-email" &&
@@ -316,7 +318,7 @@ export function writingTopicSuggestions(
       "informal-email",
     ].includes(choice)
   )
-    return classSixWritingTopics[choice];
+    return catalogue[choice];
   return [];
 }
 export function searchWritingTopics(topics: readonly string[], query: string) {

@@ -140,7 +140,9 @@ function juniorSecond(grade: 6 | 7 | 8): EnglishItem[] {
               ? "Narration: individual sentences"
               : "Passage narration",
             5,
-            grade === 7 ? { count: 5, markEach: 1 } : {},
+            grade === 7
+              ? { count: 5, markEach: 1 }
+              : { correctionCount: 5, markEach: 1 },
           ),
           grammar(
             "transformation",
@@ -155,7 +157,7 @@ function juniorSecond(grade: 6 | 7 | 8): EnglishItem[] {
       "punctuation",
       "Punctuation and capitalization",
       5,
-      grade === 6 ? { correctionCount: 10, markEach: 0.5 } : {},
+      grade === 6 || grade === 8 ? { correctionCount: 10, markEach: 0.5 } : {},
     ),
     writing("letter-email", "Letter/email: formal or informal", 8, {
       writingChoices: [

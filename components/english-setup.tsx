@@ -273,6 +273,7 @@ export default function EnglishSetup({
                       />
                     </label>
                     <EnglishTopicPicker
+                      grade={grade}
                       key={`${grade}-${paper}-${i.id}-${writing[i.id]?.choice || ""}`}
                       title={i.title}
                       topics={writingTopicSuggestions(

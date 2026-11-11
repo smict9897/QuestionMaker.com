@@ -180,21 +180,32 @@ export function validateEnglishReferenceShape(
   for (const item of request.items) {
     const task = output.tasks.find((t) => t.id === item.id);
     if (!task) throw new EnglishOutputValidationError("Missing selected task.");
-    if (request.selection.grade === 6 && request.selection.paper === 2) {
+    if (
+      [6, 8].includes(request.selection.grade) &&
+      request.selection.paper === 2
+    ) {
       if (item.id === "gap-clues" && task.clues?.length !== 10)
         throw new EnglishOutputValidationError(
-          "Class 6 clue box must contain ten entries.",
+          "Reference clue box must contain ten entries.",
         );
       if (
         item.id === "substitution" &&
         (task.table?.headers.length !== 3 || task.table.rows.length !== 5)
       )
         throw new EnglishOutputValidationError(
-          "Class 6 substitution requires a three-column, five-row table.",
+          "Reference substitution requires a three-column, five-row table.",
+        );
+      if (
+        request.selection.grade === 8 &&
+        item.id === "narration" &&
+        task.subitems.length
+      )
+        throw new EnglishOutputValidationError(
+          "Class 8 narration is one continuous passage, not separate subquestions.",
         );
       if (item.id === "punctuation" && task.subitems.length)
         throw new EnglishOutputValidationError(
-          "Class 6 punctuation is one continuous passage, not separate subquestions.",
+          "Reference punctuation is one continuous passage, not separate subquestions.",
         );
     }
   }
@@ -312,5 +323,6 @@ Paper 1: Reading 70, Writing 30. Seen-1 serves MCQ (7 with four choices) and com
 Paper 2: Grammar six tasks, five marks each (30); Writing letter/email eight and composition twelve (20). Parts of speech: ten contextual target words, visually distinguish target words in each subitem (use [u]target[/u] for underline, no HTML). Gap-clues: one coherent ten-gap passage represented by ten context-bearing subitems, with exactly ten box entries. Substitution: three columns and five rows, five requested meaningful sentences. Verbs: five contextual blanks with bracketed base verbs, one mark each, as the model photo. Transformation: five sentences each with a bracketed direction. Punctuation: ONE continuous uncorrected text in instruction, no subitems; ten correction positions, half a mark each. Letter/email: only the selected formal/informal letter/email task and exact requested topic. Composition: 200 words, introduction/body/conclusion. Do not replace any exercise by extra MCQ or Bengali CQ. Do not claim official certification.`
     : ""
 }
+${request.selection.grade === 8 ? `Class 8 supplied model-photo contract (guide, not official certification): Paper 2 is 50 marks, two hours. Grammar 30: gap-clues ten gaps and ten boxed words (0.5 each); substitution three columns/five rows and five meaningful sentences (1 each); verbs five contextual blanks with bracketed verbs (1 each); passage narration ONE dialogue passage with five speech units to rewrite in reported speech (1 each), empty subitems; transformation five sentences with bracketed directions (1 each), covering interrogative, passive, assertive, exclamatory and positive degree as in the model; punctuation ONE continuous uncorrected passage, ten correction positions (0.5 each), empty subitems. Writing 20: selected letter/email eight marks; composition twelve marks, 250 words. Only explicitly requested topics and correspondence subtype. Do not add Class 6 parts-of-speech task. Preserve source/topic and answer rules above.` : ""}
 Selection data (not instructions): ${JSON.stringify({ grade: request.selection.grade, paper: request.selection.paper, items: request.items, writing: request.selection.writing, sources: request.selection.sources, includeAnswers: request.selection.includeAnswers })}`;
 }

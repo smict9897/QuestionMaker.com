@@ -557,3 +557,61 @@ test("schema diagnostics redact unknown field names and custom messages", () => 
     "JSON schema mismatch: field (custom)",
   );
 });
+
+test("Class 8 photo contract enforces continuous narration/punctuation and table/clue shapes", () => {
+  const { validateEnglishReferenceShape: shape } = load("generation");
+  for (const id of ["narration", "punctuation"]) {
+    const s = {
+      grade: 8,
+      paper: 2,
+      mode: "selected",
+      itemIds: [id],
+      writing: {},
+      sources: {},
+      includeAnswers: false,
+    };
+    assert.throws(
+      () =>
+        shape(s, {
+          passages: [],
+          tasks: [
+            {
+              id,
+              instruction: "Passage",
+              subitems: [{ text: "Separate question" }],
+            },
+          ],
+        }),
+      /continuous passage/,
+    );
+    shape(s, {
+      passages: [],
+      tasks: [{ id, instruction: "Passage", subitems: [] }],
+    });
+  }
+  const s = {
+    grade: 8,
+    paper: 2,
+    mode: "writing",
+    itemIds: ["composition"],
+    writing: { composition: { topic: "Your Favourite Hobby" } },
+    sources: {},
+    includeAnswers: false,
+  };
+  assert.match(prompt(s), /Class 8 supplied model-photo contract/);
+  assert.match(prompt(s), /250 words/);
+  assert.throws(
+    () =>
+      v(s, {
+        passages: [],
+        tasks: [
+          {
+            id: "composition",
+            instruction: "Your Favourite Hobby 200 words",
+            subitems: [],
+          },
+        ],
+      }),
+    /word limit/,
+  );
+});

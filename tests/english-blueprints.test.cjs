@@ -89,3 +89,29 @@ test("renewed class-six photo distributions and printed formulas are exact", () 
   assert.equal(m.exports.englishMarksLabel(p2.items[5]), "0.5×10=5");
   assert.equal(m.exports.englishMarksLabel(p1.items[9]), "2×5=10");
 });
+
+test("Class 8 second-paper model keeps eight tasks, exact marks and 250-word composition", () => {
+  const model = b(8, 2);
+  assert.deepEqual(
+    model.items.map((i) => i.id),
+    [
+      "gap-clues",
+      "substitution",
+      "verbs",
+      "narration",
+      "transformation",
+      "punctuation",
+      "letter-email",
+      "composition",
+    ],
+  );
+  assert.deepEqual(
+    model.items.map((i) => i.marks),
+    [5, 5, 5, 5, 5, 5, 8, 12],
+  );
+  assert.equal(model.items[0].count, 10);
+  assert.equal(model.items[3].correctionCount, 5);
+  assert.equal(model.items[3].count, undefined);
+  assert.equal(model.items[5].correctionCount, 10);
+  assert.equal(model.items[7].words, 250);
+});
