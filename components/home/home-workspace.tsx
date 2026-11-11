@@ -1,6 +1,7 @@
 "use client";
 
 import "@/components/chapter-selector.css";
+import "./starter-card.css";
 import ChapterSelector from "@/components/chapter-selector";
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -211,50 +212,98 @@ export function HomeStarter({
   return (
     <section id="start" className="hm-panel hm-starter">
       <div className="hm-panel-title">
-        <h1>১ মিনিটে প্রশ্ন তৈরি করুন</h1>
+        <span className="hm-starter-badge">
+          <BookOpen size={14} aria-hidden="true" /> প্রশ্ন তৈরির কর্মক্ষেত্র
+        </span>
+        <h1>
+          আপনার প্রশ্নপত্র,
+          <br className="hm-title-break" /> <em>আপনার মতো করে।</em>
+        </h1>
         <p>
           শ্রেণি, বিষয় ও অধ্যায় নির্বাচন করে আপনার প্রয়োজন অনুযায়ী প্রশ্ন
           তৈরি শুরু করুন।
         </p>
       </div>
+      <ol className="hm-starter-progress" aria-label="প্রশ্ন তৈরির প্রস্তুতি">
+        {["শ্রেণি", "বিষয়", "অধ্যায়"].map((label, index) => {
+          const current = !category ? 0 : !subject ? 1 : 2;
+          const done = index < current;
+          return (
+            <li
+              key={label}
+              className={
+                done ? "is-done" : index === current ? "is-current" : ""
+              }
+              aria-current={index === current ? "step" : undefined}
+            >
+              <span className="hm-progress-number" aria-hidden="true">
+                {done ? (
+                  <CheckCircle2 size={16} />
+                ) : (
+                  (index + 1).toLocaleString("bn-BD")
+                )}
+              </span>
+              <span>{label}</span>
+            </li>
+          );
+        })}
+      </ol>
       <form action="/question-builder/prepare" className="hm-start-form">
-        <label>
-          শ্রেণি <b>*</b>
-          <select
-            required
-            name="category"
-            value={category}
-            onChange={(e) => {
-              setCategory(e.target.value);
-              setSubject("");
-              setSelectedTopics([]);
-            }}
-          >
-            <option value="">শ্রেণি নির্বাচন করুন</option>
-            {classes.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          বিষয় <b>*</b>
-          <select
-            required
-            disabled={!category}
-            name="subject"
-            value={subject}
-            onChange={(e) => {
-              setSubject(e.target.value);
-              setSelectedTopics([]);
-            }}
-          >
-            <option value="">বিষয় নির্বাচন করুন</option>
-            {subjects.map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
-        </label>
-        <ChapterSelector topics={topics} value={selectedTopics} onChange={setSelectedTopics} disabled={!subject}/>
+        <div className="hm-starter-fields">
+          <label>
+            <span className="hm-field-caption">
+              <GraduationCap size={17} aria-hidden="true" /> শ্রেণি <b>*</b>
+            </span>
+            <select
+              required
+              name="category"
+              value={category}
+              onChange={(e) => {
+                setCategory(e.target.value);
+                setSubject("");
+                setSelectedTopics([]);
+              }}
+            >
+              <option value="">শ্রেণি নির্বাচন করুন</option>
+              {classes.map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className="hm-field-caption">
+              <BookMarked size={17} aria-hidden="true" /> বিষয় <b>*</b>
+            </span>
+            <select
+              required
+              disabled={!category}
+              name="subject"
+              value={subject}
+              onChange={(e) => {
+                setSubject(e.target.value);
+                setSelectedTopics([]);
+              }}
+            >
+              <option value="">বিষয় নির্বাচন করুন</option>
+              {subjects.map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {!subject && (
+          <p className="hm-starter-help">
+            {category
+              ? "এবার বিষয় বেছে নিন — তারপর অধ্যায় নির্বাচন করতে পারবেন।"
+              : "প্রথমে শ্রেণি বেছে নিন — আপনার বিষয়গুলো এখানে দেখা যাবে।"}
+          </p>
+        )}
+        <ChapterSelector
+          topics={topics}
+          value={selectedTopics}
+          onChange={setSelectedTopics}
+          disabled={!subject}
+        />
         <p className="hm-info" role="status">
           ⓘ{" "}
           {unavailable
@@ -264,15 +313,16 @@ export function HomeStarter({
               : "এখনও কোনো বিষয় নির্বাচন করা হয়নি।"}
         </p>
         <button className="hm-primary hm-next" disabled={!category || !subject}>
-          পরবর্তী <ArrowRight size={18} />
+          প্রশ্ন বাছাইয়ে এগিয়ে যান <ArrowRight size={18} aria-hidden="true" />
         </button>
         <div className="hm-promo">
           <div>
-            <small>নিজের মতো সাজিয়ে নিন</small>
-            <h3>পরিপাটি প্রশ্নপত্র</h3>
-            <span>সহজে · দ্রুত · অনলাইনে</span>
+            <h3>বাছাই থেকে প্রিন্ট — এক জায়গায়</h3>
+            <span>প্রশ্ন বাছুন · নিজের মতো সাজান · PDF নিন</span>
           </div>
-          <Printer size={50} />
+          <span className="hm-promo-icon">
+            <Printer size={25} aria-hidden="true" />
+          </span>
         </div>
       </form>
     </section>
