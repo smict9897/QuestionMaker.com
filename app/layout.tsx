@@ -126,9 +126,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </PathGate>
 
           {/* মোবাইলের নিচের স্মার্ট অ্যাপ বার */}
-          <PathGate>
-            <MobileBottomNav user={u ? { name: u.name, role: u.role } : null} />
-          </PathGate>
+          <MobileBottomNav user={u ? { name: u.name, role: u.role } : null} />
 
           {wa && (
             <PathGate>
@@ -137,7 +135,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="WhatsApp"
-                className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg md:bottom-6 hover:scale-105 transition-transform"
+                className="qm-whatsapp-float fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg md:bottom-6 hover:scale-105 transition-transform"
               >
                 <MessageCircle size={26} />
               </a>
