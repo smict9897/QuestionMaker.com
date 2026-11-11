@@ -1,0 +1,94 @@
+.qm-bottom-nav {
+  display: none;
+}
+@media (max-width: 767px) {
+  body {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .qm-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.25fr 1fr 1fr;
+    align-items: end;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+    min-height: 74px;
+    background: #fffffff5;
+    border-top: 1px solid #dce6ec;
+    box-shadow: 0 -4px 24px #0d324614;
+    backdrop-filter: blur(14px);
+    font-family: var(--qk-body), sans-serif;
+    color: #6b7d8c;
+  }
+  .qm-bottom-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    min-width: 0;
+    min-height: 48px;
+    text-align: center;
+    color: inherit !important;
+    text-decoration: none !important;
+    font-size: 11px;
+    line-height: 1.3;
+    border-radius: 10px;
+    padding: 3px 0;
+    font-weight: 500;
+  }
+  .qm-bottom-icon {
+    height: 25px;
+    display: grid;
+    place-items: center;
+  }
+  .qm-bottom-item.is-active {
+    color: #107c65 !important;
+    font-weight: 700;
+  }
+  .qm-bottom-item:focus-visible {
+    outline: 3px solid #2784cc;
+    outline-offset: 2px;
+  }
+  .qm-bottom-create {
+    color: #164e68 !important;
+    font-weight: 700;
+  }
+  .qm-bottom-create .qm-bottom-icon {
+    height: 58px;
+    width: 58px;
+    margin-top: -27px;
+    margin-bottom: 2px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #124976, #11966e);
+    box-shadow: 0 5px 16px #156b7a40;
+    border: 3px solid #f2f7fb;
+    color: white;
+  }
+  .qm-bottom-create .qm-bottom-icon svg {
+    width: 26px;
+    height: 26px;
+  }
+  .qm-bottom-create.is-active .qm-bottom-icon {
+    box-shadow:
+      0 0 0 3px #b5e3d5,
+      0 5px 16px #156b7a40;
+  }
+  .qm-bottom-item:active {
+    background: #eaf5f2;
+  }
+  .qm-whatsapp-float {
+    bottom: calc(110px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+@media print {
+  .qm-bottom-nav {
+    display: none !important;
+  }
+  body {
+    padding-bottom: 0 !important;
+  }
+}
