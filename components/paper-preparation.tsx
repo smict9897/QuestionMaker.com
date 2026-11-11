@@ -5,7 +5,7 @@ import {
   checkPaperTopics,
   preparePaperTopic,
 } from "@/app/actions/prepare-paper";
-import "./paper-preparation.css";
+import PreparationPopup from "./preparation-popup";
 export default function PaperPreparation({
   category,
   subject,
@@ -19,6 +19,8 @@ export default function PaperPreparation({
   append: boolean;
   questionType?: string;
 }) {
+  const [stage, setStage] = useState(0);
+  const [progress, setProgress] = useState<number | undefined>(undefined);
   const taskCache = useRef(
     new Map<string, ReturnType<typeof preparePaperTopic>>(),
   );
@@ -36,6 +38,8 @@ export default function PaperPreparation({
     let stopped = false;
     (async () => {
       setError("");
+      setStage(0);
+      setProgress(undefined);
       setDone(0);
       setTotal(0);
       setGenerated(0);
@@ -53,6 +57,7 @@ export default function PaperPreparation({
           return;
         }
         setTotal(plan.topics.length);
+        setStage(1);
         for (let i = 0; i < plan.topics.length; i++) {
           if (stopped) return;
           let ready = false;
@@ -87,6 +92,15 @@ export default function PaperPreparation({
             setMessage(
               `${plan.topics[i]} — ${result.count.toLocaleString("bn-BD")} / ৩০টি প্রশ্ন প্রস্তুত`,
             );
+            setProgress(
+              Math.min(
+                99,
+                Math.floor(
+                  ((i + Math.min(result.count, 30) / 30) / plan.topics.length) *
+                    100,
+                ),
+              ),
+            );
             if (result.generated) setGenerated((n) => n + (result.added || 0));
             if (result.count >= 30) {
               ready = true;
@@ -102,6 +116,8 @@ export default function PaperPreparation({
           setDone(i + 1);
         }
         if (stopped) return;
+        setStage(2);
+        setProgress(100);
         setMessage("প্রশ্ন প্রস্তুত। নির্বাচন পেজ খোলা হচ্ছে…");
         const params = new URLSearchParams({ category, subject, questionType });
         topics.forEach((t) => params.append("topic", t));
@@ -117,59 +133,27 @@ export default function PaperPreparation({
     };
   }, [category, subject, topics, append, questionType, router, retry]);
   return (
-    <main className="paper-preparation">
-      <section className="preparation-card" aria-busy={!error}>
-        <span className="preparation-badge">✧ প্রশ্নপত্র প্রস্তুতি</span>
-        <div
-          className={`preparation-orbit ${error ? "stopped" : ""}`}
-          aria-hidden="true"
-        >
-          <span>▤</span>
-        </div>
-        <h1>আপনার প্রশ্নপত্র প্রস্তুত হচ্ছে…</h1>
-        <p className="preparation-selection">
-          {category} · {subject}
-        </p>
-        <ol>
-          <li>✓ নির্বাচিত বিষয় ও অধ্যায় পরীক্ষা</li>
-          <li>অনুমোদিত প্রশ্ন থাকলে সেখান থেকেই ব্যবহার</li>
-          <li>প্রয়োজনে ধাপে ধাপে নতুন প্রশ্ন প্রস্তুত ও পর্যালোচনার জন্য সংরক্ষণ</li>
-        </ol>
-        <p role="status" className="preparation-status">
-          {message}
-        </p>
-        {total > 0 && (
-          <>
-            <progress max={total} value={done} />
-            <p>
-              {done.toLocaleString("bn-BD")} / {total.toLocaleString("bn-BD")}টি
-              অধ্যায় প্রস্তুত
-            </p>
-          </>
-        )}
-        {generated > 0 && (
-          <p>{generated.toLocaleString("bn-BD")}টি নতুন প্রশ্ন তৈরি হয়েছে।</p>
-        )}
-        <aside>
-          নতুন প্রশ্ন আপনি এখন ব্যবহার করতে পারবেন। পর্যালোচনা শেষ না হওয়া পর্যন্ত অন্য
-          ব্যবহারকারীরা পাবেন না। ব্যবহারের আগে প্রশ্ন ও উত্তর যাচাই করুন।
-        </aside>
-        {error && (
-          <div role="alert">
-            <p className="preparation-error">{error}</p>
-            <button
-              onClick={() => {
-                started.current = false;
-                taskCache.current.clear();
-                setRetry((n) => n + 1);
-              }}
-            >
-              আবার চেষ্টা করুন
-            </button>{" "}
-            <a href="/question-builder">নির্বাচনে ফিরুন</a>
-          </div>
-        )}
-      </section>
-    </main>
+    <PreparationPopup
+      subject={subject}
+      stage={stage}
+      progress={progress}
+      error={error}
+    >
+      {error && (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              started.current = false;
+              taskCache.current.clear();
+              setRetry((n) => n + 1);
+            }}
+          >
+            আবার চেষ্টা করুন
+          </button>
+          <a href="/question-builder">নির্বাচনে ফিরুন</a>
+        </>
+      )}
+    </PreparationPopup>
   );
 }
