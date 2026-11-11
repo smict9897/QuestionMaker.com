@@ -1,3 +1,4 @@
+import { requirePaidQuestions } from "@/lib/wallet";
 import { auth } from "@/auth";
 import { visibleQuestions } from "@/lib/paper-generation";
 import { NextResponse } from "next/server";
@@ -49,6 +50,16 @@ export async function POST(req: Request) {
   if (!ids.length) return NextResponse.json({ items: [] });
 
   const user = (await auth())?.user;
+  if (!user?.id)
+    return NextResponse.json({ error: "লগইন করুন।" }, { status: 401 });
+  try {
+    await requirePaidQuestions(user.id, ids);
+  } catch {
+    return NextResponse.json(
+      { error: "সেটআপ খুলতে আগে নির্বাচিত প্রশ্নের checkout সম্পন্ন করুন।" },
+      { status: 402 },
+    );
+  }
   const rows = await db.question.findMany({
     where: { id: { in: ids }, ...visibleQuestions(user?.id) },
   });
