@@ -388,3 +388,62 @@ test("all sixteen HSC second-paper tasks assemble with requested separate answer
   assert.equal(result.tasks.length, 16);
   assert.equal(resolveEnglishSelection(s).items.length, 16);
 });
+
+test("class-six photo contract rejects extra clues, wrong substitution layout and numbered punctuation exercises", () => {
+  const v = load("generation").assembleEnglishProviderOutput;
+  const s = {
+    grade: 6,
+    paper: 2,
+    mode: "selected",
+    itemIds: ["gap-clues"],
+    writing: {},
+    sources: {},
+    includeAnswers: false,
+  };
+  const task = {
+    id: "gap-clues",
+    instruction: "Fill the passage gaps.",
+    clues: Array.from({ length: 10 }, (_, i) => `clue${i}`),
+    subitems: Array.from({ length: 10 }, (_, i) => ({
+      text: `Context (${i}) ____`,
+    })),
+  };
+  assert.equal(v(s, { passages: [], tasks: [task] }).total, 5);
+  task.clues.pop();
+  assert.throws(() => v(s, { passages: [], tasks: [task] }), /ten entries/);
+  const p = { ...s, itemIds: ["punctuation"] };
+  assert.throws(
+    () =>
+      v(p, {
+        passages: [],
+        tasks: [
+          {
+            id: "punctuation",
+            instruction: "Correct this text.",
+            subitems: [{ text: "wrong" }],
+          },
+        ],
+      }),
+    /continuous passage/,
+  );
+  const sub = {
+    id: "substitution",
+    instruction: "Make five sentences.",
+    subitems: Array.from({ length: 5 }, () => ({ text: "Make a sentence." })),
+    table: {
+      headers: ["A", "B", "C"],
+      rows: Array.from({ length: 5 }, () => ["We", "are", "students."]),
+    },
+  };
+  assert.equal(
+    v({ ...s, itemIds: ["substitution"] }, { passages: [], tasks: [sub] })
+      .total,
+    5,
+  );
+  sub.table.rows.pop();
+  assert.throws(
+    () =>
+      v({ ...s, itemIds: ["substitution"] }, { passages: [], tasks: [sub] }),
+    /five-row/,
+  );
+});
