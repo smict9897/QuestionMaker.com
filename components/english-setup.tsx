@@ -1,5 +1,7 @@
 "use client";
 import "./english-theme.css";
+import EnglishTopicPicker from "@/components/english-topic-picker";
+import { writingTopicSuggestions } from "@/lib/english/writing-topics";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { generateEnglishPaper } from "@/app/actions/english-paper";
@@ -246,7 +248,10 @@ export default function EnglishSetup({
                           className={field}
                           value={writing[i.id]?.choice || ""}
                           onChange={(e) =>
-                            updateWriting(i.id, { choice: e.target.value })
+                            updateWriting(i.id, {
+                              choice: e.target.value,
+                              topic: "",
+                            })
                           }
                         >
                           <option value="">Choose exactly one</option>
@@ -267,6 +272,18 @@ export default function EnglishSetup({
                         }
                       />
                     </label>
+                    <EnglishTopicPicker
+                      key={`${grade}-${paper}-${i.id}-${writing[i.id]?.choice || ""}`}
+                      title={i.title}
+                      topics={writingTopicSuggestions(
+                        grade,
+                        paper,
+                        i.id,
+                        writing[i.id]?.choice,
+                      )}
+                      value={writing[i.id]?.topic || ""}
+                      onSelect={(topic) => updateWriting(i.id, { topic })}
+                    />
                     <label className="block">
                       Word limit{" "}
                       {i.words ? `(reference: ${i.words})` : "(optional)"}
