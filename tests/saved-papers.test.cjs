@@ -60,7 +60,7 @@ test("saved paper filters combine class subject name and chapter search", () => 
     1,
   );
 });
-function api(user, rows = []) {
+function api(user, rows = [], paid = user?.role !== "STUDENT") {
   let deleted = false,
     created;
   return {
@@ -71,6 +71,11 @@ function api(user, rows = []) {
       return created;
     },
     actions: load("app/actions/qb-papers.ts", {
+      "@/lib/wallet": {
+        requirePaidQuestions: async () => {
+          if (!paid) throw Error("checkout required");
+        },
+      },
       "@/lib/paper-generation": {
         visibleQuestions: () => ({ approved: true }),
       },
@@ -138,7 +143,7 @@ test("ownerless legacy papers remain admin-only", async () => {
   const a = api({ id: "admin", role: "ADMIN" }, [row(undefined)]);
   assert.equal((await a.actions.listPapers()).length, 1);
 });
-test("new saves include owner and scoped key; students cannot save", async () => {
+test("new saves include owner and scoped key; unpaid students cannot save", async () => {
   const a = api({ id: "u", role: "TEACHER" });
   assert.equal(
     (await a.actions.savePaper({ name: "Test", ids: ["q"], settings: {} })).ok,
@@ -151,4 +156,15 @@ test("new saves include owner and scoped key; students cannot save", async () =>
     (await b.actions.savePaper({ name: "Test", ids: ["q"] })).ok,
     false,
   );
+});
+
+test("paid student may save only an owned paper", async () => {
+  const a = api({ id: "s", role: "STUDENT" }, [], true);
+  const r = await a.actions.savePaper({
+    name: "Paid paper",
+    ids: ["q"],
+    settings: {},
+  });
+  assert.equal(r.ok, true);
+  assert.match(a.created.key, /^qbpaper:s:/);
 });

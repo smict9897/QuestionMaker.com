@@ -1,5 +1,6 @@
 "use server";
 
+import { walletTransaction } from "@/lib/wallet";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -32,7 +33,9 @@ export async function submitPackagePurchase(formData: FormData) {
   const transactionId = String(formData.get("transactionId") ?? "")
     .trim()
     .toUpperCase();
-  const senderNumber = normalizePhone(String(formData.get("senderNumber") ?? ""));
+  const senderNumber = normalizePhone(
+    String(formData.get("senderNumber") ?? ""),
+  );
 
   if (!packageId) fail("একটা প্যাকেজ বেছে নিন");
   if (!PAYMENT_METHODS.some((m) => m.id === method))
@@ -50,7 +53,9 @@ export async function submitPackagePurchase(formData: FormData) {
     where: { userId, status: "PENDING" },
   });
   if (pending)
-    fail("আপনার আগের একটি অনুরোধ যাচাই বাকি আছে। অ্যাডমিন দেখার পর আবার চেষ্টা করুন");
+    fail(
+      "আপনার আগের একটি অনুরোধ যাচাই বাকি আছে। অ্যাডমিন দেখার পর আবার চেষ্টা করুন",
+    );
 
   // একই Transaction ID দুইবার ব্যবহার ঠেকানো (REJECTED বাদে)
   const duplicate = await db.packagePurchase.findFirst({
@@ -58,17 +63,27 @@ export async function submitPackagePurchase(formData: FormData) {
   });
   if (duplicate) fail("এই Transaction ID আগে ব্যবহার করা হয়েছে");
 
-  await db.packagePurchase.create({
-    data: {
-      userId,
-      packageId: pkg.id,
-      amount: pkg.price,
-      transactionId,
-      paymentNumber: `${method} · ${senderNumber}`,
-      status: "PENDING",
-    },
+  await walletTransaction(async (tx) => {
+    if (
+      await tx.setting.findUnique({
+        where: { key: `wallet:trx:${transactionId}` },
+      })
+    )
+      fail("এই TrxID আগে ব্যবহৃত হয়েছে");
+    await tx.setting.create({
+      data: { key: `wallet:trx:${transactionId}`, value: `package:${userId}` },
+    });
+    await tx.packagePurchase.create({
+      data: {
+        userId,
+        packageId: pkg.id,
+        amount: pkg.price,
+        transactionId,
+        paymentNumber: `${method} · ${senderNumber}`,
+        status: "PENDING",
+      },
+    });
   });
-
   revalidatePath(BACK);
   revalidatePath("/admin/packages");
   revalidatePath("/admin/package-requests");
