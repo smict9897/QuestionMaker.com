@@ -4,6 +4,7 @@ import "@/components/chapter-selector.css";
 import ChapterSelector from "@/components/chapter-selector";
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import BrandWordmark from "@/components/brand-wordmark";
 import { signOut } from "next-auth/react";
 import {
   BookOpen,
@@ -86,9 +87,8 @@ export function WorkspaceShell({
           >
             {open ? <X size={21} /> : <Menu size={21} />}
           </button>
-          <Link href="/">
-            {siteName}
-            <span>Empowering Assessments with AI</span>
+          <Link href="/" aria-label={`${siteName} হোম`}>
+            <BrandWordmark name={siteName} />
           </Link>
         </div>
         <div className="hm-account">

@@ -31,7 +31,7 @@
   color: #123b63;
   line-height: 1.1;
 }
-.hm-brand span {
+.hm-brand > a > span:not(.qm-wordmark) {
   display: block;
   font-size: 11px;
   font-weight: 400;
@@ -628,7 +628,7 @@
   .hm-brand > a {
     font-size: 23px;
   }
-  .hm-brand span {
+  .hm-brand > a > span:not(.qm-wordmark) {
     font-size: 10px;
   }
   .hm-account > span {
@@ -773,4 +773,4 @@
 
 /* Longer English wordmark stays clear of the account actions on narrow phones. */
 .hm-brand{min-width:0}.hm-brand>a{font-size:clamp(16px,2.3vw,27px);overflow-wrap:anywhere}
-@media(max-width:640px){.hm-brand{gap:8px}.hm-brand>a{font-size:clamp(13px,3.5vw,22px)}.hm-brand span{font-size:8px;max-width:190px}.hm-account{flex-shrink:0}.qm-intro{width:100%;min-width:0}}
+@media(max-width:640px){.hm-brand{gap:8px}.hm-brand>a{font-size:clamp(13px,3.5vw,22px)}.hm-brand>a>span:not(.qm-wordmark){font-size:8px;max-width:190px}.hm-account{flex-shrink:0}}
