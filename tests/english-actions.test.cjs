@@ -217,3 +217,30 @@ test("draft save rejects stale tabs instead of silently overwriting newer edits"
     else process.env.DEEPSEEK_API_KEY = old;
   }
 });
+
+test("admin bypasses daily quota including existing full quota, but retains generation lock", async () => {
+  const old = process.env.DEEPSEEK_API_KEY;
+  process.env.DEEPSEEK_API_KEY = "test-only";
+  try {
+    const h = harness();
+    for (let i = 0; i < 10; i++)
+      assert.equal((await h.actions.generateEnglishPaper(selection)).ok, true);
+    h.setUser({ id: "teacher:one", role: "ADMIN" });
+    for (let i = 0; i < 12; i++)
+      assert.equal((await h.actions.generateEnglishPaper(selection)).ok, true);
+    assert.equal(
+      [...h.rows.keys()].filter((k) => k.startsWith("englishai:quota:")).length,
+      10,
+    );
+    const results = await Promise.all([
+      h.actions.generateEnglishPaper(selection),
+      h.actions.generateEnglishPaper(selection),
+    ]);
+    assert.equal(results.filter((r) => r.ok).length, 1);
+    h.setUser({ id: "teacher:one", role: "TEACHER" });
+    assert.equal((await h.actions.generateEnglishPaper(selection)).ok, false);
+  } finally {
+    if (old === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = old;
+  }
+});

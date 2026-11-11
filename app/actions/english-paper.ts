@@ -27,6 +27,10 @@ export async function generateEnglishPaper(raw: unknown) {
       ok: false as const,
       error: "শিক্ষক বা অ্যাডমিন হিসেবে লগইন করুন।",
     };
+  const quotaNotice =
+    user.role === "ADMIN"
+      ? ""
+      : " আবার চেষ্টা করলে দৈনিক সীমা থেকে আরেকবার গণনা হবে।";
   let stage = "selection";
   let acquired = false;
   const token = randomUUID(),
@@ -52,27 +56,29 @@ export async function generateEnglishPaper(raw: unknown) {
         error: "আপনার একটি generation চলছে। কিছুক্ষণ অপেক্ষা করুন।",
       };
     }
-    const day = new Date().toISOString().slice(0, 10);
-    let reserved = false;
-    for (let i = 0; i < 10; i++) {
-      try {
-        await db.setting.create({
-          data: {
-            key: `englishai:quota:${createHash("sha256").update(user.id).digest("hex")}:${day}:${i}`,
-            value: token,
-          },
-        });
-        reserved = true;
-        break;
-      } catch (e) {
-        if ((e as { code?: string }).code !== "P2002") throw e;
+    if (user.role !== "ADMIN") {
+      const day = new Date().toISOString().slice(0, 10);
+      let reserved = false;
+      for (let i = 0; i < 10; i++) {
+        try {
+          await db.setting.create({
+            data: {
+              key: `englishai:quota:${createHash("sha256").update(user.id).digest("hex")}:${day}:${i}`,
+              value: token,
+            },
+          });
+          reserved = true;
+          break;
+        } catch (e) {
+          if ((e as { code?: string }).code !== "P2002") throw e;
+        }
       }
+      if (!reserved)
+        return {
+          ok: false as const,
+          error: "আজকের English generation সীমা (১০ বার) শেষ।",
+        };
     }
-    if (!reserved)
-      return {
-        ok: false as const,
-        error: "আজকের English generation সীমা (১০ বার) শেষ।",
-      };
     stage = "generation";
     const generated = await requestEnglishPaper(request.selection, {
       apiKey: process.env.DEEPSEEK_API_KEY,
@@ -120,7 +126,7 @@ export async function generateEnglishPaper(raw: unknown) {
         ok: false as const,
         stage: "generation",
         code: error.code,
-        error: `${englishProviderMessage(error.code)} [${error.code}] আবার চেষ্টা করলে দৈনিক সীমা থেকে আরেকবার গণনা হবে।`,
+        error: `${englishProviderMessage(error.code)} [${error.code}]${quotaNotice}`,
       };
     return {
       ok: false as const,
@@ -129,8 +135,10 @@ export async function generateEnglishPaper(raw: unknown) {
         stage === "selection"
           ? "শ্রেণি, পত্র, নির্বাচিত task, writing topic এবং প্রয়োজনীয় textbook source/reference যাচাই করুন। সংযোগ বা দৈনিক সীমা যাচাইও ব্যর্থ হয়ে থাকতে পারে।"
           : stage === "storage"
-            ? "প্রশ্ন তৈরি হয়েছে কিন্তু draft সেভ হয়নি। Database সংযোগ যাচাই করতে হবে। আবার চেষ্টা করলে দৈনিক সীমা থেকে আরেকবার গণনা হবে।"
-            : "Generation ব্যর্থ হয়েছে: provider সংযোগ, সময়সীমা অথবা output validation সমস্যা হতে পারে। অসম্পূর্ণ paper সেভ করা হয়নি। শ্রেণি/পত্র ও এই error-এর screenshot দিন। আবার চেষ্টা করলে দৈনিক সীমা থেকে আরেকবার গণনা হবে।",
+            ? "প্রশ্ন তৈরি হয়েছে কিন্তু draft সেভ হয়নি। Database সংযোগ যাচাই করতে হবে।" +
+              quotaNotice
+            : "Generation ব্যর্থ হয়েছে: provider সংযোগ, সময়সীমা অথবা output validation সমস্যা হতে পারে। অসম্পূর্ণ paper সেভ করা হয়নি। শ্রেণি/পত্র ও এই error-এর screenshot দিন।" +
+              quotaNotice,
     };
   } finally {
     if (acquired)
