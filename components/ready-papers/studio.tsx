@@ -11,6 +11,7 @@ import {
   readySelectionIdentity,
   type ReadySnapshot,
 } from "@/lib/ready-commerce";
+import PageLoader from "./page-loader";
 import RasterTools from "./raster-tools";
 import { rasterEditKey, type RasterPoint } from "@/lib/ready-raster";
 import PlacedQuestion from "./placed-question";
@@ -77,6 +78,8 @@ export default function ReadyStudio({
   const [paidSelection, setPaidSelection] = useState(
     initialPurchase ? readySelectionIdentity(initialPurchase.selected) : "",
   );
+  const [pageLoading, setPageLoading] = useState(true);
+  const [pageProgress, setPageProgress] = useState({ completed: 0, total: 0 });
   const [liveReviewPage, setLiveReviewPage] = useState(0);
   const [liveReview, setLiveReview] = useState("");
   const [reviewPending, setReviewPending] = useState(false);
@@ -161,11 +164,15 @@ export default function ReadyStudio({
   useEffect(() => {
     let live = true;
     setBusy(true);
+    setPageLoading(true);
+    setPages([]);
+    setPageProgress({ completed: 0, total: 0 });
     loadPdfImages(paper.url, (n, total) => {
-      if (live) setMessage(`Page ${n} / ${total} প্রস্তুত হচ্ছে…`);
+      if (live) setPageProgress({ completed: n, total });
     })
       .then((p) => {
         if (live) {
+          setPageLoading(false);
           setPages(p);
           setMessage("Page বেছে সেটআপে যান।");
           setBusy(false);
@@ -173,6 +180,7 @@ export default function ReadyStudio({
       })
       .catch((e) => {
         if (live) {
+          setPageLoading(false);
           setMessage(e.message || "PDF খোলা যায়নি। আবার চেষ্টা করুন।");
           setBusy(false);
         }
@@ -501,9 +509,16 @@ export default function ReadyStudio({
           </span>
         </div>
       </section>
-      <p role="status" className="rp-status" data-noprint>
-        {message}
-      </p>
+      {pageLoading ? (
+        <PageLoader
+          completed={pageProgress.completed}
+          total={pageProgress.total}
+        />
+      ) : (
+        <p role="status" className="rp-status" data-noprint>
+          {message}
+        </p>
+      )}
       {pages.length > 0 && (
         <div className="rp-toolbar" data-noprint>
           <button onClick={() => setStep("select")}>
