@@ -18,6 +18,7 @@ import {
   Users,
   FileText,
   Library,
+  ChevronDown,
 } from "lucide-react";
 
 const items = [
@@ -38,12 +39,45 @@ const items = [
   ["Edit / Delete", "/admin/manage", Pencil],
 ] as const;
 
+const menuGroups = [
+  {
+    title: "মডেল টেস্ট",
+    links: [
+      ["মডেল টেস্ট ম্যানেজ", "/admin/model-test"],
+      ["পাবলিক ফিড", "/model-test"],
+      ["Global Leaderboard", "/model-test/leaderboard"],
+    ],
+  },
+  {
+    title: "প্যাকেজ ও পেমেন্ট",
+    links: [
+      ["পেমেন্ট অনুরোধ", "/admin/package-requests"],
+      ["Recharge যাচাই", "/admin/wallet"],
+      ["প্যাকেজ ম্যানেজ", "/admin/packages"],
+      ["পাবলিক প্যাকেজ পেজ", "/packages"],
+    ],
+  },
+  {
+    title: "কনটেন্ট ও সাইট",
+    links: [
+      ["ম্যাটেরিয়াল / PDF", "/admin/pdf"],
+      ["হোমপেজ পপ-আপ", "/admin/promo"],
+      ["হোম পেজ দেখুন", "/"],
+      ["Instant Exam", "/exam"],
+      ["Practice Test", "/tests"],
+      ["প্রোফাইল ড্যাশবোর্ড", "/profile"],
+    ],
+  },
+] as const;
+
 export default function AdminNav({
   name,
   role,
+  pendingPayments = 0,
 }: {
   name: string;
   role?: string;
+  pendingPayments?: number;
 }) {
   const path = usePathname();
   const on = (h: string) =>
@@ -65,6 +99,44 @@ export default function AdminNav({
               <Icon size={18} />
               {l}
             </Link>
+          ))}
+        </nav>
+        <nav
+          aria-label="কন্ট্রোল প্যানেল মেনু"
+          className="mt-3 grid gap-2 border-t border-slate-200 pt-3"
+        >
+          {menuGroups.map((group) => (
+            <details
+              key={group.title}
+              className="group rounded-xl border border-slate-200 bg-slate-50"
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+                <span>
+                  {group.title}
+                  {group.title === "প্যাকেজ ও পেমেন্ট" && pendingPayments > 0 && (
+                    <span className="ml-2 rounded-full bg-amber-500 px-2 py-0.5 text-xs text-white">
+                      {pendingPayments}
+                    </span>
+                  )}
+                </span>
+                <ChevronDown
+                  size={16}
+                  className="shrink-0 transition-transform group-open:rotate-180"
+                />
+              </summary>
+              <div className="grid gap-1 border-t border-slate-200 p-2">
+                {group.links.map(([label, href]) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    aria-current={path === href ? "page" : undefined}
+                    className={`rounded-lg px-3 py-2 text-sm ${path === href ? "bg-blue-100 font-semibold text-blue-800" : "text-slate-700 hover:bg-white"}`}
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            </details>
           ))}
         </nav>
         <div className="mt-3 hidden border-t border-slate-200 pt-3 lg:block">

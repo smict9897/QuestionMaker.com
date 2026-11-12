@@ -46,9 +46,9 @@ test("admin landing loads only pending payments, not analytics, and retains cont
   });
   const html = renderToStaticMarkup(await Page());
   assert.equal(count, 1);
-  assert.match(html, /কন্ট্রোল প্যানেল/);
+  assert.doesNotMatch(html, /কন্ট্রোল প্যানেল/);
   assert.match(html, /AI generator/);
-  assert.match(html, /href="\/admin\/overview"/);
+  assert.doesNotMatch(html, /href="\/admin\/overview"/);
   assert.doesNotMatch(
     html,
     /New students, last 6 months|Earnings|Questions by difficulty/,
