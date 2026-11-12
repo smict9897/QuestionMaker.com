@@ -7,9 +7,11 @@ import ReadyClassSubject, { type ReadyCatalog } from "./class-subject";
 export default function ReadyUpload({
   papers,
   catalog,
+  storageReady,
 }: {
   papers: ReadyPaper[];
   catalog: ReadyCatalog;
+  storageReady: boolean;
 }) {
   const [formKey, setFormKey] = useState(0);
   const [busy, setBusy] = useState(false),
@@ -17,14 +19,43 @@ export default function ReadyUpload({
   const router = useRouter();
   return (
     <>
+      {!storageReady && (
+        <section className="rp-panel" role="alert">
+          <h2>PDF storage সংযুক্ত করা বাকি</h2>
+          <p>
+            Vercel-এ এই QuestionMaker প্রজেক্টের জন্য আলাদা public Blob store তৈরি
+            ও সংযুক্ত করুন, তারপর redeploy করুন। সংযোগ না হওয়া পর্যন্ত PDF upload হবে
+            না।
+          </p>
+          <p>
+            Storage → Create Database / Store → Blob → Connect Project। Token
+            এখানে পাঠাবেন না।
+          </p>
+        </section>
+      )}
       <form
         key={formKey}
         className="rp-panel rp-form"
         onSubmit={async (e) => {
           e.preventDefault();
           if (busy) return;
+          if (!storageReady) {
+            setMessage("আগে Vercel Blob storage সংযুক্ত করে redeploy করুন।");
+            return;
+          }
           const form = e.currentTarget,
             fd = new FormData(form);
+          const file = fd.get("file");
+          if (
+            !(file instanceof File) ||
+            file.size < 5 ||
+            file.size > 3_000_000
+          ) {
+            setMessage(
+              "প্রতিটি PDF part সর্বোচ্চ ৩ MB হতে পারবে। বড় ফাইল ছোট অংশে ভাগ করে দিন।",
+            );
+            return;
+          }
           setBusy(true);
           setMessage("Upload হচ্ছে…");
           try {
@@ -45,6 +76,10 @@ export default function ReadyUpload({
         }}
       >
         <h2>নতুন প্রশ্নপত্র PDF</h2>
+        <p className="rp-muted">
+          একই পরীক্ষা ও বিষয়ে একাধিক PDF upload করতে পারবেন। শিরোনামে Part 1,
+          Part 2 লিখুন। প্রতিটি upload আলাদা থাকবে; আগের PDF replace হবে না।
+        </p>
         <div className="rp-fields">
           <label>
             বিভাগ
@@ -55,7 +90,13 @@ export default function ReadyUpload({
           </label>
           <label>
             শিরোনাম
-            <input name="title" required minLength={3} maxLength={160} />
+            <input
+              name="title"
+              placeholder="যেমন: ICT মডেল টেস্ট — Part 1"
+              required
+              minLength={3}
+              maxLength={160}
+            />
           </label>
           <ReadyClassSubject catalog={catalog} required />
           <label>
@@ -79,7 +120,9 @@ export default function ReadyUpload({
           <input type="checkbox" name="published" />
           Library-তে প্রকাশ করুন (আগে preview যাচাই করা ভালো)
         </label>
-        <button disabled={busy}>{busy ? "সংরক্ষণ হচ্ছে…" : "PDF Upload"}</button>
+        <button disabled={busy || !storageReady}>
+          {busy ? "সংরক্ষণ হচ্ছে…" : "PDF Upload"}
+        </button>
         <p role="status">{message}</p>
       </form>
       <section className="rp-panel">
