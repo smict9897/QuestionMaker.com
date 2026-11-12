@@ -359,13 +359,17 @@ export default function ReadyStudio({
                 <button
                   type="button"
                   className="rp-page-open"
-                  aria-label={`Page ${i + 1} বড় করে দেখুন`}
+                  aria-label={`Page ${i + 1} বড় করে দেখতে এখানে ক্লিক করুন`}
                   onClick={() =>
                     setViewer({ src, page: i + 1, selectable: true })
                   }
                 >
                   <img src={src} alt={`মূল PDF page ${i + 1}`} loading="lazy" />
-                  <span>বড় করে দেখুন ⤢</span>
+                  <span className="rp-page-open-rail">
+                    <span className="rp-page-open-caption">
+                      বড় করে দেখতে এখানে ক্লিক করুন
+                    </span>
+                  </span>
                 </button>
                 <label className="rp-page-choice">
                   <input

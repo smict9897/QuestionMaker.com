@@ -497,19 +497,44 @@
   border-radius: 8px;
 }
 /* Screen-only reading controls; A4 geometry remains unchanged in print. */
-.rp-page-open {
-  display: block;
+.rp-root .rp-page-open {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: stretch;
+  gap: 0;
   width: 100%;
+  min-width: 0;
   border: 0;
+  border-radius: 0;
   padding: 0;
   background: white;
-  color: #145b53;
   cursor: zoom-in;
   text-align: center;
 }
-.rp-page-open span {
+.rp-page-open > img {
+  min-width: 0;
+  width: 100%;
+}
+.rp-page-open-rail {
   display: block;
-  padding: 9px;
+  position: relative;
+  background: #145b53;
+  color: white;
+  overflow: hidden;
+}
+.rp-page-open-caption {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: block;
+  width: max-content;
+  padding: 0;
+  white-space: nowrap;
+  writing-mode: horizontal-tb;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 .rp-page-choice {
   padding: 14px;
