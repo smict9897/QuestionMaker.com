@@ -19,3 +19,16 @@ test("enlarged page dialog traps focus natively, supports Escape and restores bo
   assert.match(s, /ResizeObserver/);
   assert.match(s, /createPortal/);
 });
+
+test("page enlarge action has an unbroken rotated Bengali caption in a fixed side rail", () => {
+  const studio = fs.readFileSync("components/ready-papers/studio.tsx", "utf8");
+  const css = fs.readFileSync("components/ready-papers/ready.css", "utf8");
+  assert.match(studio, /বড় করে দেখতে এখানে ক্লিক করুন/);
+  assert.match(studio, /className="rp-page-open-caption"/);
+  assert.match(css, /\.rp-root \.rp-page-open\s*\{[^}]*display: grid;/);
+  assert.match(css, /grid-template-columns: minmax\(0, 1fr\) 44px/);
+  assert.match(
+    css,
+    /\.rp-page-open-caption\s*\{[^}]*white-space: nowrap;[^}]*rotate\(-90deg\)/,
+  );
+});
