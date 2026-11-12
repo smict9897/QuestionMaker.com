@@ -118,3 +118,24 @@ test("bottom side handle increases only height with top fixed", () => {
   const side = p.placementAfterResize(v, "e", 40, 0, 300, 500, 300, 300);
   assert.equal(p.placementSize(side, 300, 500, 300, 300).h, before.h);
 });
+
+test("question image and resize border share one box, overriding global article image rules", () => {
+  const s = fs.readFileSync(
+    "components/ready-papers/placed-question.tsx",
+    "utf8",
+  );
+  const css = fs.readFileSync("components/ready-papers/ready.css", "utf8");
+  assert.match(s, /className="rp-question-box"/);
+  assert.match(s, /className="rp-question-selection"/);
+  const rule = css.match(
+    /\.rp-placed-question \.rp-question-box > img\s*\{([^}]+)\}/,
+  )[1];
+  for (const text of [
+    "height: 100% !important",
+    "width: 100% !important",
+    "margin: 0 !important",
+    "border-radius: 0 !important",
+  ])
+    assert.ok(rule.includes(text));
+  assert.match(css, /\.rp-question-selection\s*\{[^}]*inset: 0/);
+});
