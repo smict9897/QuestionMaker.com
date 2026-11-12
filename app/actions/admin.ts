@@ -120,7 +120,6 @@ export async function deleteTest(id: string): Promise<void> {
 export async function deleteInquiry(id: string): Promise<void> {
   await staff();
   await db.inquiry.delete({ where: { id } });
-  revalidatePath("/admin/inquiries");
 }
 
 export async function renameCategory(id: string, fd: FormData): Promise<void> {
