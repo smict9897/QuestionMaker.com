@@ -808,3 +808,29 @@
 .rp-adjustable-header.rp-header-line-off .header-exam-row {
   border-bottom: 0;
 }
+/* Purpose-specific actions stay distinct from the surrounding teal controls. */
+.rp-root button.rp-action-setup {
+  background: #4338ca;
+  color: #fff;
+  border: 1px solid #3730a3;
+}
+.rp-root button.rp-action-setup:hover {
+  background: #3730a3;
+}
+.rp-root button.rp-action-print {
+  background: #b45309;
+  color: #fff;
+  border: 1px solid #92400e;
+}
+.rp-root button.rp-action-print:hover {
+  background: #92400e;
+}
+.rp-live-review {
+  min-width: 0;
+  padding: 12px 0 20px;
+  border-bottom: 1px solid #cbd5e1;
+  margin-bottom: 16px;
+}
+.rp-live-review h3 {
+  margin: 0 0 8px;
+}

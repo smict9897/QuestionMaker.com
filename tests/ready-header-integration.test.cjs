@@ -13,7 +13,7 @@ test("Ready Papers reuses existing header manager and renderer, first selected p
   );
   assert.match(
     s,
-    /i === 0 &&\s*headerStyle === "custom" &&\s*headerSettings.header.enabled/,
+    /first &&\s*headerStyle === "custom" &&\s*headerSettings.header.enabled/,
   );
   assert.match(s, /<HeaderPreview header=\{currentHeader\(headerSettings\)\}/);
   assert.match(s, /<option value="none">/);
@@ -39,4 +39,15 @@ test("ready header line and gap are local-draft persisted and bounded on restore
   assert.match(s, /Math.min\(15, Math.max\(0, data.headerGap\)\)/);
   assert.match(s, /rp-header-line-off/);
   assert.match(s, /marginBottom: `\$\{headerGap\}mm`/);
+});
+
+test("setup live A4 review shares print header and current edits, cancels stale renders", () => {
+  const s = fs.readFileSync("components/ready-papers/studio.tsx", "utf8");
+  assert.match(s, /renderPageHeader\(active === selected\[0\]\)/);
+  assert.match(s, /renderPageHeader\(i === 0\)/);
+  assert.match(s, /renderEdited\(pages\[active - 1\], edit\)/);
+  assert.match(s, /liveReviewPage === active/);
+  assert.match(s, /clearTimeout\(timer\)/);
+  assert.match(s, /rp-action-setup/);
+  assert.match(s, /rp-action-print/);
 });
