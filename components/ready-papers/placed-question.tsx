@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import {
+  placementSize,
   placementAfterResize,
   type ResizeHandle,
   placementAfterDrag,
@@ -171,9 +172,26 @@ export default function PlacedQuestion({
         alt={`সম্পাদিত page ${page}`}
         draggable={false}
         style={{
-          objectPosition: `${value.printX * 100}% ${value.printY * 100}%`,
-          transform: `scale(${value.printScale})`,
-          transformOrigin: `${value.printX * 100}% ${value.printY * 100}%`,
+          ...(() => {
+            const { w, h } = placementSize(
+              value,
+              size.width,
+              size.height,
+              size.imageWidth,
+              size.imageHeight,
+            );
+            return {
+              width: size.width ? `${(w / size.width) * 100}%` : "100%",
+              height: size.height ? `${(h / size.height) * 100}%` : "100%",
+              left: size.width
+                ? `${(((size.width - w) * value.printX) / size.width) * 100}%`
+                : 0,
+              top: size.height
+                ? `${(((size.height - h) * value.printY) / size.height) * 100}%`
+                : 0,
+              objectFit: "fill" as const,
+            };
+          })(),
           pointerEvents: "none",
         }}
       />
@@ -181,13 +199,13 @@ export default function PlacedQuestion({
         size.width > 0 &&
         size.imageWidth > 0 &&
         (() => {
-          const fit =
-            Math.min(
-              size.width / size.imageWidth,
-              size.height / size.imageHeight,
-            ) * value.printScale;
-          const w = size.imageWidth * fit,
-            h = size.imageHeight * fit;
+          const { w, h } = placementSize(
+            value,
+            size.width,
+            size.height,
+            size.imageWidth,
+            size.imageHeight,
+          );
           return (
             <div
               data-noprint

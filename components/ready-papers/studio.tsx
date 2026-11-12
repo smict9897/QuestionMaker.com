@@ -58,6 +58,8 @@ export default function ReadyStudio({
   adminPreset: boolean;
   answerEntries?: ReadyAnswer[];
 }) {
+  const [headerLine, setHeaderLine] = useState(true);
+  const [headerGap, setHeaderGap] = useState(2);
   const [placementMode, setPlacementMode] = useState(false);
   const [headerStyle, setHeaderStyle] = useState<"simple" | "custom" | "none">(
     "simple",
@@ -246,6 +248,8 @@ export default function ReadyStudio({
           header,
           headerStyle,
           headerSettings,
+          headerLine,
+          headerGap,
         });
         setMessage(
           "এই browser-এ draft save হয়েছে। অন্য device-এ পাওয়া যাবে না।",
@@ -294,6 +298,14 @@ export default function ReadyStudio({
           marks: "",
           ...data.header,
         });
+      setHeaderLine(
+        typeof data.headerLine === "boolean" ? data.headerLine : true,
+      );
+      setHeaderGap(
+        typeof data.headerGap === "number" && Number.isFinite(data.headerGap)
+          ? Math.min(15, Math.max(0, data.headerGap))
+          : 2,
+      );
       setHeaderStyle(
         ["simple", "custom", "none"].includes(data.headerStyle)
           ? data.headerStyle
@@ -505,6 +517,30 @@ export default function ReadyStudio({
                   <option value="none">হেডার ছাড়া</option>
                 </select>
               </label>
+              {headerStyle !== "none" && (
+                <>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={headerLine}
+                      onChange={(e) => setHeaderLine(e.target.checked)}
+                    />
+                    হেডারের নিচের লাইন দেখান
+                  </label>
+                  <label>
+                    হেডার–প্রশ্নের gap · {headerGap} mm
+                    <input
+                      aria-label="হেডার প্রশ্নের gap"
+                      type="range"
+                      min="0"
+                      max="15"
+                      step=".5"
+                      value={headerGap}
+                      onChange={(e) => setHeaderGap(+e.target.value)}
+                    />
+                  </label>
+                </>
+              )}
               {headerStyle === "custom" && (
                 <>
                   <HeaderManager
@@ -963,7 +999,10 @@ export default function ReadyStudio({
                     {i === 0 &&
                       headerStyle === "custom" &&
                       headerSettings.header.enabled && (
-                        <header className="rp-custom-print-header">
+                        <header
+                          className={`rp-custom-print-header rp-adjustable-header ${headerLine ? "" : "rp-header-line-off"}`}
+                          style={{ marginBottom: `${headerGap}mm` }}
+                        >
                           <HeaderPreview
                             header={currentHeader(headerSettings)}
                           />
@@ -972,7 +1011,10 @@ export default function ReadyStudio({
                     {i === 0 &&
                       headerStyle === "simple" &&
                       Object.values(header).some(Boolean) && (
-                        <header className="rp-print-header">
+                        <header
+                          className={`rp-print-header rp-adjustable-header ${headerLine ? "" : "rp-header-line-off"}`}
+                          style={{ marginBottom: `${headerGap}mm` }}
+                        >
                           <h2>{header.school}</h2>
                           <h3>{header.exam}</h3>
                           <p>{header.subject}</p>

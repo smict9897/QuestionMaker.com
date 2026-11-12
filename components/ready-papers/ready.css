@@ -785,3 +785,18 @@
 .rp-root .rp-question-selection .rp-resize-w {
   transform: translate(0, -50%);
 }
+.rp-adjustable-header {
+  padding-bottom: 0;
+}
+.rp-adjustable-header .custom-paper-header {
+  padding-bottom: 0;
+}
+.rp-adjustable-header .custom-paper-header > :last-child {
+  margin-bottom: 0;
+}
+.rp-adjustable-header.rp-header-line-off {
+  border-bottom: 0;
+}
+.rp-adjustable-header.rp-header-line-off .header-exam-row {
+  border-bottom: 0;
+}
