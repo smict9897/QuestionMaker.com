@@ -10,6 +10,7 @@ import {
   readyRecordSchema,
   parseReady,
 } from "@/lib/ready-papers";
+import { validReadyPair } from "@/lib/ready-paper-catalog";
 import { z } from "zod";
 export async function uploadReadyPaper(fd: FormData) {
   await admin();
@@ -18,6 +19,8 @@ export async function uploadReadyPaper(fd: FormData) {
       ...Object.fromEntries(fd),
       published: fd.get("published") === "on",
     });
+    if (!validReadyPair(meta.grade, meta.subject))
+      throw Error("Invalid class/subject");
     if (fd.get("rights") !== "on") throw Error("ব্যবহারের অনুমতি নিশ্চিত করুন।");
     const file = fd.get("file");
     if (
@@ -79,6 +82,11 @@ export async function updateReadyPaper(
       ...readyMetadataSchema.parse(raw),
       presets: presets === undefined ? old.presets : presets,
     });
+    if (
+      (record.grade !== old.grade || record.subject !== old.subject) &&
+      !validReadyPair(record.grade, record.subject)
+    )
+      throw Error("Invalid class/subject");
     await db.setting.update({
       where: { key: READY_PREFIX + id },
       data: { value: JSON.stringify(record) },

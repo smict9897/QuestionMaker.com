@@ -3,13 +3,22 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { uploadReadyPaper, updateReadyPaper } from "@/app/actions/ready-papers";
 import type { ReadyPaper } from "@/lib/ready-papers";
-export default function ReadyUpload({ papers }: { papers: ReadyPaper[] }) {
+import ReadyClassSubject, { type ReadyCatalog } from "./class-subject";
+export default function ReadyUpload({
+  papers,
+  catalog,
+}: {
+  papers: ReadyPaper[];
+  catalog: ReadyCatalog;
+}) {
+  const [formKey, setFormKey] = useState(0);
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
   const router = useRouter();
   return (
     <>
       <form
+        key={formKey}
         className="rp-panel rp-form"
         onSubmit={async (e) => {
           e.preventDefault();
@@ -22,6 +31,7 @@ export default function ReadyUpload({ papers }: { papers: ReadyPaper[] }) {
             const r = await uploadReadyPaper(fd);
             if (r.ok) {
               form.reset();
+              setFormKey((k) => k + 1);
               setMessage(
                 "PDF সংরক্ষিত। Preview খুলে পরিষ্কার ও crop preset যাচাই করুন।",
               );
@@ -47,24 +57,7 @@ export default function ReadyUpload({ papers }: { papers: ReadyPaper[] }) {
             শিরোনাম
             <input name="title" required minLength={3} maxLength={160} />
           </label>
-          <label>
-            শ্রেণি / পরীক্ষা
-            <input
-              name="grade"
-              placeholder="Class 8 / SSC / HSC"
-              required
-              maxLength={60}
-            />
-          </label>
-          <label>
-            বিষয় ও পত্র
-            <input
-              name="subject"
-              placeholder="English 2nd Paper"
-              required
-              maxLength={100}
-            />
-          </label>
+          <ReadyClassSubject catalog={catalog} required />
           <label>
             বছর
             <input name="year" type="number" min={2000} max={2099} required />

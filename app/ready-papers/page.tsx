@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { readyLibrary } from "@/lib/ready-paper-data";
 import "@/components/ready-papers/ready.css";
+import ReadyClassSubject from "@/components/ready-papers/class-subject";
+import { readyPaperCatalog, readyGrade } from "@/lib/ready-paper-catalog";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "রেডি প্রশ্নপত্র" };
 export default async function ReadyLibrary({
@@ -15,7 +17,12 @@ export default async function ReadyLibrary({
   }>;
 }) {
   const p = await searchParams;
-  const papers = await readyLibrary().catch(() => null);
+  const records = await readyLibrary().catch(() => null);
+  const papers =
+    records
+      ?.map((r) => ({ ...r, grade: readyGrade(r.grade) }))
+      .filter((r) => readyPaperCatalog.some((c) => c.grade === r.grade)) ??
+    null;
   const selected = Object.fromEntries(
     ["kind", "grade", "subject", "year", "source"].map((k) => [
       k,
@@ -24,6 +31,7 @@ export default async function ReadyLibrary({
         : undefined,
     ]),
   );
+  if (selected.grade) selected.grade = readyGrade(selected.grade);
   const filtered = papers?.filter((row) =>
     Object.entries(selected).every(
       ([k, v]) => !v || row[k as keyof typeof row] === v,
@@ -49,9 +57,15 @@ export default async function ReadyLibrary({
             <option value="SCHOOL">স্কুলের মডেল টেস্ট</option>
           </select>
         </label>
-        {(["grade", "subject", "year", "source"] as const).map((k, i) => (
+        <ReadyClassSubject
+          key={`${selected.grade}:${selected.subject}`}
+          catalog={readyPaperCatalog}
+          grade={selected.grade}
+          subject={selected.subject}
+        />
+        {(["year", "source"] as const).map((k, i) => (
           <label key={k}>
-            {["শ্রেণি / পরীক্ষা", "বিষয় ও পত্র", "বছর", "বোর্ড / স্কুল"][i]}
+            {["বছর", "বোর্ড / স্কুল"][i]}
             <select name={k} defaultValue={selected[k]}>
               <option value="">সব</option>
               {[

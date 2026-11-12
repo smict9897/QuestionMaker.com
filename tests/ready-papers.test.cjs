@@ -18,12 +18,14 @@ function load(file, mocks = {}) {
   );
   return m.exports;
 }
+const nctb = load("lib/nctb-data.ts");
+const catalog = load("lib/ready-paper-catalog.ts", { "./nctb-data": nctb });
 const model = load("lib/ready-papers.ts");
 const record = {
   title: "English Board Test",
   kind: "BOARD",
   grade: "SSC",
-  subject: "English 2nd Paper",
+  subject: "English Grammar and Composition",
   year: "2025",
   source: "Sylhet Board",
   published: true,
@@ -115,6 +117,7 @@ function actions(allow = true) {
       },
     },
     "@/lib/ready-papers": model,
+    "@/lib/ready-paper-catalog": catalog,
     "@vercel/blob": {
       put: async () => {
         puts++;
@@ -178,4 +181,37 @@ test("invalid preset cannot be saved and actual metadata changes use existing so
     true,
   );
   assert.equal(h.writes, 1);
+});
+
+test("Ready catalog exposes only JSC/SSC/HSC with exact NCTB subject names", () => {
+  assert.deepEqual(
+    catalog.readyPaperCatalog.map((c) => c.grade),
+    ["JSC", "SSC", "HSC"],
+  );
+  for (const [i, source] of ["Class 8", "Class 9", "Class 11-12"].entries()) {
+    assert.deepEqual(catalog.readyPaperCatalog[i].subjects, [
+      ...new Set(
+        nctb.NCTB_CLASSES.find((c) => c.class === source).subjects.map(
+          (s) => s.name,
+        ),
+      ),
+    ]);
+  }
+  assert.equal(catalog.validReadyPair("Class 6", "English 2nd Paper"), false);
+  assert.equal(catalog.validReadyPair("SSC", "not a subject"), false);
+  assert.equal(catalog.readyGrade("Class 8"), "JSC");
+});
+test("admin upload rejects unsupported class and subject before Blob write", async () => {
+  const h = actions();
+  for (const [grade, subject] of [
+    ["Class 6", "English 2nd Paper"],
+    ["SSC", "unknown"],
+  ]) {
+    const f = fd();
+    f.set("grade", grade);
+    f.set("subject", subject);
+    assert.equal((await h.api.uploadReadyPaper(f)).ok, false);
+  }
+  assert.equal(h.puts, 0);
+  assert.equal(h.writes, 0);
 });
