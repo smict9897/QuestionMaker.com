@@ -1,4 +1,5 @@
 "use server";
+import { readyAIConfigured } from "@/lib/ready-ai-config";
 import { createHash, randomUUID } from "crypto";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
@@ -92,7 +93,7 @@ async function quote(tx: Tx, id: string, raw: unknown) {
   const total =
     owned || wallet.admin ? 0 : (units - packageUnits) * READY_UNIT_PAISA;
   const q: ReadyQuote = {
-    aiAvailable: !!process.env.GEMINI_API_KEY?.trim(),
+    aiAvailable: readyAIConfigured(),
     receiptId,
     units,
     total,

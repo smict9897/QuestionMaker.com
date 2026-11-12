@@ -1,3 +1,4 @@
+import { readyAIConfigured } from "@/lib/ready-ai-config";
 import { admin } from "@/lib/guard";
 import { readyLibrary } from "@/lib/ready-paper-data";
 import ReadyUpload from "@/components/ready-papers/admin-upload";
@@ -14,13 +15,14 @@ export default async function ReadyAdmin() {
       <p>
         মূল PDF অপরিবর্তিত থাকে। Preset save করার আগে প্রতিটি page preview দেখুন।
       </p>
-      {!process.env.GEMINI_API_KEY?.trim() && (
+      {!readyAIConfigured() && (
         <section className="rp-panel" role="alert">
-          <h2>স্বয়ংক্রিয় AI উত্তরের vision সংযোগ বাকি</h2>
+          <h2>স্বয়ংক্রিয় AI উত্তরের OCR সংযোগ বাকি</h2>
           <p>
-            এই প্রজেক্টের Vercel Environment Variables-এ GEMINI_API_KEY
-            (Production/Preview) যুক্ত করে redeploy করুন। Key চ্যাটে বা source
-            code-এ দেবেন না। DeepSeek text key স্ক্যান/PDF পড়তে পারে না।
+            এই প্রজেক্টের Vercel Environment Variables-এ READY_OCR_URL ও
+            READY_OCR_TOKEN (Production/Preview) যুক্ত করে redeploy করুন। Key চ্যাটে
+            বা source code-এ দেবেন না। DeepSeek উত্তর তৈরি করবে; আলাদা OCR সার্ভিস
+            PDF-এর লেখা পড়বে। DEEPSEEK_API_KEY-ও প্রয়োজন।
           </p>
         </section>
       )}

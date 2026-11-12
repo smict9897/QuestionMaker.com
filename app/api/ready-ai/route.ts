@@ -1,3 +1,4 @@
+import { readyAIConfigured } from "@/lib/ready-ai-config";
 import { randomUUID } from "crypto";
 import { auth } from "@/auth";
 import { walletTransaction } from "@/lib/wallet";
@@ -12,7 +13,7 @@ import { solveReadyAIPage } from "@/lib/ready-ai-provider";
 import type { ReadyPurchase } from "@/app/actions/ready-commerce";
 import { z } from "zod";
 export const runtime = "nodejs";
-export const maxDuration = 90;
+export const maxDuration = 180;
 export async function POST(request: Request) {
   const origin = request.headers.get("origin");
   if (
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
       let work: { page: number; url: string; lease: string } | undefined;
       if (
         input.run &&
-        process.env.GEMINI_API_KEY &&
+        readyAIConfigured() &&
         !Object.values(job.pages).some((p) => p.status === "running")
       ) {
         const page = purchase.selected.find(
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
           p.status = "running";
           p.attempts++;
           p.lease = lease;
-          p.leaseUntil = Date.now() + 120000;
+          p.leaseUntil = Date.now() + 240000;
           work = { page, url: paper.url, lease };
         }
       }
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
     if (!claim.work)
       return Response.json({
         job: claim.job,
-        configured: !!process.env.GEMINI_API_KEY,
+        configured: readyAIConfigured(),
       });
     const work = claim.work;
     let result: AIPageResult | undefined;
