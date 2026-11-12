@@ -14,6 +14,7 @@ export default function AIAnswers({
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
     [cycle, setCycle] = useState(0);
+  const blankRetry = useRef(false);
   const callback = useRef(onJob);
   callback.current = onJob;
   useEffect(() => {
@@ -48,7 +49,10 @@ export default function AIAnswers({
     }
     (async () => {
       try {
-        let data = await request(false, cycle > 0);
+        let data = await request(false, cycle > 0, {
+          retryBlanks: blankRetry.current,
+        });
+        blankRetry.current = false;
         while (live) {
           if (!data.configured) {
             setMessage(
@@ -63,7 +67,7 @@ export default function AIAnswers({
             setMessage(
               pages.some((p) => p.status === "error")
                 ? "কিছু পৃষ্ঠার উত্তর তৈরি হয়নি। ফাঁকা আছে; Retry করতে পারেন।"
-                : "AI উত্তর অ্যাকাউন্টে সংরক্ষিত। ফাঁকা ঘরগুলো সমাধান করা যায়নি।",
+                : "AI-এর চেষ্টার ফল অ্যাকাউন্টে সংরক্ষিত। ফাঁকা উত্তর তৈরি হয়নি—কারণ দেখুন বা ফাঁকা উত্তর আবার চেষ্টা করুন।",
             );
             break;
           }
@@ -124,6 +128,8 @@ export default function AIAnswers({
   }, [receiptId, cycle]);
   const pages = Object.entries(job?.pages ?? {}),
     done = pages.filter(([, p]) => p.status === "done").length;
+  const questions = pages.flatMap(([, p]) => p.result?.questions ?? []),
+    answered = questions.filter((q) => !!q.answer).length;
   return (
     <section className="rp-panel rp-ai-panel" data-noprint>
       <span className="rp-tag">AI উত্তরপত্র</span>
@@ -143,6 +149,10 @@ export default function AIAnswers({
         {pages.length > 0 &&
           `${pages.length}টির মধ্যে ${done} পৃষ্ঠার চেষ্টা সম্পন্ন।`}
       </p>
+      <p>
+        {answered}টি উত্তর পাওয়া গেছে · {questions.length - answered}টি চিহ্নিত
+        প্রশ্ন ফাঁকা। OCR কিছু প্রশ্ন বাদ দিয়ে থাকতে পারে।
+      </p>
       <div className="rp-toolbar">
         <button disabled={!job} onClick={onPrint}>
           AI উত্তর দেখুন / Print
@@ -150,10 +160,29 @@ export default function AIAnswers({
         <button disabled={busy} onClick={() => setCycle((c) => c + 1)}>
           {busy ? "উত্তর প্রস্তুত হচ্ছে…" : "Retry / সংরক্ষিত অবস্থা দেখুন"}
         </button>
+        <button
+          disabled={
+            busy ||
+            !pages.some(
+              ([, p]) =>
+                p.status === "done" &&
+                (!p.result?.questions.length ||
+                  p.result.questions.some((q) => !q.answer)) &&
+                (p.blankRetries ?? 0) < 2,
+            )
+          }
+          onClick={() => {
+            blankRetry.current = true;
+            setCycle((c) => c + 1);
+          }}
+        >
+          ফাঁকা উত্তর আবার চেষ্টা করুন
+        </button>
       </div>
       <p className="rp-muted">
-        Retry-তে প্রশ্নপত্রের টাকা কাটবে না। প্রস্তুত উত্তর পুনরায় তৈরি হয় না। ব্যর্থ
-        পৃষ্ঠায় সর্বোচ্চ ৩টি চেষ্টা; ট্যাব বন্ধ করলে ফিরে এসে অবস্থা দেখা যাবে।
+        Retry-তে প্রশ্নপত্রের টাকা কাটবে না। পাওয়া উত্তর রাখা হবে। ফাঁকা উত্তরের জন্য
+        আলাদা বোতামে সর্বোচ্চ ২ বার নতুন চেষ্টা করা যাবে। ব্যর্থ পৃষ্ঠায় সর্বোচ্চ ৩টি
+        চেষ্টা; ট্যাব বন্ধ করলে ফিরে এসে অবস্থা দেখা যাবে।
       </p>
       {job && (
         <details>
@@ -178,6 +207,12 @@ export default function AIAnswers({
                           {q.answer ||
                             "________________ (সমাধান অনিশ্চিত / ফাঁকা)"}
                         </p>
+                        {!q.answer && (
+                          <small>
+                            {q.blankReason ||
+                              "আগের ফলের কারণ পাওয়া যায়নি—ফাঁকা উত্তর আবার চেষ্টা করুন।"}
+                          </small>
+                        )}
                       </div>
                     ))
                   ) : (
@@ -225,7 +260,9 @@ export function AIAnswerSheets({
       continuation: boolean;
     }[] = [];
     for (const q of p?.result?.questions ?? []) {
-      const answer = q.answer || "________________";
+      const answer =
+        q.answer ||
+        `________________\n${q.blankReason || "সমাধান পাওয়া যায়নি।"}`;
       for (let start = 0; start < answer.length; start += 600)
         blocks.push({
           number: q.number,

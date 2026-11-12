@@ -72,6 +72,7 @@ export const readyMetadataSchema = z.object({
 });
 export const readyRecordSchema = readyMetadataSchema.extend({
   id: z.string().uuid(),
+  deletedAt: z.string().datetime().optional(),
   url: z
     .string()
     .url()

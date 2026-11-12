@@ -321,3 +321,63 @@ test("watermark rendering is before grayscale and original comparison explicitly
   );
   assert.match(studio, /update\(\{ blueWatermark:/);
 });
+test("admin Delete archives one record, hides from both libraries, retains owned source", async () => {
+  const store = new Map([
+    [model.READY_PREFIX + record.id, JSON.stringify(record)],
+  ]);
+  let allowed = true,
+    updates = 0;
+  const setting = {
+    findUnique: async ({ where }) =>
+      store.has(where.key) ? { value: store.get(where.key) } : null,
+    update: async ({ where, data }) => {
+      updates++;
+      store.set(where.key, data.value);
+    },
+    findMany: async () => [...store.values()].map((value) => ({ value })),
+  };
+  const actions = load("app/actions/ready-papers.ts", {
+    "@/lib/db": { db: { setting } },
+    "@/lib/guard": {
+      admin: async () => {
+        if (!allowed) throw Error("Forbidden");
+      },
+    },
+    "@/lib/ready-papers": model,
+    "@/lib/ready-paper-catalog": catalog,
+    "next/cache": { revalidatePath: () => {} },
+    "@vercel/blob": {
+      put: () => {
+        throw Error("not allowed");
+      },
+      del: () => {
+        throw Error("must retain PDF");
+      },
+    },
+  });
+  allowed = false;
+  await assert.rejects(() => actions.deleteReadyPaper(record.id));
+  assert.equal(updates, 0);
+  allowed = true;
+  assert.equal((await actions.deleteReadyPaper("bad")).ok, false);
+  assert.equal(updates, 0);
+  assert.equal((await actions.deleteReadyPaper(record.id)).ok, true);
+  let archived = JSON.parse(store.get(model.READY_PREFIX + record.id));
+  assert.equal(archived.url, record.url);
+  assert.equal(archived.published, false);
+  assert.ok(archived.deletedAt);
+  assert.ok(model.parseReady(JSON.stringify(archived)));
+  assert.equal((await actions.deleteReadyPaper(record.id)).ok, true);
+  const library = load("lib/ready-paper-data.ts", {
+    "@/lib/db": { db: { setting } },
+    "./ready-papers": model,
+  });
+  assert.equal((await library.readyLibrary(true)).length, 0);
+  assert.equal((await library.readyLibrary()).length, 0);
+  const ui = fs.readFileSync(
+    "components/ready-papers/admin-upload.tsx",
+    "utf8",
+  );
+  assert.match(ui, /window.confirm/);
+  assert.match(ui, /deleteReadyPaper\(p.id\)/);
+});

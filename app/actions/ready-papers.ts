@@ -108,7 +108,7 @@ export async function updateReadyPaper(
       where: { key: READY_PREFIX + id },
     });
     const old = row && parseReady(row.value);
-    if (!old) throw Error();
+    if (!old || old.deletedAt) throw Error();
     const record = readyRecordSchema.parse({
       ...old,
       ...readyMetadataSchema.parse(raw),
@@ -129,5 +129,34 @@ export async function updateReadyPaper(
     return { ok: true as const };
   } catch {
     return { ok: false as const, error: "Save হয়নি। তথ্য আবার যাচাই করুন।" };
+  }
+}
+
+/** Archive one part only; preserve PDFs and purchases for existing owners. */
+export async function deleteReadyPaper(id: string) {
+  await admin();
+  try {
+    z.string().uuid().parse(id);
+    const row = await db.setting.findUnique({
+      where: { key: READY_PREFIX + id },
+    });
+    const old = row && parseReady(row.value);
+    if (!old) return { ok: false as const, error: "প্রশ্নপত্র পাওয়া যায়নি।" };
+    await db.setting.update({
+      where: { key: READY_PREFIX + id },
+      data: {
+        value: JSON.stringify({
+          ...old,
+          published: false,
+          deletedAt: old.deletedAt || new Date().toISOString(),
+        }),
+      },
+    });
+    revalidatePath("/ready-papers");
+    revalidatePath("/admin/ready-papers");
+    revalidatePath(`/ready-papers/${id}`);
+    return { ok: true as const };
+  } catch {
+    return { ok: false as const, error: "Delete হয়নি। আবার চেষ্টা করুন।" };
   }
 }
