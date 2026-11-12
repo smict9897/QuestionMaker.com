@@ -163,7 +163,6 @@ export async function saveBookToStore(data: Omit<BookItem, "id"> & { id?: string
     }
 
     revalidatePath("/books");
-    revalidatePath("/admin/books");
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || "সংরক্ষণ ব্যর্থ হয়েছে" };
@@ -177,7 +176,6 @@ export async function deleteBookAction(id: string) {
     await ensureBookTable();
     await db.$executeRawUnsafe(`DELETE FROM "BookStore" WHERE "id" = $1;`, id);
     revalidatePath("/books");
-    revalidatePath("/admin/books");
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || "ডিলিট ব্যর্থ হয়েছে" };

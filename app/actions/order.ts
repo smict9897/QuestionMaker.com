@@ -2,7 +2,6 @@
 
 import { db } from "@/lib/db";
 import { staff } from "@/lib/guard";
-import { revalidatePath } from "next/cache";
 
 // ডাটাবেজে টেবিল না থাকলে অটোমেটিক তৈরি করার ফাংশন
 async function ensureOrderTable() {
@@ -80,7 +79,6 @@ export async function createBookOrder(input: CreateOrderInput) {
       input.trxId.toUpperCase().trim()
     );
 
-    revalidatePath("/admin/orders");
     return { success: true, order: res[0] };
   } catch (err: any) {
     console.error("Order creation failed:", err);
@@ -111,7 +109,6 @@ export async function updateOrderStatus(orderId: string, status: string) {
       status,
       orderId
     );
-    revalidatePath("/admin/orders");
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
