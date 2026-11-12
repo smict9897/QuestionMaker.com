@@ -80,3 +80,29 @@ test("zoom preserves placement, clamps safe-fit limits and ignores invalid facto
   for (const factor of [NaN, Infinity, 0, -1])
     assert.deepEqual(p.placementAfterZoom(value, factor), value);
 });
+
+test("resize handles preserve aspect scale, opposite edge and safe bounds", () => {
+  const v = { printScale: 0.6, printX: 0.5, printY: 0.5 };
+  const grown = p.placementAfterResize(v, "se", 30, 30, 300, 400, 300, 300);
+  assert.ok(grown.printScale > v.printScale);
+  const oldLeft = (300 - 300 * v.printScale) * v.printX;
+  assert.ok(
+    Math.abs((300 - 300 * grown.printScale) * grown.printX - oldLeft) < 1e-8,
+  );
+  for (const h of ["n", "ne", "e", "se", "s", "sw", "w", "nw"]) {
+    const next = p.placementAfterResize(
+      v,
+      h,
+      10000,
+      -10000,
+      300,
+      400,
+      300,
+      300,
+    );
+    assert.ok(next.printScale >= 0.4 && next.printScale <= 1);
+    assert.ok(next.printX >= 0 && next.printX <= 1);
+    assert.ok(next.printY >= 0 && next.printY <= 1);
+  }
+  assert.deepEqual(p.placementAfterResize(v, "se", 1, 1, 0, 0, 0, 0), v);
+});
