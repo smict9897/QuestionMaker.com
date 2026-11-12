@@ -11,6 +11,8 @@ import {
   readySelectionIdentity,
   type ReadySnapshot,
 } from "@/lib/ready-commerce";
+import RasterTools from "./raster-tools";
+import { rasterEditKey, type RasterPoint } from "@/lib/ready-raster";
 import PlacedQuestion from "./placed-question";
 import { defaultPlacement, type Placement } from "@/lib/ready-placement";
 import HeaderManager from "@/components/paper-builder/header-manager";
@@ -118,12 +120,11 @@ export default function ReadyStudio({
       time: "",
       marks: "",
     });
-  const canvas = useRef<HTMLCanvasElement>(null),
-    undo = useRef<Record<number, PageEdit[]>>({}),
+  const undo = useRef<Record<number, PageEdit[]>>({}),
     redo = useRef<Record<number, PageEdit[]>>({}),
-    drag = useRef<{ x: number; y: number } | null>(null),
     key = `${userId}:${paper.id}`,
     edit = edits[String(active)] || freshEdit();
+  const rasterKey = rasterEditKey(edit);
   function snapshot(): ReadySnapshot {
     return {
       edits,
@@ -183,35 +184,17 @@ export default function ReadyStudio({
   useEffect(() => {
     if (step !== "edit" || !pages[active - 1]) return;
     let live = true;
-    (async () => {
-      try {
-        await document.fonts.ready;
-        const result = await renderEdited(
-          pages[active - 1],
-          original ? { ...freshEdit(), rotation: edit.rotation } : edit,
-        );
-        if (live && canvas.current) {
-          canvas.current.width = result.width;
-          canvas.current.height = result.height;
-          canvas.current.getContext("2d")!.drawImage(result, 0, 0);
-        }
-        result.width = result.height = 0;
-      } catch {
-        if (live) setMessage("Preview তৈরি হয়নি।");
-      }
-    })();
-    return () => {
-      live = false;
-    };
-  }, [pages, active, edits, step, original]);
-  useEffect(() => {
-    if (step !== "edit" || !pages[active - 1]) return;
-    let live = true;
     setReviewPending(true);
     const timer = setTimeout(async () => {
       try {
         await document.fonts.ready;
-        const result = await renderEdited(pages[active - 1], edit);
+        const rasterEdit = JSON.parse(rasterKey) as PageEdit;
+        const result = await renderEdited(
+          pages[active - 1],
+          original
+            ? { ...freshEdit(), rotation: rasterEdit.rotation }
+            : rasterEdit,
+        );
         if (live) {
           setLiveReview(result.toDataURL("image/png"));
           setLiveReviewPage(active);
@@ -227,7 +210,7 @@ export default function ReadyStudio({
       live = false;
       clearTimeout(timer);
     };
-  }, [pages, active, edits, step]);
+  }, [pages, active, rasterKey, step, original]);
   function renderPageHeader(first: boolean) {
     return (
       <>
@@ -336,18 +319,29 @@ export default function ReadyStudio({
       setPrintPages([]);
     }
   }
-  function point(e: React.PointerEvent<HTMLCanvasElement>) {
-    const r = e.currentTarget.getBoundingClientRect();
-    return {
-      x:
-        edit.left +
-        Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) *
-          (1 - edit.left - edit.right),
-      y:
-        edit.top +
-        Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)) *
-          (1 - edit.top - edit.bottom),
-    };
+  function commitRaster(start: RasterPoint, end: RasterPoint) {
+    if (original || reviewPending) return;
+    if (tool === "erase") {
+      const box = {
+        x: Math.min(start.x, end.x),
+        y: Math.min(start.y, end.y),
+        w: Math.abs(end.x - start.x),
+        h: Math.abs(end.y - start.y),
+      };
+      if (box.w > 0.003 && box.h > 0.003 && edit.masks.length < 40)
+        update({ masks: [...edit.masks, box] });
+    } else if (tool === "text" && text.trim() && edit.texts.length < 30)
+      update({
+        texts: [
+          ...edit.texts,
+          {
+            x: Math.min(0.95, start.x),
+            y: Math.min(0.98, start.y),
+            text: text.trim(),
+            size,
+          },
+        ],
+      });
   }
   async function preview() {
     if (busy) return;
@@ -953,9 +947,9 @@ export default function ReadyStudio({
               </button>
               <button
                 onClick={() => {
-                  if (canvas.current)
+                  if (liveReview && liveReviewPage === active)
                     setViewer({
-                      src: canvas.current.toDataURL("image/png"),
+                      src: liveReview,
                       page: active,
                       selectable: false,
                     });
@@ -974,80 +968,73 @@ export default function ReadyStudio({
                 {original ? "Edited দেখুন" : "Original দেখুন"}
               </button>
             </div>
+            <div className="rp-toolbar">
+              <button
+                aria-pressed={placementMode}
+                onClick={() => {
+                  setPlacementMode((v) => !v);
+                  setTool("view");
+                  setOriginal(false);
+                }}
+              >
+                প্রশ্নের আকার ও অবস্থান {placementMode ? "বন্ধ" : "ঠিক করুন"}
+              </button>
+              <span className="rp-muted">
+                ঢেকে দিন / লেখা বসান বেছে এই A4 পাতাতেই কাজ করুন।
+              </span>
+            </div>
             <section
               className="rp-live-review"
               aria-label="সেটআপের সরাসরি A4 রিভিউ"
               aria-busy={reviewPending}
             >
-              <h3>সরাসরি A4 রিভিউ</h3>
+              <h3>সরাসরি A4 রিভিউ ও Edit</h3>
               <p className="rp-muted" role="status">
                 {reviewPending
                   ? "রিভিউ আপডেট হচ্ছে…"
                   : "হেডার ও Edit-এর ফল এখানেই দেখুন।"}
               </p>
-              {liveReview && liveReviewPage === active && (
-                <PrintFrame>
-                  <article className="rp-print-sheet">
-                    {renderPageHeader(active === selected[0])}
+              {active !== selected[0] && (
+                <p className="rp-muted">
+                  হেডার শুধু প্রথম নির্বাচিত পৃষ্ঠায় থাকবে।{" "}
+                  <button onClick={() => setActive(selected[0])}>
+                    হেডারসহ প্রথম পৃষ্ঠা দেখুন
+                  </button>
+                </p>
+              )}
+              <PrintFrame>
+                <article className="rp-print-sheet">
+                  {renderPageHeader(active === selected[0])}
+                  {liveReview && liveReviewPage === active ? (
                     <PlacedQuestion
                       src={liveReview}
                       page={active}
                       value={edit}
-                      movable={false}
-                      onChange={() => {}}
-                    />
-                  </article>
-                </PrintFrame>
-              )}
+                      movable={
+                        !original &&
+                        !reviewPending &&
+                        tool === "view" &&
+                        placementMode
+                      }
+                      onChange={(value) => placePage(active, value)}
+                    >
+                      {!original && !reviewPending && tool !== "view" && (
+                        <RasterTools
+                          key={`${active}:${tool}:${liveReview}`}
+                          tool={tool}
+                          edit={edit}
+                          onCommit={commitRaster}
+                        />
+                      )}
+                    </PlacedQuestion>
+                  ) : (
+                    <div className="rp-print-content">
+                      <p role="status">প্রশ্নের ছবি প্রস্তুত হচ্ছে…</p>
+                    </div>
+                  )}
+                </article>
+              </PrintFrame>
             </section>
-            <h3>ছবির ওপর Erase / Text edit</h3>
-            <canvas
-              ref={canvas}
-              aria-label={`Page ${active} সম্পাদনা preview`}
-              style={{
-                touchAction: tool === "view" ? "auto" : "none",
-                cursor: tool === "view" ? "default" : "crosshair",
-              }}
-              onPointerDown={(e) => {
-                if (original || tool === "view") return;
-                e.currentTarget.setPointerCapture(e.pointerId);
-                drag.current = point(e);
-              }}
-              onPointerUp={(e) => {
-                const start = drag.current;
-                drag.current = null;
-                if (!start || original) return;
-                const end = point(e);
-                if (tool === "erase") {
-                  const box = {
-                    x: Math.min(start.x, end.x),
-                    y: Math.min(start.y, end.y),
-                    w: Math.abs(end.x - start.x),
-                    h: Math.abs(end.y - start.y),
-                  };
-                  if (box.w > 0.003 && box.h > 0.003 && edit.masks.length < 40)
-                    update({ masks: [...edit.masks, box] });
-                } else if (
-                  tool === "text" &&
-                  text.trim() &&
-                  edit.texts.length < 30
-                )
-                  update({
-                    texts: [
-                      ...edit.texts,
-                      {
-                        x: Math.min(0.95, start.x),
-                        y: Math.min(0.98, start.y),
-                        text: text.trim(),
-                        size,
-                      },
-                    ],
-                  });
-              }}
-              onPointerCancel={() => {
-                drag.current = null;
-              }}
-            />
             <p className="rp-muted">
               মূল scan-এর resolution-ই print-এর সীমা। ক্ষুদ্র punctuation ও table
               line দেখে clean mode বাছুন। Rotation করলে overlay reset হয়।

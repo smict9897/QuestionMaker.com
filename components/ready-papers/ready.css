@@ -890,3 +890,20 @@
   padding: 16px 0;
   border-bottom: 1px solid #dce4ec;
 }
+.rp-raster-tools {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+.rp-erase-selection {
+  position: absolute;
+  pointer-events: none;
+  background: #fff9;
+  border: 1px dashed #b45309;
+  box-sizing: border-box;
+}
+@media print {
+  .rp-raster-tools {
+    display: none !important;
+  }
+}
