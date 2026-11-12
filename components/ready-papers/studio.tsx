@@ -1,6 +1,16 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import ReadyCheckout from "./checkout";
+import {
+  getReadyPurchase,
+  saveReadyPurchase,
+  type ReadyPurchase,
+} from "@/app/actions/ready-commerce";
+import {
+  readySelectionIdentity,
+  type ReadySnapshot,
+} from "@/lib/ready-commerce";
 import PlacedQuestion from "./placed-question";
 import { defaultPlacement, type Placement } from "@/lib/ready-placement";
 import HeaderManager from "@/components/paper-builder/header-manager";
@@ -52,12 +62,19 @@ export default function ReadyStudio({
   userId,
   adminPreset,
   answerEntries = [],
+  initialPurchase,
 }: {
   paper: ReadyPaper;
   userId: string;
   adminPreset: boolean;
   answerEntries?: ReadyAnswer[];
+  initialPurchase?: ReadyPurchase;
 }) {
+  const [checkout, setCheckout] = useState(false);
+  const [receipt, setReceipt] = useState(initialPurchase?.id ?? "");
+  const [paidSelection, setPaidSelection] = useState(
+    initialPurchase ? readySelectionIdentity(initialPurchase.selected) : "",
+  );
   const [liveReviewPage, setLiveReviewPage] = useState(0);
   const [liveReview, setLiveReview] = useState("");
   const [reviewPending, setReviewPending] = useState(false);
@@ -107,6 +124,39 @@ export default function ReadyStudio({
     drag = useRef<{ x: number; y: number } | null>(null),
     key = `${userId}:${paper.id}`,
     edit = edits[String(active)] || freshEdit();
+  function snapshot(): ReadySnapshot {
+    return {
+      edits,
+      header,
+      headerStyle,
+      headerSettings,
+      headerLine,
+      headerGap,
+    };
+  }
+  const paid =
+    adminPreset ||
+    (!!receipt && paidSelection === readySelectionIdentity(selected));
+  function startSetup() {
+    if (!selected.length) return;
+    if (paid) {
+      setActive(selected[0]);
+      setStep("edit");
+    } else setCheckout(true);
+  }
+  useEffect(() => {
+    if (!initialPurchase) return;
+    const p = initialPurchase;
+    setSelected(p.selected);
+    setActive(p.selected[0]);
+    setEdits(p.snapshot.edits);
+    setHeader(p.snapshot.header);
+    setHeaderStyle(p.snapshot.headerStyle);
+    setHeaderSettings(p.snapshot.headerSettings);
+    setHeaderLine(p.snapshot.headerLine);
+    setHeaderGap(p.snapshot.headerGap);
+    setStep("edit");
+  }, [initialPurchase]);
   useEffect(() => {
     let live = true;
     setBusy(true);
@@ -208,6 +258,35 @@ export default function ReadyStudio({
       </>
     );
   }
+  useEffect(() => {
+    if (!paid || adminPreset || !receipt || step === "select") return;
+    let live = true;
+    const timer = setTimeout(() => {
+      saveReadyPurchase(receipt, snapshot(), selected)
+        .then((r) => {
+          if (live && !r.ok) setMessage("Account auto-save হয়নি: " + r.error);
+        })
+        .catch(() => {
+          if (live) setMessage("Account auto-save হয়নি। Draft save চাপুন।");
+        });
+    }, 1200);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [
+    paid,
+    selected,
+    receipt,
+    step,
+    edits,
+    header,
+    headerStyle,
+    headerSettings,
+    headerLine,
+    headerGap,
+    adminPreset,
+  ]);
   function togglePage(n: number) {
     setSelected((old) => {
       if (old.includes(n)) return old.filter((v) => v !== n);
@@ -272,6 +351,10 @@ export default function ReadyStudio({
   }
   async function preview() {
     if (busy) return;
+    if (!paid) {
+      setCheckout(true);
+      return;
+    }
     setBusy(true);
     setMessage("Print preview প্রস্তুত হচ্ছে…");
     try {
@@ -281,6 +364,10 @@ export default function ReadyStudio({
         const c = await renderEdited(pages[n - 1], edits[n] || freshEdit());
         out.push(c.toDataURL("image/png"));
         c.width = c.height = 0;
+      }
+      if (!adminPreset) {
+        const saved = await saveReadyPurchase(receipt, snapshot(), selected);
+        if (!saved.ok) throw new Error(saved.error);
       }
       setPrintKind("questions");
       setPrintPages(out);
@@ -299,6 +386,13 @@ export default function ReadyStudio({
         const r = await updateReadyPaper(paper.id, paper, edits);
         setMessage(r.ok ? "Admin preset save হয়েছে। মূল PDF বদলায়নি।" : r.error);
       } else {
+        if (paid) {
+          const r = await saveReadyPurchase(receipt, snapshot(), selected);
+          if (!r.ok) {
+            setMessage(r.error);
+            return;
+          }
+        }
         await saveLocal(key, {
           selected,
           edits,
@@ -309,7 +403,9 @@ export default function ReadyStudio({
           headerGap,
         });
         setMessage(
-          "এই browser-এ draft save হয়েছে। অন্য device-এ পাওয়া যাবে না।",
+          paid
+            ? "প্রশ্নপত্র ও উত্তরপত্র অ্যাকাউন্টে save হয়েছে।"
+            : "এই browser-এ draft save হয়েছে। কেনার পর account-এ save হবে।",
         );
       }
     } catch {
@@ -423,14 +519,12 @@ export default function ReadyStudio({
             <button
               className="rp-action-setup"
               disabled={busy}
-              onClick={() => {
-                setActive(selected[0]);
-                setStep("edit");
-              }}
+              onClick={startSetup}
             >
               সেটআপে যান
             </button>
           )}
+          <Link href="/ready-papers/saved">আমার প্রশ্নপত্র ও প্যাকেজ</Link>
           <button disabled={busy} onClick={save}>
             <Save size={16} />
             {adminPreset ? "Admin preset save" : "Draft save"}
@@ -457,6 +551,10 @@ export default function ReadyStudio({
             ])
           }
           onPrint={(kind) => {
+            if (!paid) {
+              setCheckout(true);
+              return;
+            }
             setPrintKind(kind);
             setStep("preview");
           }}
@@ -966,6 +1064,7 @@ export default function ReadyStudio({
             <button
               disabled={
                 busy ||
+                !paid ||
                 !selected.length ||
                 (printKind === "questions" &&
                   printPages.length !== selected.length)
@@ -1106,6 +1205,43 @@ export default function ReadyStudio({
             </section>
           </PrintFrame>
         </>
+      )}
+      {checkout && (
+        <ReadyCheckout
+          paperId={paper.id}
+          selected={selected}
+          snapshot={snapshot()}
+          beforePurchase={async () => {
+            await document.fonts.ready;
+            for (const n of selected) {
+              if (!pages[n - 1]) throw new Error("Page unavailable");
+              const c = await renderEdited(
+                pages[n - 1],
+                edits[n] || freshEdit(),
+              );
+              c.width = c.height = 0;
+            }
+          }}
+          onClose={() => setCheckout(false)}
+          onPaid={async (id) => {
+            const saved = await getReadyPurchase(id);
+            if (saved) {
+              setEdits(saved.snapshot.edits);
+              setHeader(saved.snapshot.header);
+              setHeaderStyle(saved.snapshot.headerStyle);
+              setHeaderSettings(saved.snapshot.headerSettings);
+              setHeaderLine(saved.snapshot.headerLine);
+              setHeaderGap(saved.snapshot.headerGap);
+              setEntries(saved.answers);
+            }
+            setReceipt(id);
+            setPaidSelection(readySelectionIdentity(selected));
+            setCheckout(false);
+            setActive(selected[0]);
+            setStep("edit");
+            setMessage("প্রশ্নপত্র ও সংশ্লিষ্ট উত্তরপত্র অ্যাকাউন্টে সংরক্ষিত।");
+          }}
+        />
       )}
       {viewer && (
         <PageViewer

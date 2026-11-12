@@ -78,6 +78,12 @@ export default async function Dashboard({
       admin={!!w?.admin}
     >
       <main className="tw-main">
+        <Link
+          href="/ready-papers/saved"
+          className="inline-flex rounded-xl bg-indigo-700 px-4 py-3 font-bold text-white mb-4"
+        >
+          আমার Ready প্রশ্নপত্র ও উত্তরপত্র · প্যাকেজ
+        </Link>
         <section className="tw-hero">
           <span className="tw-eyebrow">আপনার প্রশ্ন তৈরির কর্মক্ষেত্র</span>
           <p>{greeting()},</p>

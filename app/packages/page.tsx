@@ -70,7 +70,15 @@ export default async function PackagesPage({
         <p className="text-xs font-semibold uppercase tracking-widest text-amber-300">
           👑 Premium
         </p>
-        <h1 className="mt-1 text-2xl font-bold">সব Premium মডেল টেস্ট আনলক করুন</h1>
+        <Link
+          href="/ready-papers/saved"
+          className="block rounded-xl bg-indigo-50 p-4 text-indigo-800 font-bold mb-4"
+        >
+          Ready Paper: মাসিক ৳৯৯ · ৩০ ইউনিট (প্রতি ইউনিট সর্বোচ্চ ৩ পৃষ্ঠা) →
+        </Link>
+        <h1 className="mt-1 text-2xl font-bold">
+          সব Premium মডেল টেস্ট আনলক করুন
+        </h1>
         <p className="mt-2 text-sm text-slate-300">
           একটা প্যাকেজ নিলেই মেয়াদ পর্যন্ত সব Premium পরীক্ষা দিতে পারবেন।
         </p>
@@ -117,8 +125,8 @@ export default async function PackagesPage({
       {/* যাচাই বাকি */}
       {hasPending && (
         <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-          ⏳ আপনার একটি পেমেন্ট অনুরোধ অ্যাডমিন যাচাই করছে। অনুমোদন হলে Premium
-          নিজে থেকেই চালু হবে।
+          ⏳ আপনার একটি পেমেন্ট অনুরোধ অ্যাডমিন যাচাই করছে। অনুমোদন হলে Premium নিজে
+          থেকেই চালু হবে।
         </div>
       )}
 
@@ -299,7 +307,10 @@ export default async function PackagesPage({
       )}
 
       <div className="text-center">
-        <Link href="/model-test" className="text-sm font-semibold text-indigo-700">
+        <Link
+          href="/model-test"
+          className="text-sm font-semibold text-indigo-700"
+        >
           ← মডেল টেস্টে ফিরে যান
         </Link>
       </div>

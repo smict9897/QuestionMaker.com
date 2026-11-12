@@ -42,6 +42,10 @@ export default async function ReadyLibrary({
       <section className="rp-hero">
         <span>READY PAPER STUDIO</span>
         <h1>রেডি প্রশ্নপত্র</h1>
+        <Link href="/ready-papers/saved">আমার প্রশ্নপত্র ও ৳৯৯ প্যাকেজ →</Link>
+        <p>
+          প্রতি ১–৩ পৃষ্ঠা ৳৫ · মাসিক ৳৯৯-এ ৩০ ইউনিট · সেটআপের আগে মূল্য নিশ্চিত করুন।
+        </p>
         <p>মূল প্রশ্নপত্র দেখুন, page বাছুন, নিজের header দিয়ে প্রিন্ট করুন।</p>
         <div className="rp-tabs">
           <Link href="/ready-papers?kind=BOARD">বোর্ড প্রশ্ন</Link>

@@ -56,6 +56,12 @@ export default async function WalletPage() {
       admin={!!w?.admin}
     >
       <main className="tw-main">
+        <Link
+          href="/ready-papers/saved"
+          className="block rounded-xl bg-indigo-50 p-4 text-indigo-800 font-bold mb-4"
+        >
+          Ready Paper: কেনা প্রশ্নপত্র ও উত্তরপত্র, খরচের রসিদ এবং ৳৯৯ প্যাকেজ →
+        </Link>
         <div className="tw-section-title">
           <h1 style={{ fontSize: "1.8rem", fontWeight: 800 }}>আমার ওয়ালেট</h1>
           <Link href="/dashboard">ড্যাশবোর্ডে ফিরুন →</Link>
