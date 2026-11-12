@@ -279,3 +279,45 @@ test("cache refresh failure after persisted upload does not invite duplicate ret
   assert.equal(h.writes, 1);
   assert.equal(h.deletes, 0);
 });
+
+test("blue watermark control defaults off for legacy presets and rejects invalid levels", () => {
+  const old = model.freshEdit();
+  delete old.blueWatermark;
+  assert.equal(model.pageEditSchema.parse(old).blueWatermark, 0);
+  for (const level of [-1, 1.1, NaN, Infinity])
+    assert.equal(
+      model.pageEditSchema.safeParse({ ...old, blueWatermark: level }).success,
+      false,
+    );
+});
+test("blue suppression preserves dark ink, grayscale, red and alpha; light cyan is reduced", () => {
+  const p = new Uint8ClampedArray([
+    180, 220, 240, 255, 25, 30, 35, 255, 180, 180, 180, 255, 240, 180, 180, 255,
+    255, 255, 255, 255,
+  ]);
+  const old = p.slice();
+  model.reduceBlueWatermark(p, 1);
+  assert.deepEqual([...p.slice(0, 4)], [255, 255, 255, 255]);
+  assert.deepEqual(p.slice(4), old.slice(4));
+  for (const level of [0, NaN, Infinity]) {
+    const q = old.slice();
+    model.reduceBlueWatermark(q, level);
+    assert.deepEqual(q, old);
+  }
+  const mid = old.slice();
+  model.reduceBlueWatermark(mid, 0.5);
+  assert.ok(mid[0] > old[0] && mid[0] < 255);
+});
+test("watermark rendering is before grayscale and original comparison explicitly resets controls", () => {
+  const browser = fs.readFileSync("lib/ready-paper-browser.ts", "utf8");
+  assert.ok(
+    browser.indexOf("reduceBlueWatermark(pixels.data") <
+      browser.indexOf("cleanPixels("),
+  );
+  const studio = fs.readFileSync("components/ready-papers/studio.tsx", "utf8");
+  assert.match(
+    studio,
+    /original \? \{ \.\.\.freshEdit\(\), rotation: edit.rotation \} : edit/,
+  );
+  assert.match(studio, /update\(\{ blueWatermark:/);
+});

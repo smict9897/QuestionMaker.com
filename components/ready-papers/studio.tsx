@@ -425,6 +425,36 @@ export default function ReadyStudio({
                 <option value="bw">Black & White</option>
               </select>
             </label>
+            <fieldset>
+              <legend>হালকা নীল watermark কমান</legend>
+              <label>
+                মাত্রা · {Math.round(edit.blueWatermark * 100)}%
+                <input
+                  aria-label="নীল watermark কমানোর মাত্রা"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step=".1"
+                  value={edit.blueWatermark}
+                  onChange={(e) => update({ blueWatermark: +e.target.value })}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() =>
+                  update({ blueWatermark: edit.blueWatermark ? 0 : 1 })
+                }
+              >
+                {edit.blueWatermark
+                  ? "Watermark filter বন্ধ করুন"
+                  : "নীল watermark কমিয়ে দেখুন"}
+              </button>
+              <p className="rp-muted">
+                শুধু অনুমতিপ্রাপ্ত PDF-এ ব্যবহার করুন। নীল diagram/লেখাও হালকা হতে
+                পারে; Original-এর সঙ্গে মিলিয়ে প্রশ্ন, অপশন ও টেবিল যাচাই করুন।
+                কালো/ধূসর watermark বা হারানো লেখা উদ্ধার করে না।
+              </p>
+            </fieldset>
             <label>
               পরিষ্কারের মাত্রা
               <input

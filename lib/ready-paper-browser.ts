@@ -1,4 +1,8 @@
-import { cleanPixels, type PageEdit } from "./ready-papers";
+import {
+  cleanPixels,
+  reduceBlueWatermark,
+  type PageEdit,
+} from "./ready-papers";
 let pdfLoader: Promise<any> | undefined;
 export async function loadPdfImages(
   url: string,
@@ -76,6 +80,11 @@ export async function renderEdited(
   ctx.rotate(((edit.rotation + edit.deskew) * Math.PI) / 180);
   ctx.drawImage(image, -image.width / 2, -image.height / 2);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (edit.blueWatermark > 0) {
+    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    reduceBlueWatermark(pixels.data, edit.blueWatermark);
+    ctx.putImageData(pixels, 0, 0);
+  }
   if (edit.mode !== "original") {
     const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
     cleanPixels(
