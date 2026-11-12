@@ -80,7 +80,7 @@ export const readyRecordSchema = readyMetadataSchema.extend({
     }, "Trusted PDF storage required"),
   at: z.string().datetime(),
   presets: z
-    .record(z.string().regex(/^([1-9]|1\d|20)$/), pageEditSchema)
+    .record(z.string().regex(/^([1-9]|[1-3]\d|40)$/), pageEditSchema)
     .default({}),
 });
 export type ReadyPaper = z.infer<typeof readyRecordSchema>;

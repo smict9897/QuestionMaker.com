@@ -478,3 +478,21 @@
     display: none !important;
   }
 }
+.rp-answer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  font-size: 12pt;
+}
+.rp-answer-grid > div {
+  border: 1px solid #bbb;
+  padding: 8px;
+  break-inside: avoid;
+}
+.rp-root textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #ccd4df;
+  padding: 10px;
+  border-radius: 8px;
+}

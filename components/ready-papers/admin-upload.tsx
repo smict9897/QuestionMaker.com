@@ -109,7 +109,7 @@ export default function ReadyUpload({
           </label>
         </div>
         <label>
-          PDF · সর্বোচ্চ ৩ MB · সর্বোচ্চ ২০ page
+          PDF · সর্বোচ্চ ৩ MB · সর্বোচ্চ ৪০ page
           <input name="file" type="file" accept="application/pdf" required />
         </label>
         <label className="rp-check">
