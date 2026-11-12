@@ -9,7 +9,7 @@ import {
   type ReadyAIJob,
   type AIPageResult,
 } from "@/lib/ready-ai";
-import { solveReadyAIPage } from "@/lib/ready-ai-provider";
+import { browserOCRSchema, solveReadyAIPage } from "@/lib/ready-ai-provider";
 import type { ReadyPurchase } from "@/app/actions/ready-commerce";
 import { z } from "zod";
 export const runtime = "nodejs";
@@ -54,6 +54,39 @@ export async function POST(request: Request) {
           delete p.error;
         }
       }
+      if (input.ocr || input.ocrFailed) {
+        const p = job.pages[input.page!];
+        if (
+          !purchase.selected.includes(input.page!) ||
+          !p ||
+          p.status !== "running" ||
+          p.lease !== input.lease ||
+          (p.leaseUntil ?? 0) <= Date.now() ||
+          p.submitted
+        )
+          throw Error("Invalid OCR lease");
+        if (input.ocrFailed) {
+          p.status = "error";
+          p.error = "ব্রাউজারে OCR পড়া যায়নি। আবার চেষ্টা করুন।";
+          delete p.lease;
+          delete p.leaseUntil;
+          await tx.setting.update({
+            where: { key: jobKey },
+            data: { value: JSON.stringify(job) },
+          });
+          return { job, work: undefined, submit: false };
+        }
+        p.submitted = true;
+        await tx.setting.update({
+          where: { key: jobKey },
+          data: { value: JSON.stringify(job) },
+        });
+        return {
+          job,
+          work: { page: input.page!, url: "", lease: input.lease! },
+          submit: true,
+        };
+      }
       let work: { page: number; url: string; lease: string } | undefined;
       if (
         input.run &&
@@ -72,9 +105,10 @@ export async function POST(request: Request) {
           const p = job.pages[page],
             lease = randomUUID();
           p.status = "running";
+          delete p.submitted;
           p.attempts++;
           p.lease = lease;
-          p.leaseUntil = Date.now() + 240000;
+          p.leaseUntil = Date.now() + 600000;
           work = { page, url: paper.url, lease };
         }
       }
@@ -83,18 +117,24 @@ export async function POST(request: Request) {
         create: { key: jobKey, value: JSON.stringify(job) },
         update: { value: JSON.stringify(job) },
       });
-      return { job, work };
+      return { job, work, submit: false };
     });
     if (!claim.work)
       return Response.json({
         job: claim.job,
         configured: readyAIConfigured(),
       });
+    if (!claim.submit)
+      return Response.json({
+        job: claim.job,
+        work: claim.work,
+        configured: true,
+      });
     const work = claim.work;
     let result: AIPageResult | undefined;
     let failed = false;
     try {
-      result = await solveReadyAIPage(work.url, work.page);
+      result = await solveReadyAIPage(input.ocr!, work.page);
     } catch {
       failed = true;
     }
@@ -127,8 +167,16 @@ export async function POST(request: Request) {
     );
   }
 }
-const inputSchema = z.object({
-  receiptId: z.string().regex(/^[a-f0-9]{64}$/),
-  run: z.boolean().default(false),
-  retry: z.boolean().default(false),
-});
+const inputSchema = z
+  .object({
+    receiptId: z.string().regex(/^[a-f0-9]{64}$/),
+    run: z.boolean().default(false),
+    retry: z.boolean().default(false),
+    page: z.number().int().min(1).max(100).optional(),
+    lease: z.string().uuid().optional(),
+    ocr: browserOCRSchema.optional(),
+    ocrFailed: z.boolean().optional(),
+  })
+  .refine(
+    (v) => (!v.ocr && !v.ocrFailed) || (v.page !== undefined && !!v.lease),
+  );

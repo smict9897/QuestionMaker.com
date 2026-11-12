@@ -23,12 +23,16 @@ export default function AIAnswers({
     callback.current(null);
     setBusy(true);
     setMessage("কেনা প্রশ্নপত্রের AI উত্তর প্রস্তুত করছি…");
-    async function request(run: boolean, retry = false) {
+    async function request(
+      run: boolean,
+      retry = false,
+      extra: Record<string, unknown> = {},
+    ) {
       const response = await fetch("/api/ready-ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
-        body: JSON.stringify({ receiptId, run, retry }),
+        body: JSON.stringify({ receiptId, run, retry, ...extra }),
       });
       const data = await response.json();
       if (!response.ok) throw Error(data.error || "AI উত্তর সংরক্ষণ হয়নি।");
@@ -36,7 +40,11 @@ export default function AIAnswers({
         setJob(data.job);
         callback.current(data.job);
       }
-      return data as { job: ReadyAIJob; configured: boolean };
+      return data as {
+        job: ReadyAIJob;
+        configured: boolean;
+        work?: { page: number; url: string; lease: string };
+      };
     }
     (async () => {
       try {
@@ -44,7 +52,7 @@ export default function AIAnswers({
         while (live) {
           if (!data.configured) {
             setMessage(
-              "স্ক্যান/PDF পড়ার AI সংযোগ নেই। অ্যাডমিনকে READY_OCR_URL ও READY_OCR_TOKEN যুক্ত করতে হবে। প্রশ্নপত্র ব্যবহার করা যাবে; উত্তর এখনো প্রস্তুত হয়নি।",
+              "DeepSeek সংযোগ নেই। অ্যাডমিনকে DEEPSEEK_API_KEY যুক্ত করতে হবে। প্রশ্নপত্র ব্যবহার করা যাবে; উত্তর এখনো প্রস্তুত হয়নি।",
             );
             break;
           }
@@ -63,7 +71,40 @@ export default function AIAnswers({
             await new Promise((r) => setTimeout(r, 5000));
             if (!live) break;
             data = await request(false);
-          } else data = await request(true);
+          } else {
+            data = await request(true);
+            if (data.work) {
+              const work = data.work;
+              const { readPurchasedPage } =
+                await import("@/lib/ready-browser-ocr");
+              let ocr;
+              try {
+                ocr = await readPurchasedPage(
+                  work.url,
+                  work.page,
+                  controller.signal,
+                  (text) => {
+                    if (live) setMessage(text);
+                  },
+                );
+              } catch (e) {
+                if (live)
+                  await request(false, false, {
+                    page: work.page,
+                    lease: work.lease,
+                    ocrFailed: true,
+                  });
+                throw e;
+              }
+              if (!live) break;
+              setMessage(`পৃষ্ঠা ${work.page}: DeepSeek উত্তর তৈরি করছে…`);
+              data = await request(false, false, {
+                page: work.page,
+                lease: work.lease,
+                ocr,
+              });
+            }
+          }
         }
       } catch (e) {
         if (live)
@@ -87,9 +128,15 @@ export default function AIAnswers({
     <section className="rp-panel rp-ai-panel" data-noprint>
       <span className="rp-tag">AI উত্তরপত্র</span>
       <h2>আপনার প্রশ্নগুলোর AI উত্তর</h2>
+      <p className="rp-muted">
+        OCR আপনার ব্রাউজারেই চলে—আলাদা hosting লাগবে না। প্রথমবার ভাষার ফাইল
+        নামবে; ট্যাব খোলা রাখুন। দুর্বল মোবাইলে ধীর হতে পারে। OCR-এর লেখা DeepSeek-এ
+        যায়; DeepSeek API-এর খরচ আলাদা।
+      </p>
       <p className="rp-ai-warning">
-        AI-তৈরি উত্তর—যাচাই প্রয়োজন। মডেল ভুল করতে পারে। অস্পষ্ট/অনিশ্চিত উত্তর ফাঁকা
-        রাখা হয়েছে; এটি অ্যাডমিন-অনুমোদিত উত্তরমালা নয়।
+        AI-তৈরি উত্তর—যাচাই প্রয়োজন। OCR-এর পড়া লেখা ও মডেলের উত্তর দুটোতেই ভুল হতে
+        পারে। অস্পষ্ট/অনিশ্চিত উত্তর ফাঁকা রাখা হয়েছে; এটি অ্যাডমিন-অনুমোদিত উত্তরমালা
+        নয়।
       </p>
       <p role="status">
         {message}{" "}

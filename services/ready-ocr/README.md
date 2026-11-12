@@ -1,3 +1,5 @@
+> Historical optional server alternative. Current paid-answer flow uses browser OCR and does not call this service. No VPS setup is needed for the current flow.
+
 # QuestionMaker private OCR service
 
 Separate Bengali/English Tesseract OCR, no Gemini and no AI answer generation here. The Next.js app sends one purchased PDF page; only OCR text goes to DeepSeek. This container is **not deployed by Vercel**. A Docker-capable VPS/container host is required. No cloud host/account is provisioned by this patch.
