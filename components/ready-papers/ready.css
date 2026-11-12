@@ -1176,3 +1176,16 @@
     transition: none !important;
   }
 }
+.rp-import-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.rp-group-link {
+  display: block;
+  margin: 8px 4px 14px;
+  color: #175e75;
+  font-weight: 700;
+  font-size: 13px;
+}

@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { uploadReadyPaper, updateReadyPaper } from "@/app/actions/ready-papers";
+import { updateReadyPaper } from "@/app/actions/ready-papers";
 import type { ReadyPaper } from "@/lib/ready-papers";
 import ReadyClassSubject, { type ReadyCatalog } from "./class-subject";
 export default function ReadyUpload({
@@ -13,6 +13,10 @@ export default function ReadyUpload({
   catalog: ReadyCatalog;
   storageReady: boolean;
 }) {
+  const importJob = useRef<ReturnType<
+    typeof import("@/lib/ready-auto-import").createReadyImport
+  > | null>(null);
+  useEffect(() => () => importJob.current?.cancel(), []);
   const [formKey, setFormKey] = useState(0);
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
@@ -47,29 +51,30 @@ export default function ReadyUpload({
             fd = new FormData(form);
           const file = fd.get("file");
           if (
-            !(file instanceof File) ||
-            file.size < 5 ||
-            file.size > 3_000_000
+            !importJob.current &&
+            (!(file instanceof File) || file.size < 5 || file.size > 50_000_000)
           ) {
-            setMessage(
-              "প্রতিটি PDF part সর্বোচ্চ ৩ MB হতে পারবে। বড় ফাইল ছোট অংশে ভাগ করে দিন।",
-            );
+            setMessage("মূল PDF সর্বোচ্চ ৫০ MB। বড় হলে PDF কমপ্রেস বা ভাগ করুন।");
             return;
           }
           setBusy(true);
           setMessage("Upload হচ্ছে…");
           try {
-            const r = await uploadReadyPaper(fd);
-            if (r.ok) {
-              form.reset();
-              setFormKey((k) => k + 1);
-              setMessage(
-                "PDF সংরক্ষিত। Preview খুলে পরিষ্কার ও crop preset যাচাই করুন।",
-              );
-              router.refresh();
-            } else setMessage(r.error);
-          } catch {
-            setMessage("সংযোগ সমস্যা। আবার চেষ্টা করুন।");
+            const { createReadyImport } =
+              await import("@/lib/ready-auto-import");
+            if (!importJob.current) importJob.current = createReadyImport(fd);
+            const count = await importJob.current.run(setMessage);
+            importJob.current = null;
+            form.reset();
+            setFormKey((k) => k + 1);
+            setMessage(`${count}টি পার্ট সংরক্ষিত। Preview যাচাই করুন।`);
+            router.refresh();
+          } catch (e) {
+            setMessage(
+              (e instanceof Error ? e.message : "সংযোগ সমস্যা।") +
+                " Retry চাপলে সফল পার্ট আবার upload হবে না।",
+            );
+            router.refresh();
           } finally {
             setBusy(false);
           }
@@ -77,52 +82,82 @@ export default function ReadyUpload({
       >
         <h2>নতুন প্রশ্নপত্র PDF</h2>
         <p className="rp-muted">
-          একই পরীক্ষা ও বিষয়ে একাধিক PDF upload করতে পারবেন। শিরোনামে Part 1,
-          Part 2 লিখুন। প্রতিটি upload আলাদা থাকবে; আগের PDF replace হবে না।
+          একটি বড় PDF দিন—সিস্টেম স্বয়ংক্রিয়ভাবে Part 1, Part 2… বানাবে। প্রতি পার্ট
+          সর্বোচ্চ ১০ MB / ১০০ পৃষ্ঠা। পুরোনো ফাইল বদলাবে না; লেখা rasterize বা ঝাপসা
+          করা হবে না।
         </p>
-        <div className="rp-fields">
+        <p className="rp-muted">
+          Import শেষ হওয়া পর্যন্ত এই ট্যাব খোলা রাখুন। একই ট্যাবে Retry করলে সফল পার্ট
+          আবার upload হবে না। খুব বড়/জটিল PDF হলে কম্পিউটার ব্যবহার করুন।
+        </p>
+        <fieldset
+          disabled={busy || !!importJob.current}
+          className="rp-import-fields"
+        >
+          <div className="rp-fields">
+            <label>
+              বিভাগ
+              <select name="kind">
+                <option value="BOARD">বোর্ড প্রশ্ন</option>
+                <option value="SCHOOL">স্কুলের মডেল টেস্ট</option>
+              </select>
+            </label>
+            <label>
+              শিরোনাম
+              <input
+                name="title"
+                placeholder="যেমন: ICT মডেল টেস্ট — Part 1"
+                required
+                minLength={3}
+                maxLength={160}
+              />
+            </label>
+            <ReadyClassSubject catalog={catalog} required />
+            <label>
+              বছর
+              <input name="year" type="number" min={2000} max={2099} required />
+            </label>
+            <label>
+              মূল বোর্ড / স্কুল / উৎস
+              <input name="source" required minLength={2} maxLength={160} />
+            </label>
+          </div>
           <label>
-            বিভাগ
-            <select name="kind">
-              <option value="BOARD">বোর্ড প্রশ্ন</option>
-              <option value="SCHOOL">স্কুলের মডেল টেস্ট</option>
-            </select>
+            মূল PDF · সর্বোচ্চ ৫০ MB / ৫০০ পৃষ্ঠা · Automatic split
+            <input name="file" type="file" accept="application/pdf" required />
           </label>
-          <label>
-            শিরোনাম
-            <input
-              name="title"
-              placeholder="যেমন: ICT মডেল টেস্ট — Part 1"
-              required
-              minLength={3}
-              maxLength={160}
-            />
+          <label className="rp-check">
+            <input type="checkbox" name="rights" required />
+            এই প্রশ্নপত্র ব্যবহারের প্রয়োজনীয় অনুমতি আছে
           </label>
-          <ReadyClassSubject catalog={catalog} required />
-          <label>
-            বছর
-            <input name="year" type="number" min={2000} max={2099} required />
+          <label className="rp-check">
+            <input type="checkbox" name="published" />
+            Library-তে প্রকাশ করুন (আগে preview যাচাই করা ভালো)
           </label>
-          <label>
-            মূল বোর্ড / স্কুল / উৎস
-            <input name="source" required minLength={2} maxLength={160} />
-          </label>
-        </div>
-        <label>
-          PDF · সর্বোচ্চ ৩ MB · সর্বোচ্চ ৪০ page
-          <input name="file" type="file" accept="application/pdf" required />
-        </label>
-        <label className="rp-check">
-          <input type="checkbox" name="rights" required />
-          এই প্রশ্নপত্র ব্যবহারের প্রয়োজনীয় অনুমতি আছে
-        </label>
-        <label className="rp-check">
-          <input type="checkbox" name="published" />
-          Library-তে প্রকাশ করুন (আগে preview যাচাই করা ভালো)
-        </label>
+        </fieldset>
         <button disabled={busy || !storageReady}>
-          {busy ? "সংরক্ষণ হচ্ছে…" : "PDF Upload"}
+          {busy
+            ? "ভাগ ও সংরক্ষণ হচ্ছে…"
+            : importJob.current
+              ? "Retry Import"
+              : "PDF ভাগ করে Upload"}
         </button>
+        {busy && (
+          <button type="button" onClick={() => importJob.current?.cancel()}>
+            Import থামান (সফল পার্ট থাকবে)
+          </button>
+        )}
+        {importJob.current && !busy && (
+          <button
+            type="button"
+            onClick={() => {
+              importJob.current = null;
+              setMessage("নতুন import প্রস্তুত। আগের সফল পার্টগুলো রাখা হয়েছে।");
+            }}
+          >
+            এই অসমাপ্ত import ছেড়ে নতুন ফাইল দিন
+          </button>
+        )}
         <p role="status">{message}</p>
       </form>
       <section className="rp-panel">
@@ -134,8 +169,17 @@ export default function ReadyUpload({
               <strong>{p.title}</strong>
               <p>
                 {p.grade} · {p.subject} · {p.year} · {p.source}
+                {p.groupTitle && (
+                  <>
+                    {" "}
+                    · মূল ফাইল: {p.groupTitle} · পৃষ্ঠা {p.pageStart}–{p.pageEnd}
+                  </>
+                )}
               </p>
             </div>
+            {p.groupId && (
+              <a href={`/ready-papers?group=${p.groupId}`}>এই ফাইলের সব পার্ট</a>
+            )}
             <a href={`/ready-papers/${p.id}?preset=1`}>Preview ও preset</a>
             <button
               disabled={busy}

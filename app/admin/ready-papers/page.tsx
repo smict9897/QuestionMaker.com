@@ -3,6 +3,7 @@ import { readyLibrary } from "@/lib/ready-paper-data";
 import ReadyUpload from "@/components/ready-papers/admin-upload";
 import "@/components/ready-papers/ready.css";
 import { readyPaperCatalog } from "@/lib/ready-paper-catalog";
+export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 export default async function ReadyAdmin() {
   await admin();

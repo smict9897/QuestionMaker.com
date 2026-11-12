@@ -7,6 +7,7 @@ let pdfLoader: Promise<any> | undefined;
 export async function loadPdfImages(
   url: string,
   onProgress: (n: number, total: number) => void,
+  selected?: number[],
 ) {
   if (!pdfLoader)
     pdfLoader = new Promise((resolve, reject) => {
@@ -29,12 +30,19 @@ export async function loadPdfImages(
   const doc = await task.promise;
   const images: string[] = [];
   try {
-    if (doc.numPages > 40)
-      throw Error("এক PDF-এ সর্বোচ্চ ৪০ page। ছোট ভাগে upload করুন।");
-    for (let i = 1; i <= doc.numPages; i++) {
+    if (doc.numPages > 100)
+      throw Error("এক PDF-এ সর্বোচ্চ ১০০ page। ছোট ভাগে upload করুন।");
+    const indices =
+      selected ?? Array.from({ length: doc.numPages }, (_, i) => i + 1);
+    for (const i of indices) {
+      if (!Number.isInteger(i) || i < 1 || i > doc.numPages)
+        throw Error("অবৈধ page");
       const page = await doc.getPage(i),
         v = page.getViewport({ scale: 1 }),
-        scale = Math.min(4, 2400 / Math.max(v.width, v.height)),
+        scale = Math.min(
+          4,
+          (selected ? 2400 : 900) / Math.max(v.width, v.height),
+        ),
         vp = page.getViewport({ scale });
       if (vp.width < 1 || vp.height < 1) throw Error("অবৈধ page");
       const canvas = document.createElement("canvas");
@@ -217,7 +225,7 @@ export async function readReadyPageText(url: string, page: number) {
       !Number.isInteger(page) ||
       page < 1 ||
       page > doc.numPages ||
-      doc.numPages > 40
+      doc.numPages > 100
     )
       throw Error("অবৈধ page");
     const content = await (await doc.getPage(page)).getTextContent();

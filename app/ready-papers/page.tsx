@@ -14,6 +14,7 @@ export default async function ReadyLibrary({
     subject?: string;
     year?: string;
     source?: string;
+    group?: string;
   }>;
 }) {
   const p = await searchParams;
@@ -32,11 +33,15 @@ export default async function ReadyLibrary({
     ]),
   );
   if (selected.grade) selected.grade = readyGrade(selected.grade);
-  const filtered = papers?.filter((row) =>
-    Object.entries(selected).every(
-      ([k, v]) => !v || row[k as keyof typeof row] === v,
-    ),
+  const filtered = papers?.filter(
+    (row) =>
+      (!p.group || row.groupId === p.group) &&
+      Object.entries(selected).every(
+        ([k, v]) => !v || row[k as keyof typeof row] === v,
+      ),
   );
+  if (p.group)
+    filtered?.sort((a, b) => (a.partIndex ?? 0) - (b.partIndex ?? 0));
   return (
     <main className="rp-root">
       <section className="rp-hero">
@@ -52,6 +57,11 @@ export default async function ReadyLibrary({
           <Link href="/ready-papers?kind=SCHOOL">সুনামধন্য স্কুলের মডেল টেস্ট</Link>
         </div>
       </section>
+      {p.group && (
+        <p className="rp-status">
+          একই মূল PDF-এর পার্টগুলো · <Link href="/ready-papers">সব ফাইল দেখুন</Link>
+        </p>
+      )}
       <form className="rp-panel rp-fields">
         <label>
           বিভাগ
@@ -95,21 +105,38 @@ export default async function ReadyLibrary({
       ) : (
         <div className="rp-library">
           {filtered?.map((r) => (
-            <Link
-              href={`/ready-papers/${r.id}`}
-              key={r.id}
-              className="rp-library-card"
-            >
-              <span>{r.kind === "BOARD" ? "বোর্ড প্রশ্ন" : "স্কুল মডেল টেস্ট"}</span>
-              <h2>{r.title}</h2>
-              <p>
-                {r.grade} · {r.subject}
-              </p>
-              <p>
-                {r.year} · {r.source}
-              </p>
-              <strong>PDF খুলুন →</strong>
-            </Link>
+            <div key={r.id}>
+              <Link
+                href={`/ready-papers/${r.id}`}
+                key={r.id}
+                className="rp-library-card"
+              >
+                <span>
+                  {r.kind === "BOARD" ? "বোর্ড প্রশ্ন" : "স্কুল মডেল টেস্ট"}
+                </span>
+                <h2>{r.title}</h2>
+                <p>
+                  {r.grade} · {r.subject}
+                </p>
+                <p>
+                  {r.year} · {r.source}
+                </p>
+                {r.groupTitle && (
+                  <p>
+                    মূল ফাইল: {r.groupTitle} · পৃষ্ঠা {r.pageStart}–{r.pageEnd}
+                  </p>
+                )}
+                <strong>PDF খুলুন →</strong>
+              </Link>
+              {r.groupId && (
+                <Link
+                  href={`/ready-papers?group=${r.groupId}`}
+                  className="rp-group-link"
+                >
+                  এই মূল ফাইলের সব পার্ট →
+                </Link>
+              )}
+            </div>
           ))}
           {!filtered?.length && (
             <p>এই নির্বাচনে প্রকাশিত PDF নেই। অন্য filter বাছুন।</p>

@@ -172,7 +172,7 @@ test("ready page grouping 1–3/4–6/7–9/10, validates unique bounded selecti
     false,
   );
   assert.equal(
-    s.pricing.readySelectionSchema.safeParse({ paperId, selected: [41] })
+    s.pricing.readySelectionSchema.safeParse({ paperId, selected: [101] })
       .success,
     false,
   );
