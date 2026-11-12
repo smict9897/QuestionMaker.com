@@ -29,8 +29,8 @@ export async function loadPdfImages(
   const doc = await task.promise;
   const images: string[] = [];
   try {
-    if (doc.numPages > 20)
-      throw Error("এক PDF-এ সর্বোচ্চ ২০ page। ছোট ভাগে upload করুন।");
+    if (doc.numPages > 40)
+      throw Error("এক PDF-এ সর্বোচ্চ ৪০ page। ছোট ভাগে upload করুন।");
     for (let i = 1; i <= doc.numPages; i++) {
       const page = await doc.getPage(i),
         v = page.getViewport({ scale: 1 }),
@@ -200,4 +200,32 @@ function openLocal(): Promise<IDBDatabase> {
     r.onsuccess = () => resolve(r.result);
     r.onerror = () => reject(r.error);
   });
+}
+
+/** Text layer only; not OCR. Legacy Bengali fonts may produce unreadable text. */
+export async function readReadyPageText(url: string, page: number) {
+  const pdfjs = await pdfLoader;
+  if (!pdfjs) throw Error("আগে PDF খুলুন।");
+  const task = pdfjs.getDocument({
+    url,
+    isEvalSupported: false,
+    disableFontFace: true,
+  });
+  const doc = await task.promise;
+  try {
+    if (
+      !Number.isInteger(page) ||
+      page < 1 ||
+      page > doc.numPages ||
+      doc.numPages > 40
+    )
+      throw Error("অবৈধ page");
+    const content = await (await doc.getPage(page)).getTextContent();
+    return content.items
+      .map((item: any) => item.str || "")
+      .join(" ")
+      .slice(0, 20000);
+  } finally {
+    await doc.destroy();
+  }
 }

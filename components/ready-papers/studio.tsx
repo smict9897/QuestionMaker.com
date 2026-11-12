@@ -30,6 +30,8 @@ import {
 } from "@/lib/ready-paper-browser";
 import { updateReadyPaper } from "@/app/actions/ready-papers";
 import "./ready.css";
+import AnswerAssistant, { AnswerSheets } from "./answer-assistant";
+import type { ReadyAnswer } from "@/lib/ready-answers";
 type Header = {
   school: string;
   exam: string;
@@ -41,11 +43,17 @@ export default function ReadyStudio({
   paper,
   userId,
   adminPreset,
+  answerEntries = [],
 }: {
   paper: ReadyPaper;
   userId: string;
   adminPreset: boolean;
+  answerEntries?: ReadyAnswer[];
 }) {
+  const [entries, setEntries] = useState(answerEntries);
+  const [printKind, setPrintKind] = useState<"questions" | "blank" | "answers">(
+    "questions",
+  );
   const [pages, setPages] = useState<string[]>([]),
     [selected, setSelected] = useState<number[]>([]),
     [edits, setEdits] = useState<Record<string, PageEdit>>(paper.presets),
@@ -173,6 +181,7 @@ export default function ReadyStudio({
         out.push(c.toDataURL("image/png"));
         c.width = c.height = 0;
       }
+      setPrintKind("questions");
       setPrintPages(out);
       setStep("preview");
       setMessage("Preview দেখে print করুন।");
@@ -302,6 +311,26 @@ export default function ReadyStudio({
             </button>
           )}
         </div>
+      )}
+      {pages.length > 0 && (
+        <AnswerAssistant
+          id={paper.id}
+          url={paper.url}
+          pages={pages}
+          selected={selected}
+          admin={adminPreset}
+          entries={entries}
+          onSaved={(entry) =>
+            setEntries((old) => [
+              ...old.filter((v) => v.questionPage !== entry.questionPage),
+              entry,
+            ])
+          }
+          onPrint={(kind) => {
+            setPrintKind(kind);
+            setStep("preview");
+          }}
+        />
       )}
       {step === "select" && (
         <section data-noprint>
@@ -665,7 +694,12 @@ export default function ReadyStudio({
           <div className="rp-toolbar" data-noprint>
             <button onClick={() => setStep("edit")}>Edit-এ ফিরুন</button>
             <button
-              disabled={busy || printPages.length !== selected.length}
+              disabled={
+                busy ||
+                !selected.length ||
+                (printKind === "questions" &&
+                  printPages.length !== selected.length)
+              }
               onClick={() => window.print()}
             >
               <Printer size={16} />
@@ -673,24 +707,32 @@ export default function ReadyStudio({
             </button>
           </div>
           <section id="ready-print">
-            {printPages.map((src, i) => (
-              <article className="rp-print-sheet" key={selected[i]}>
-                {i === 0 && Object.values(header).some(Boolean) && (
-                  <header className="rp-print-header">
-                    <h2>{header.school}</h2>
-                    <h3>{header.exam}</h3>
-                    <p>{header.subject}</p>
-                    <div>
-                      <span>{header.time && `সময়: ${header.time}`}</span>
-                      <span>{header.marks && `পূর্ণমান: ${header.marks}`}</span>
-                    </div>
-                  </header>
-                )}
-                <div className="rp-print-content">
-                  <img src={src} alt={`সম্পাদিত page ${selected[i]}`} />
-                </div>
-              </article>
-            ))}
+            {printKind !== "questions" ? (
+              <AnswerSheets
+                selected={selected}
+                entries={entries}
+                blank={printKind === "blank"}
+              />
+            ) : (
+              printPages.map((src, i) => (
+                <article className="rp-print-sheet" key={selected[i]}>
+                  {i === 0 && Object.values(header).some(Boolean) && (
+                    <header className="rp-print-header">
+                      <h2>{header.school}</h2>
+                      <h3>{header.exam}</h3>
+                      <p>{header.subject}</p>
+                      <div>
+                        <span>{header.time && `সময়: ${header.time}`}</span>
+                        <span>{header.marks && `পূর্ণমান: ${header.marks}`}</span>
+                      </div>
+                    </header>
+                  )}
+                  <div className="rp-print-content">
+                    <img src={src} alt={`সম্পাদিত page ${selected[i]}`} />
+                  </div>
+                </article>
+              ))
+            )}
           </section>
         </>
       )}
