@@ -61,8 +61,8 @@ test("print placement uses the same bounded image for screen and print, no heade
     "components/ready-papers/placed-question.tsx",
     "utf8",
   );
-  assert.match(c, /objectPosition:/);
-  assert.match(c, /transformOrigin:/);
+  assert.match(c, /placementSize/);
+  assert.match(c, /objectFit: "fill"/);
   assert.match(c, /onPointerCancel/);
   const s = fs.readFileSync("components/ready-papers/studio.tsx", "utf8");
   assert.match(s, /<PlacedQuestion/);
@@ -105,4 +105,16 @@ test("resize handles preserve aspect scale, opposite edge and safe bounds", () =
     assert.ok(next.printY >= 0 && next.printY <= 1);
   }
   assert.deepEqual(p.placementAfterResize(v, "se", 1, 1, 0, 0, 0, 0), v);
+});
+
+test("bottom side handle increases only height with top fixed", () => {
+  const v = { printScale: 0.8, printX: 0.5, printY: 0 };
+  const before = p.placementSize(v, 300, 500, 300, 300);
+  const next = p.placementAfterResize(v, "s", 0, 100, 300, 500, 300, 300);
+  const after = p.placementSize(next, 300, 500, 300, 300);
+  assert.equal(after.w, before.w);
+  assert.ok(after.h > before.h);
+  assert.equal(next.printY, 0);
+  const side = p.placementAfterResize(v, "e", 40, 0, 300, 500, 300, 300);
+  assert.equal(p.placementSize(side, 300, 500, 300, 300).h, before.h);
 });

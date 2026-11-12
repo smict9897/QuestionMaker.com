@@ -31,3 +31,12 @@ test("draft restores validated header settings with legacy simple fallback; shar
   assert.match(h, /\.custom-paper-header-dynamic/);
   assert.match(h, /print-color-adjust: exact/);
 });
+
+test("ready header line and gap are local-draft persisted and bounded on restore", () => {
+  const s = fs.readFileSync("components/ready-papers/studio.tsx", "utf8");
+  assert.match(s, /headerLine,\s*headerGap/);
+  assert.match(s, /Number.isFinite\(data.headerGap\)/);
+  assert.match(s, /Math.min\(15, Math.max\(0, data.headerGap\)\)/);
+  assert.match(s, /rp-header-line-off/);
+  assert.match(s, /marginBottom: `\$\{headerGap\}mm`/);
+});
