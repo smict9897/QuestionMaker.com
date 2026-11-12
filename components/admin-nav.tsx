@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  BarChart3,
   Sparkles,
   FileUp,
   ListChecks,
@@ -20,7 +21,8 @@ import {
 } from "lucide-react";
 
 const items = [
-  ["Overview", "/admin", LayoutDashboard],
+  ["ড্যাশবোর্ড", "/admin", LayoutDashboard],
+  ["পরিসংখ্যান / Overview", "/admin/overview", BarChart3],
   ["Posts", "/admin/posts", Newspaper],
   ["New post", "/admin/blog", FilePlus2],
   ["Categories", "/admin/categories", FolderTree],
