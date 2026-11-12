@@ -1,0 +1,94 @@
+.custom-paper-header {
+  position: relative;
+  text-align: center;
+  color: #111;
+  line-height: 1.45;
+  padding: 0.2em 0 0.65em;
+  overflow-wrap: anywhere;
+}
+.custom-paper-header .header-institute {
+  font-weight: 700;
+  font-size: 1.65em;
+  line-height: 1.25;
+  margin: 0.2em 0;
+}
+.custom-paper-header .header-program {
+  font-size: 1.1em;
+}
+.custom-paper-header .header-codes {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 0.8em;
+  gap: 0.2em;
+  margin-top: 0.2em;
+}
+.custom-paper-header .header-code-boxes {
+  display: inline-flex;
+}
+.custom-paper-header .header-code-boxes span {
+  display: inline-flex;
+  min-width: 1.2em;
+  justify-content: center;
+  border: 1px solid #555;
+}
+.custom-paper-header .header-exam-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.4em;
+  border-bottom: 1px solid #777;
+  padding: 0.35em 0;
+  margin-top: 0.3em;
+}
+.custom-paper-header .header-note {
+  text-align: left;
+  font-size: 0.85em;
+  font-weight: 600;
+  padding-top: 0.35em;
+}
+.custom-paper-header .header-extra {
+  font-size: 0.85em;
+}
+.custom-paper-header .header-student-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1em;
+  padding-top: 0.6em;
+  text-align: left;
+}
+.custom-paper-header .header-branding {
+  background: #245b2b;
+  color: white;
+  font-weight: 700;
+  padding: 0.5em 0.7em;
+  margin-bottom: 0.5em;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.custom-paper-header-branded .header-institute {
+  color: #bb1b32;
+}
+.custom-paper-header .header-note-box {
+  border: 1px solid #777;
+  padding: 0.5em;
+  margin: 0.4em 0;
+  text-align: left;
+  font-size: 0.85em;
+}
+.header-layout-thumbnail {
+  height: 110px;
+  pointer-events: none;
+}
+.custom-paper-header-dynamic .header-institute {
+  color: #bb1b32;
+}
+.custom-paper-header-dynamic .header-exam-row strong {
+  background: #111;
+  color: white;
+  padding: 0.1em 0.55em;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}

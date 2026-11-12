@@ -652,3 +652,15 @@
     display: none !important;
   }
 }
+.rp-custom-print-header {
+  flex: 0 0 auto;
+  font-size: 11pt;
+  margin-bottom: 5mm;
+}
+.rp-custom-header-preview {
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #dce6ec;
+  border-radius: 8px;
+  font-size: 12px;
+}
