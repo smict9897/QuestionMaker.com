@@ -68,3 +68,15 @@ test("print placement uses the same bounded image for screen and print, no heade
   assert.match(s, /<PlacedQuestion/);
   assert.match(s, /প্রশ্নপত্র Auto Fit/);
 });
+
+test("zoom preserves placement, clamps safe-fit limits and ignores invalid factors", () => {
+  const value = { printScale: 0.6, printX: 0.3, printY: 0.8 };
+  const zoomed = p.placementAfterZoom(value, 1.5);
+  assert.ok(Math.abs(zoomed.printScale - 0.9) < 1e-10);
+  assert.equal(zoomed.printX, value.printX);
+  assert.equal(zoomed.printY, value.printY);
+  assert.equal(p.placementAfterZoom(value, 100).printScale, 1);
+  assert.equal(p.placementAfterZoom(value, 0.01).printScale, 0.4);
+  for (const factor of [NaN, Infinity, 0, -1])
+    assert.deepEqual(p.placementAfterZoom(value, factor), value);
+});
