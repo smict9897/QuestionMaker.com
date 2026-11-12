@@ -2,6 +2,7 @@ import { admin } from "@/lib/guard";
 import { readyLibrary } from "@/lib/ready-paper-data";
 import ReadyUpload from "@/components/ready-papers/admin-upload";
 import "@/components/ready-papers/ready.css";
+import { readyPaperCatalog } from "@/lib/ready-paper-catalog";
 export const dynamic = "force-dynamic";
 export default async function ReadyAdmin() {
   await admin();
@@ -12,7 +13,7 @@ export default async function ReadyAdmin() {
       <p>
         মূল PDF অপরিবর্তিত থাকে। Preset save করার আগে প্রতিটি page preview দেখুন।
       </p>
-      <ReadyUpload papers={papers} />
+      <ReadyUpload papers={papers} catalog={readyPaperCatalog} />
     </main>
   );
 }
