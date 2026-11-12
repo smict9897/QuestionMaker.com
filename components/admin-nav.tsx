@@ -25,6 +25,7 @@ const items = [
   ["Question Bank", "/admin/questions", Library],
   ["Posts", "/admin/posts", Newspaper],
   ["New post", "/admin/blog", FilePlus2],
+  ["রেডি প্রশ্নপত্র", "/admin/ready-papers", FileText],
   ["Categories", "/admin/categories", FolderTree],
   ["Pages", "/admin/pages", FileText],
   ["Media", "/admin/media", Images],

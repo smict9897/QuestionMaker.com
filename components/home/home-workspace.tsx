@@ -48,6 +48,7 @@ const groups = [
       ["আমার ড্যাশবোর্ড", "/dashboard", LayoutDashboard],
       ["এখনই প্রশ্ন তৈরি করুন", "#start", CirclePlus],
       ["সংরক্ষিত প্রশ্নপত্র", "/question-builder/saved", FolderOpen],
+      ["রেডি প্রশ্নপত্র", "/ready-papers", BookOpen],
       ["মূল্য তালিকা", "#pricing", Tags],
       ["Balance / Recharge", "/wallet", Wallet],
       ["আমাদের সুবিধা", "#features", Gift],

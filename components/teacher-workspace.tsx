@@ -33,9 +33,9 @@ export const workspaceLinks = [
     tone: "blue",
   },
   {
-    label: "English draft",
-    description: "English full ও writing প্রশ্নপত্র",
-    href: "/question-builder/english/saved",
+    label: "রেডি প্রশ্নপত্র",
+    description: "বোর্ড ও স্কুলের model test PDF",
+    href: "/ready-papers",
     icon: BookOpen,
     tone: "purple",
   },
@@ -144,6 +144,9 @@ export default function TeacherWorkspace({
                   {label}
                 </Link>
               ))}
+              <Link href="/question-builder/english/saved">
+                আমার English draft
+              </Link>
               <Link href="/packages">আমার প্যাকেজ</Link>
               <button onClick={() => signOut({ callbackUrl: "/" })}>
                 <LogOut size={17} />
