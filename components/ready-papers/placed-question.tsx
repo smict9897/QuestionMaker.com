@@ -165,22 +165,18 @@ export default function PlacedQuestion({
         if (pointers.current.has(e.pointerId)) end(e.pointerId);
       }}
     >
-      <img
-        ref={image}
-        onLoad={measure}
-        src={src}
-        alt={`সম্পাদিত page ${page}`}
-        draggable={false}
-        style={{
-          ...(() => {
-            const { w, h } = placementSize(
-              value,
-              size.width,
-              size.height,
-              size.imageWidth,
-              size.imageHeight,
-            );
-            return {
+      {(() => {
+        const { w, h } = placementSize(
+          value,
+          size.width,
+          size.height,
+          size.imageWidth,
+          size.imageHeight,
+        );
+        return (
+          <div
+            className="rp-question-box"
+            style={{
               width: size.width ? `${(w / size.width) * 100}%` : "100%",
               height: size.height ? `${(h / size.height) * 100}%` : "100%",
               left: size.width
@@ -189,82 +185,68 @@ export default function PlacedQuestion({
               top: size.height
                 ? `${(((size.height - h) * value.printY) / size.height) * 100}%`
                 : 0,
-              objectFit: "fill" as const,
-            };
-          })(),
-          pointerEvents: "none",
-        }}
-      />
-      {movable &&
-        size.width > 0 &&
-        size.imageWidth > 0 &&
-        (() => {
-          const { w, h } = placementSize(
-            value,
-            size.width,
-            size.height,
-            size.imageWidth,
-            size.imageHeight,
-          );
-          return (
-            <div
-              data-noprint
-              className="rp-question-selection"
-              style={{
-                width: `${(w / size.width) * 100}%`,
-                height: `${(h / size.height) * 100}%`,
-                left: `${(((size.width - w) * value.printX) / size.width) * 100}%`,
-                top: `${(((size.height - h) * value.printY) / size.height) * 100}%`,
-              }}
-            >
-              {(
-                ["nw", "n", "ne", "e", "se", "s", "sw", "w"] as ResizeHandle[]
-              ).map((handle) => (
-                <button
-                  key={handle}
-                  type="button"
-                  className={`rp-resize-handle rp-resize-${handle}`}
-                  data-resize-handle={handle}
-                  aria-label={`Page ${page} resize ${handle}`}
-                  title="ধরে টেনে আকার ঠিক করুন"
-                  onKeyDown={(e) => {
-                    if (
-                      ![
-                        "ArrowUp",
-                        "ArrowDown",
-                        "ArrowLeft",
-                        "ArrowRight",
-                      ].includes(e.key)
-                    )
-                      return;
-                    e.preventDefault();
-                    const r = container.current!.getBoundingClientRect();
-                    emit(
-                      placementAfterResize(
-                        value,
-                        handle,
-                        e.key === "ArrowRight"
-                          ? 5
-                          : e.key === "ArrowLeft"
-                            ? -5
-                            : 0,
-                        e.key === "ArrowDown"
-                          ? 5
-                          : e.key === "ArrowUp"
-                            ? -5
-                            : 0,
-                        r.width,
-                        r.height,
-                        size.imageWidth,
-                        size.imageHeight,
-                      ),
-                    );
-                  }}
-                />
-              ))}
-            </div>
-          );
-        })()}
+            }}
+          >
+            <img
+              ref={image}
+              onLoad={measure}
+              src={src}
+              alt={`সম্পাদিত page ${page}`}
+              draggable={false}
+              style={{ objectFit: "fill", pointerEvents: "none" }}
+            />
+            {movable && size.width > 0 && size.imageWidth > 0 && (
+              <div data-noprint className="rp-question-selection">
+                {(
+                  ["nw", "n", "ne", "e", "se", "s", "sw", "w"] as ResizeHandle[]
+                ).map((handle) => (
+                  <button
+                    key={handle}
+                    type="button"
+                    className={`rp-resize-handle rp-resize-${handle}`}
+                    data-resize-handle={handle}
+                    aria-label={`Page ${page} resize ${handle}`}
+                    title="ধরে টেনে আকার ঠিক করুন"
+                    onKeyDown={(e) => {
+                      if (
+                        ![
+                          "ArrowUp",
+                          "ArrowDown",
+                          "ArrowLeft",
+                          "ArrowRight",
+                        ].includes(e.key)
+                      )
+                        return;
+                      e.preventDefault();
+                      const r = container.current!.getBoundingClientRect();
+                      emit(
+                        placementAfterResize(
+                          value,
+                          handle,
+                          e.key === "ArrowRight"
+                            ? 5
+                            : e.key === "ArrowLeft"
+                              ? -5
+                              : 0,
+                          e.key === "ArrowDown"
+                            ? 5
+                            : e.key === "ArrowUp"
+                              ? -5
+                              : 0,
+                          r.width,
+                          r.height,
+                          size.imageWidth,
+                          size.imageHeight,
+                        ),
+                      );
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
