@@ -14,14 +14,24 @@ import { validReadyPair } from "@/lib/ready-paper-catalog";
 import { z } from "zod";
 export async function uploadReadyPaper(fd: FormData) {
   await admin();
+  let stage: "metadata" | "storage" | "database" | "refresh" = "metadata";
+  const fail = (code: string, error: string) => ({
+    ok: false as const,
+    code,
+    error,
+  });
   try {
     const meta = readyMetadataSchema.parse({
       ...Object.fromEntries(fd),
       published: fd.get("published") === "on",
     });
     if (!validReadyPair(meta.grade, meta.subject))
-      throw Error("Invalid class/subject");
-    if (fd.get("rights") !== "on") throw Error("ব্যবহারের অনুমতি নিশ্চিত করুন।");
+      return fail(
+        "CLASS_SUBJECT",
+        "নির্বাচিত পরীক্ষার তালিকা থেকে সঠিক বিষয় নির্বাচন করুন।",
+      );
+    if (fd.get("rights") !== "on")
+      return fail("RIGHTS", "প্রশ্নপত্র ব্যবহারের অনুমতি নিশ্চিত করুন।");
     const file = fd.get("file");
     if (
       !(file instanceof File) ||
@@ -29,15 +39,25 @@ export async function uploadReadyPaper(fd: FormData) {
       file.size > 3_000_000 ||
       file.type !== "application/pdf"
     )
-      throw Error("সর্বোচ্চ ৩ MB PDF দিন।");
+      return fail(
+        "FILE",
+        "সঠিক PDF ফাইল দিন; প্রতিটি part সর্বোচ্চ ৩ MB হতে পারবে।",
+      );
     const bytes = new Uint8Array(await file.arrayBuffer());
     if (new TextDecoder().decode(bytes.slice(0, 5)) !== "%PDF-")
-      throw Error("সঠিক PDF নয়।");
+      return fail("PDF", "ফাইলটি সঠিক PDF নয়। PDF হিসেবে export করে আবার দিন।");
+    if (!process.env.BLOB_READ_WRITE_TOKEN?.trim())
+      return fail(
+        "STORAGE_CONFIG",
+        "PDF storage যুক্ত নেই। Vercel-এ এই প্রজেক্টের জন্য public Blob store সংযুক্ত করে redeploy করুন।",
+      );
     const id = randomUUID();
+    stage = "storage";
     const blob = await put(`ready-papers/${id}.pdf`, Buffer.from(bytes), {
       access: "public",
       contentType: "application/pdf",
     });
+    stage = "database";
     try {
       const record = readyRecordSchema.parse({
         ...meta,
@@ -53,15 +73,27 @@ export async function uploadReadyPaper(fd: FormData) {
       await del(blob.url).catch(() => {});
       throw e;
     }
+    stage = "refresh";
     revalidatePath("/ready-papers");
     revalidatePath("/admin/ready-papers");
     return { ok: true as const, id };
   } catch {
-    return {
-      ok: false as const,
-      error:
-        "Upload হয়নি। PDF (৩ MB), metadata, অনুমতি ও Blob storage configuration পরীক্ষা করুন।",
-    };
+    // Never return provider errors, credentials, source bytes or DB details to the browser.
+    if (stage === "storage")
+      return fail(
+        "STORAGE",
+        "PDF storage-এ upload হয়নি। Blob সংযোগ, token-এর অনুমতি ও storage quota পরীক্ষা করুন।",
+      );
+    if (stage === "database")
+      return fail(
+        "DATABASE",
+        "PDF-এর তথ্য সংরক্ষণ হয়নি। ডাটাবেস সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।",
+      );
+    if (stage === "refresh") return { ok: true as const };
+    return fail(
+      "METADATA",
+      "শিরোনাম, বিভাগ, পরীক্ষা, বিষয়, বছর (2000–2099) ও উৎস সঠিকভাবে পূরণ করুন।",
+    );
   }
 }
 export async function updateReadyPaper(

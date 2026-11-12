@@ -13,7 +13,11 @@ export default async function ReadyAdmin() {
       <p>
         মূল PDF অপরিবর্তিত থাকে। Preset save করার আগে প্রতিটি page preview দেখুন।
       </p>
-      <ReadyUpload papers={papers} catalog={readyPaperCatalog} />
+      <ReadyUpload
+        papers={papers}
+        catalog={readyPaperCatalog}
+        storageReady={Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim())}
+      />
     </main>
   );
 }

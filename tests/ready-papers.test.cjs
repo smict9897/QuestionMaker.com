@@ -94,9 +94,13 @@ test("catalog hides unpublished/corrupt records except admin, preserves newest o
   assert.equal((await api.readyLibrary()).length, 1);
   assert.equal((await api.readyLibrary(true)).length, 2);
 });
-function actions(allow = true) {
+process.env.BLOB_READ_WRITE_TOKEN = "test-only-mocked-storage";
+function actions(allow = true, failure = "") {
   let puts = 0,
-    writes = 0;
+    writes = 0,
+    deletes = 0;
+  const storedKeys = [],
+    paths = [];
   const api = load("app/actions/ready-papers.ts", {
     "@/lib/guard": {
       admin: async () => {
@@ -107,7 +111,9 @@ function actions(allow = true) {
       db: {
         setting: {
           findUnique: async () => ({ value: JSON.stringify(record) }),
-          create: async () => {
+          create: async (data) => {
+            if (failure === "database") throw Error("private-db-detail");
+            storedKeys.push(data.data.key);
             writes++;
           },
           update: async () => {
@@ -119,16 +125,29 @@ function actions(allow = true) {
     "@/lib/ready-papers": model,
     "@/lib/ready-paper-catalog": catalog,
     "@vercel/blob": {
-      put: async () => {
+      put: async (path) => {
+        paths.push(path);
         puts++;
+        if (failure === "storage") throw Error("private-token-value");
         return { url: record.url };
       },
-      del: async () => {},
+      del: async () => {
+        deletes++;
+      },
     },
-    "next/cache": { revalidatePath: () => {} },
+    "next/cache": {
+      revalidatePath: () => {
+        if (failure === "refresh") throw Error("refresh-error");
+      },
+    },
   });
   return {
     api,
+    storedKeys,
+    paths,
+    get deletes() {
+      return deletes;
+    },
     get puts() {
       return puts;
     },
@@ -214,4 +233,49 @@ test("admin upload rejects unsupported class and subject before Blob write", asy
   }
   assert.equal(h.puts, 0);
   assert.equal(h.writes, 0);
+});
+
+test("missing Blob config has a safe specific error and makes no storage write", async () => {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  try {
+    delete process.env.BLOB_READ_WRITE_TOKEN;
+    const h = actions();
+    const result = await h.api.uploadReadyPaper(fd());
+    assert.equal(result.code, "STORAGE_CONFIG");
+    assert.equal(h.puts, 0);
+    assert.equal(h.writes, 0);
+  } finally {
+    process.env.BLOB_READ_WRITE_TOKEN = token;
+  }
+});
+test("storage and DB failures are distinguished without exposing internal errors", async () => {
+  for (const stage of ["storage", "database"]) {
+    const h = actions(true, stage);
+    const result = await h.api.uploadReadyPaper(fd());
+    assert.equal(result.code, stage.toUpperCase());
+    assert.equal(JSON.stringify(result).includes("private-"), false);
+    assert.equal(h.deletes, stage === "database" ? 1 : 0);
+  }
+});
+test("same subject parts create independent records and Blob paths, never overwrite", async () => {
+  const h = actions();
+  const ids = [];
+  for (const part of [1, 2]) {
+    const f = fd();
+    f.set("title", `ICT Model Test Part ${part}`);
+    const result = await h.api.uploadReadyPaper(f);
+    assert.equal(result.ok, true);
+    ids.push(result.id);
+  }
+  assert.equal(h.puts, 2);
+  assert.equal(h.writes, 2);
+  assert.equal(new Set(ids).size, 2);
+  assert.equal(new Set(h.storedKeys).size, 2);
+  assert.equal(new Set(h.paths).size, 2);
+});
+test("cache refresh failure after persisted upload does not invite duplicate retry", async () => {
+  const h = actions(true, "refresh");
+  assert.equal((await h.api.uploadReadyPaper(fd())).ok, true);
+  assert.equal(h.writes, 1);
+  assert.equal(h.deletes, 0);
 });
