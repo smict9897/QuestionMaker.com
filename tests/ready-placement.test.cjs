@@ -139,3 +139,10 @@ test("question image and resize border share one box, overriding global article 
     assert.ok(rule.includes(text));
   assert.match(css, /\.rp-question-selection\s*\{[^}]*inset: 0/);
 });
+
+test("article responsive auto-height excludes adjustable question raster", () => {
+ const css=fs.readFileSync("app/globals.css","utf8");
+ const component=fs.readFileSync("components/ready-papers/placed-question.tsx","utf8");
+ assert.match(css,/article img:not\(\.rp-question-raster\)/);
+ assert.match(component,/className="rp-question-raster"/);
+});

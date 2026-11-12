@@ -188,6 +188,7 @@ export default function PlacedQuestion({
             }}
           >
             <img
+              className="rp-question-raster"
               ref={image}
               onLoad={measure}
               src={src}

@@ -180,7 +180,7 @@ article td,
 /* ৫. ছবি রেসপনসিভ রাখা */
 .raw-html img,
 .post-html img,
-article img,
+article img:not(.rp-question-raster),
 .prose img {
   max-width: 100% !important;
   height: auto !important;
