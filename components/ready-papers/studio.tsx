@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import PlacedQuestion from "./placed-question";
+import { defaultPlacement, type Placement } from "@/lib/ready-placement";
 import HeaderManager from "@/components/paper-builder/header-manager";
 import HeaderPreview from "@/components/paper-builder/header-preview";
 import { settingsSchema } from "@/lib/paper-builder";
@@ -56,6 +58,7 @@ export default function ReadyStudio({
   adminPreset: boolean;
   answerEntries?: ReadyAnswer[];
 }) {
+  const [placementMode, setPlacementMode] = useState(false);
   const [headerStyle, setHeaderStyle] = useState<"simple" | "custom" | "none">(
     "simple",
   );
@@ -154,6 +157,16 @@ export default function ReadyStudio({
     });
     if (!selected.includes(n) && selected.length >= 10)
       setMessage("একবারে সর্বোচ্চ ১০ page নির্বাচন করুন।");
+  }
+  function placePage(page: number, placement: Placement) {
+    setEdits((old) => ({
+      ...old,
+      [page]: pageEditSchema.parse({
+        ...freshEdit(),
+        ...old[page],
+        ...placement,
+      }),
+    }));
   }
   function update(patch: Partial<PageEdit>) {
     const checked = pageEditSchema.safeParse({ ...edit, ...patch });
@@ -832,6 +845,97 @@ export default function ReadyStudio({
               Print / Save PDF
             </button>
           </div>
+          {printKind === "questions" && selected.length > 0 && (
+            <section className="rp-panel" data-noprint>
+              <h3>প্রশ্নপত্র Auto Fit ও অবস্থান</h3>
+              <label>
+                যে page ঠিক করবেন
+                <select
+                  value={selected.includes(active) ? active : selected[0]}
+                  onChange={(e) => setActive(+e.target.value)}
+                >
+                  {selected.map((n) => (
+                    <option key={n} value={n}>
+                      মূল page {n}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {(() => {
+                const n = selected.includes(active) ? active : selected[0];
+                const value = edits[n] || freshEdit();
+                return (
+                  <>
+                    <div className="rp-toolbar">
+                      <button onClick={() => placePage(n, defaultPlacement)}>
+                        প্রশ্নপত্র Auto Fit / Reset
+                      </button>
+                      <button
+                        aria-pressed={placementMode}
+                        onClick={() => setPlacementMode((v) => !v)}
+                      >
+                        {placementMode
+                          ? "অবস্থান সম্পাদনা বন্ধ"
+                          : "প্রশ্নের অবস্থান ঠিক করুন"}
+                      </button>
+                    </div>
+                    <label>
+                      আকার · {Math.round(value.printScale * 100)}% (সর্বোচ্চ
+                      নিরাপদ fit)
+                      <input
+                        aria-label="প্রশ্নপত্রের আকার"
+                        type="range"
+                        min=".4"
+                        max="1"
+                        step=".01"
+                        value={value.printScale}
+                        onChange={(e) =>
+                          placePage(n, {
+                            ...value,
+                            printScale: +e.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      ওপর–নিচ অবস্থান
+                      <input
+                        aria-label="প্রশ্নপত্রের ওপর নিচ অবস্থান"
+                        type="range"
+                        min="0"
+                        max="1"
+                        step=".01"
+                        value={value.printY}
+                        onChange={(e) =>
+                          placePage(n, { ...value, printY: +e.target.value })
+                        }
+                      />
+                    </label>
+                    <label>
+                      বাম–ডান অবস্থান
+                      <input
+                        aria-label="প্রশ্নপত্রের বাম ডান অবস্থান"
+                        type="range"
+                        min="0"
+                        max="1"
+                        step=".01"
+                        value={value.printX}
+                        onChange={(e) =>
+                          placePage(n, { ...value, printX: +e.target.value })
+                        }
+                      />
+                    </label>
+                  </>
+                );
+              })()}
+              <p className="rp-muted">
+                Auto Fit হেডারের নিচের জায়গায় অনুপাত ঠিক রেখে সর্বোচ্চ আকারে বসায়।
+                ছবির ভেতরের সাদা জায়গা আগে Crop করুন। অবস্থান বদলাতে ফাঁকা জায়গা
+                থাকতে হবে; পুরো জায়গা ভরে গেলে সেই দিকে সরবে না। Margin ও header
+                অপরিবর্তিত; লেখা কাটা হবে না। Preview zoom শুধু স্ক্রিনে দেখার জন্য।
+              </p>
+            </section>
+          )}
           <PrintFrame>
             <section id="ready-print">
               {printKind !== "questions" ? (
@@ -867,9 +971,13 @@ export default function ReadyStudio({
                           </div>
                         </header>
                       )}
-                    <div className="rp-print-content">
-                      <img src={src} alt={`সম্পাদিত page ${selected[i]}`} />
-                    </div>
+                    <PlacedQuestion
+                      src={src}
+                      page={selected[i]}
+                      value={edits[selected[i]] || freshEdit()}
+                      movable={placementMode}
+                      onChange={(value) => placePage(selected[i], value)}
+                    />
                   </article>
                 ))
               )}

@@ -664,3 +664,27 @@
   border-radius: 8px;
   font-size: 12px;
 }
+.rp-placed-question {
+  position: relative;
+  width: 100%;
+}
+.rp-placed-question > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+  user-select: none;
+}
+.rp-placement-active {
+  outline: 1px dashed #148974;
+  outline-offset: -1px;
+  cursor: move;
+}
+@media print {
+  .rp-placement-active {
+    outline: none;
+  }
+}

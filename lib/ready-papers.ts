@@ -23,6 +23,9 @@ export const pageEditSchema = z
     ]),
     mode: z.enum(["original", "clean", "bw"]),
     strength: z.number().min(0).max(1),
+    printScale: z.number().min(0.4).max(1).default(1),
+    printX: z.number().min(0).max(1).default(0.5),
+    printY: z.number().min(0).max(1).default(0),
     blueWatermark: z.number().min(0).max(1).default(0),
     masks: z.array(boxSchema).max(40),
     texts: z
@@ -48,6 +51,9 @@ export const freshEdit = (): PageEdit => ({
   mode: "original",
   strength: 0.5,
   blueWatermark: 0,
+  printScale: 1,
+  printX: 0.5,
+  printY: 0,
   masks: [],
   texts: [],
 });
