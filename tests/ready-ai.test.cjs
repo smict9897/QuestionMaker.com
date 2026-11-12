@@ -301,7 +301,7 @@ test("checkout creates durable job atomically; UI auto-resumes and never labels 
   assert.match(ui, /request\(false, cycle > 0\)/);
   assert.match(ui, /request\(true\)/);
   assert.match(ui, /যাচাই প্রয়োজন/);
-  assert.match(ui, /অ্যাডমিন-অনুমোদিত উত্তরমালা নয়/);
+  assert.match(ui.replace(/\s+/g, " "), /অ্যাডমিন-অনুমোদিত উত্তরমালা নয়/);
   assert.doesNotMatch(ui, /dangerouslySetInnerHTML/);
 });
 
