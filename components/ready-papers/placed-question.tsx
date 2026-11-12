@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   placementSize,
   placementAfterResize,
@@ -16,12 +16,14 @@ export default function PlacedQuestion({
   value,
   movable,
   onChange,
+  children,
 }: {
   src: string;
   page: number;
   value: Placement;
   movable: boolean;
   onChange: (v: Placement) => void;
+  children?: ReactNode;
 }) {
   const container = useRef<HTMLDivElement>(null),
     image = useRef<HTMLImageElement>(null);
@@ -196,6 +198,7 @@ export default function PlacedQuestion({
               draggable={false}
               style={{ objectFit: "fill", pointerEvents: "none" }}
             />
+            {children}
             {movable && size.width > 0 && size.imageWidth > 0 && (
               <div data-noprint className="rp-question-selection">
                 {(

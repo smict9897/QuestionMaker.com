@@ -317,7 +317,7 @@ test("watermark rendering is before grayscale and original comparison explicitly
   const studio = fs.readFileSync("components/ready-papers/studio.tsx", "utf8");
   assert.match(
     studio,
-    /original \? \{ \.\.\.freshEdit\(\), rotation: edit.rotation \} : edit/,
+    /original\s*\? \{ \.\.\.freshEdit\(\), rotation: rasterEdit.rotation \}\s*: rasterEdit/,
   );
   assert.match(studio, /update\(\{ blueWatermark:/);
 });

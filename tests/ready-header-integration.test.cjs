@@ -45,7 +45,7 @@ test("setup live A4 review shares print header and current edits, cancels stale 
   const s = fs.readFileSync("components/ready-papers/studio.tsx", "utf8");
   assert.match(s, /renderPageHeader\(active === selected\[0\]\)/);
   assert.match(s, /renderPageHeader\(i === 0\)/);
-  assert.match(s, /renderEdited\(pages\[active - 1\], edit\)/);
+  assert.match(s, /rasterEditKey\(edit\)/);
   assert.match(s, /liveReviewPage === active/);
   assert.match(s, /clearTimeout\(timer\)/);
   assert.match(s, /rp-action-setup/);
