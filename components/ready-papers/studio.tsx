@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { PageViewer, PrintFrame } from "./page-viewer";
 import {
   ArrowLeft,
   Check,
@@ -50,6 +51,12 @@ export default function ReadyStudio({
   adminPreset: boolean;
   answerEntries?: ReadyAnswer[];
 }) {
+  const [viewer, setViewer] = useState<{
+    src: string;
+    page: number;
+    selectable: boolean;
+  } | null>(null);
+  const [controlsOpen, setControlsOpen] = useState(false);
   const [entries, setEntries] = useState(answerEntries);
   const [printKind, setPrintKind] = useState<"questions" | "blank" | "answers">(
     "questions",
@@ -126,6 +133,15 @@ export default function ReadyStudio({
       live = false;
     };
   }, [pages, active, edits, step, original]);
+  function togglePage(n: number) {
+    setSelected((old) => {
+      if (old.includes(n)) return old.filter((v) => v !== n);
+      if (old.length >= 10) return old;
+      return [...old, n];
+    });
+    if (!selected.includes(n) && selected.length >= 10)
+      setMessage("একবারে সর্বোচ্চ ১০ page নির্বাচন করুন।");
+  }
   function update(patch: Partial<PageEdit>) {
     const checked = pageEditSchema.safeParse({ ...edit, ...patch });
     if (!checked.success) {
@@ -336,26 +352,30 @@ export default function ReadyStudio({
         <section data-noprint>
           <div className="rp-page-grid">
             {pages.map((src, i) => (
-              <label
+              <div
                 className={`rp-page-card${selected.includes(i + 1) ? " selected" : ""}`}
                 key={i}
               >
-                <img src={src} alt={`মূল PDF page ${i + 1}`} loading="lazy" />
-                <span>
+                <button
+                  type="button"
+                  className="rp-page-open"
+                  aria-label={`Page ${i + 1} বড় করে দেখুন`}
+                  onClick={() =>
+                    setViewer({ src, page: i + 1, selectable: true })
+                  }
+                >
+                  <img src={src} alt={`মূল PDF page ${i + 1}`} loading="lazy" />
+                  <span>বড় করে দেখুন ⤢</span>
+                </button>
+                <label className="rp-page-choice">
                   <input
                     type="checkbox"
                     checked={selected.includes(i + 1)}
-                    onChange={() => {
-                      if (selected.includes(i + 1))
-                        setSelected((v) => v.filter((n) => n !== i + 1));
-                      else if (selected.length < 10)
-                        setSelected((v) => [...v, i + 1]);
-                      else setMessage("একবারে সর্বোচ্চ ১০ page নির্বাচন করুন।");
-                    }}
+                    onChange={() => togglePage(i + 1)}
                   />
                   Page {(i + 1).toLocaleString("bn-BD")}
-                </span>
-              </label>
+                </label>
+              </div>
             ))}
           </div>
           {pages.length > 0 && (
@@ -368,7 +388,10 @@ export default function ReadyStudio({
       )}
       {step === "edit" && (
         <div className="rp-editor" data-noprint>
-          <aside className="rp-panel rp-controls">
+          <aside
+            id="rp-edit-controls"
+            className={`rp-panel rp-controls${controlsOpen ? " rp-controls-open" : ""}`}
+          >
             <h2>Page ও Header</h2>
             <div className="rp-order">
               {selected.map((n, i) => (
@@ -631,6 +654,29 @@ export default function ReadyStudio({
           <section className="rp-canvas-panel">
             <div className="rp-toolbar">
               <strong>Page {active}</strong>
+              <button
+                className="rp-mobile-controls"
+                aria-expanded={controlsOpen}
+                aria-controls="rp-edit-controls"
+                onClick={() => setControlsOpen((v) => !v)}
+              >
+                {controlsOpen ? "Edit controls বন্ধ" : "Header ও Edit controls"}
+              </button>
+              <button
+                onClick={() => {
+                  if (canvas.current)
+                    setViewer({
+                      src: canvas.current.toDataURL("image/png"),
+                      page: active,
+                      selectable: false,
+                    });
+                }}
+              >
+                বড় করে দেখুন ⤢
+              </button>
+              <button disabled={busy} onClick={preview}>
+                Print preview
+              </button>
               <button onClick={() => setOriginal((v) => !v)}>
                 {original ? "Edited দেখুন" : "Original দেখুন"}
               </button>
@@ -706,35 +752,49 @@ export default function ReadyStudio({
               Print / Save PDF
             </button>
           </div>
-          <section id="ready-print">
-            {printKind !== "questions" ? (
-              <AnswerSheets
-                selected={selected}
-                entries={entries}
-                blank={printKind === "blank"}
-              />
-            ) : (
-              printPages.map((src, i) => (
-                <article className="rp-print-sheet" key={selected[i]}>
-                  {i === 0 && Object.values(header).some(Boolean) && (
-                    <header className="rp-print-header">
-                      <h2>{header.school}</h2>
-                      <h3>{header.exam}</h3>
-                      <p>{header.subject}</p>
-                      <div>
-                        <span>{header.time && `সময়: ${header.time}`}</span>
-                        <span>{header.marks && `পূর্ণমান: ${header.marks}`}</span>
-                      </div>
-                    </header>
-                  )}
-                  <div className="rp-print-content">
-                    <img src={src} alt={`সম্পাদিত page ${selected[i]}`} />
-                  </div>
-                </article>
-              ))
-            )}
-          </section>
+          <PrintFrame>
+            <section id="ready-print">
+              {printKind !== "questions" ? (
+                <AnswerSheets
+                  selected={selected}
+                  entries={entries}
+                  blank={printKind === "blank"}
+                />
+              ) : (
+                printPages.map((src, i) => (
+                  <article className="rp-print-sheet" key={selected[i]}>
+                    {i === 0 && Object.values(header).some(Boolean) && (
+                      <header className="rp-print-header">
+                        <h2>{header.school}</h2>
+                        <h3>{header.exam}</h3>
+                        <p>{header.subject}</p>
+                        <div>
+                          <span>{header.time && `সময়: ${header.time}`}</span>
+                          <span>
+                            {header.marks && `পূর্ণমান: ${header.marks}`}
+                          </span>
+                        </div>
+                      </header>
+                    )}
+                    <div className="rp-print-content">
+                      <img src={src} alt={`সম্পাদিত page ${selected[i]}`} />
+                    </div>
+                  </article>
+                ))
+              )}
+            </section>
+          </PrintFrame>
         </>
+      )}
+      {viewer && (
+        <PageViewer
+          {...viewer}
+          selected={selected.includes(viewer.page)}
+          onToggle={
+            viewer.selectable ? () => togglePage(viewer.page) : undefined
+          }
+          onClose={() => setViewer(null)}
+        />
       )}
     </main>
   );
