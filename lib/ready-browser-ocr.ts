@@ -1,4 +1,14 @@
-import { loadPdfImages } from "./ready-paper-browser";
+import {
+  usablePDFText,
+  pdfTextLines,
+  columnBoundaries,
+  redactOCRWord,
+} from "./ready-text-layout";
+import {
+  loadReadyPdfEngine,
+  loadPdfImages,
+  imageFrom,
+} from "./ready-paper-browser";
 /** Dynamically imported only by the paid studio. Original page, never edited output. */
 export async function readPurchasedPage(
   url: string,
@@ -8,6 +18,40 @@ export async function readPurchasedPage(
 ) {
   if (signal.aborted) throw Error("OCR বাতিল হয়েছে।");
   onProgress(`পৃষ্ঠা ${page}: মূল PDF পড়ছি…`);
+  const engine = await loadReadyPdfEngine();
+  const doc = await engine.getDocument({
+    url,
+    isEvalSupported: false,
+    disableFontFace: true,
+  }).promise;
+  try {
+    if (doc.numPages > 100 || page < 1 || page > doc.numPages)
+      throw Error("Page unavailable");
+    const p = await doc.getPage(page);
+    const text = pdfTextLines((await p.getTextContent()).items);
+    p.cleanup();
+    if (usablePDFText(text)) {
+      onProgress(`পৃষ্ঠা ${page}: সরাসরি PDF লেখা পাওয়া গেছে।`);
+      let context = "";
+      if (page > 1) {
+        const prev = await doc.getPage(page - 1);
+        const raw = pdfTextLines((await prev.getTextContent()).items);
+        prev.cleanup();
+        if (usablePDFText(raw)) context = raw.slice(-12000);
+      }
+      if (signal.aborted) throw Error("OCR বাতিল হয়েছে।");
+      return {
+        text: text.slice(0, 60000),
+        context,
+        confidence: 100,
+        uncertain: false,
+        scoped: true,
+        method: "pdf-text",
+      };
+    }
+  } finally {
+    await doc.destroy();
+  }
   const images = await loadPdfImages(url, () => {}, [page]);
   if (signal.aborted) throw Error("OCR বাতিল হয়েছে।");
   const { createWorker } = await import("tesseract.js");
@@ -37,32 +81,79 @@ export async function readPurchasedPage(
         await worker.terminate();
         throw Error("OCR বাতিল হয়েছে।");
       }
-      const { data } = await worker.recognize(
-        images[0],
-        {},
-        { text: true, blocks: true },
+      const source = await imageFrom(images[0]);
+      const canvas = document.createElement("canvas");
+      canvas.width = source.width;
+      canvas.height = source.height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(source, 0, 0);
+      const boundaries = columnBoundaries(
+        ctx.getImageData(0, 0, canvas.width, canvas.height).data,
+        canvas.width,
+        canvas.height,
       );
-      if (aborted || signal.aborted) throw Error("OCR বাতিল হয়েছে।");
-      const words =
-        data.blocks?.flatMap((b) =>
-          b.paragraphs.flatMap((p) => p.lines.flatMap((l) => l.words)),
-        ) ?? [];
-      const uncertain = !words.length || words.some((w) => w.confidence < 80);
-      // Scope uncertainty to its original line instead of poisoning the entire page.
-      const lines =
-        data.blocks?.flatMap((b) => b.paragraphs.flatMap((p) => p.lines)) ?? [];
-      const text = lines.length
-        ? lines
-            .map((l) =>
-              l.words
-                .map((w) => (w.confidence < 45 ? "[UNCLEAR]" : w.text))
-                .join(" "),
-            )
-            .join("\n")
-            .trim()
-        : data.text.trim();
-      if (!text || text.length > 60000) throw Error("OCR-এ প্রশ্ন পড়া যায়নি।");
-      return { text, confidence: data.confidence, uncertain, scoped: true };
+      const outputs: string[] = [];
+      let confidence = 0,
+        uncertain = false;
+      try {
+        for (let c = 0; c < boundaries.length - 1; c++) {
+          if (signal.aborted) throw Error("OCR বাতিল হয়েছে।");
+          onProgress(
+            `পৃষ্ঠা ${page}: কলাম ${c + 1}/${boundaries.length - 1} পড়ছি…`,
+          );
+          const crop = document.createElement("canvas");
+          crop.width = boundaries[c + 1] - boundaries[c];
+          crop.height = canvas.height;
+          const cc = crop.getContext("2d")!;
+          cc.drawImage(
+            canvas,
+            boundaries[c],
+            0,
+            crop.width,
+            crop.height,
+            0,
+            0,
+            crop.width,
+            crop.height,
+          );
+          let data;
+          try {
+            ({ data } = await worker.recognize(
+              crop,
+              {},
+              { text: true, blocks: true },
+            ));
+          } finally {
+            crop.width = crop.height = 0;
+          }
+          const lines =
+            data.blocks?.flatMap((b) => b.paragraphs.flatMap((p) => p.lines)) ??
+            [];
+          const text = lines.length
+            ? lines
+                .map((l) => l.words.map(redactOCRWord).join(" "))
+                .join("\n")
+                .trim()
+            : data.text.trim();
+          outputs.push(text);
+          confidence += data.confidence;
+          uncertain ||=
+            !lines.length ||
+            lines.some((l) => l.words.some((w) => w.confidence < 80));
+        }
+      } finally {
+        canvas.width = canvas.height = 0;
+      }
+      const text = outputs.join("\n\n");
+      if (!text.trim() || text.length > 60000)
+        throw Error("OCR-এ প্রশ্ন পড়া যায়নি।");
+      return {
+        text,
+        confidence: confidence / (boundaries.length - 1),
+        uncertain,
+        scoped: true,
+        method: "column-ocr",
+      };
     })();
     return await Promise.race([
       task,

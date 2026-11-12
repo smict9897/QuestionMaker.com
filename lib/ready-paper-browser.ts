@@ -4,11 +4,7 @@ import {
   type PageEdit,
 } from "./ready-papers";
 let pdfLoader: Promise<any> | undefined;
-export async function loadPdfImages(
-  url: string,
-  onProgress: (n: number, total: number) => void,
-  selected?: number[],
-) {
+export async function loadReadyPdfEngine() {
   if (!pdfLoader)
     pdfLoader = new Promise((resolve, reject) => {
       const script = document.createElement("script");
@@ -22,6 +18,14 @@ export async function loadPdfImages(
     });
   const pdfjs = await pdfLoader;
   pdfjs.GlobalWorkerOptions.workerSrc = "/vendor/pdfjs/pdf.worker.min.js";
+  return pdfjs;
+}
+export async function loadPdfImages(
+  url: string,
+  onProgress: (n: number, total: number) => void,
+  selected?: number[],
+) {
+  const pdfjs = await loadReadyPdfEngine();
   const task = pdfjs.getDocument({
     url,
     isEvalSupported: false,

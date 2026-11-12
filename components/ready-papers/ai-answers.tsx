@@ -168,7 +168,7 @@ export default function AIAnswers({
                 p.status === "done" &&
                 (!p.result?.questions.length ||
                   p.result.questions.some((q) => !q.answer)) &&
-                (p.blankRetries ?? 0) < 2,
+                (p.solverVersion !== 3 || (p.blankRetries ?? 0) < 2),
             )
           }
           onClick={() => {
