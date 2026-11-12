@@ -23,6 +23,7 @@ export const pageEditSchema = z
     ]),
     mode: z.enum(["original", "clean", "bw"]),
     strength: z.number().min(0).max(1),
+    blueWatermark: z.number().min(0).max(1).default(0),
     masks: z.array(boxSchema).max(40),
     texts: z
       .array(
@@ -46,6 +47,7 @@ export const freshEdit = (): PageEdit => ({
   deskew: 0,
   mode: "original",
   strength: 0.5,
+  blueWatermark: 0,
   masks: [],
   texts: [],
 });
@@ -132,4 +134,24 @@ export function cleanPixels(
       data[i] = data[i + 1] = data[i + 2] = v;
     }
   return data;
+}
+
+/** Optional light blue/cyan suppression, not content reconstruction or secure redaction.
+ * Operates on fresh raster pixels before grayscale, preserving dark/neutral ink.
+ */
+export function reduceBlueWatermark(data: Uint8ClampedArray, strength: number) {
+  const amount = Number.isFinite(strength)
+    ? Math.max(0, Math.min(1, strength))
+    : 0;
+  if (!amount) return;
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i],
+      g = data[i + 1],
+      b = data[i + 2];
+    // Restrict to light blue/cyan. Dark ink and low-chroma gray are untouched.
+    if (r < 110 || g < 140 || b < 165 || b - r < 18 || g - r < 6 || b < g - 8)
+      continue;
+    const blend = amount * Math.min(1, (b - r - 12) / 18);
+    for (let c = 0; c < 3; c++) data[i + c] += (255 - data[i + c]) * blend;
+  }
 }
