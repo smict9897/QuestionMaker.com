@@ -376,7 +376,21 @@ test("lazy browser OCR uses local assets, original page and worker cleanup", asy
     rendered,
     loaded = 0;
   const browser = load("lib/ready-browser-ocr.ts", {
+    "./ready-text-layout": load("lib/ready-text-layout.ts"),
     "./ready-paper-browser": {
+      loadReadyPdfEngine: async () => ({
+        getDocument: () => ({
+          promise: Promise.resolve({
+            numPages: 2,
+            getPage: async () => ({
+              getTextContent: async () => ({ items: [] }),
+              cleanup: () => {},
+            }),
+            destroy: async () => {},
+          }),
+        }),
+      }),
+      imageFrom: async () => ({ width: 10, height: 10 }),
       loadPdfImages: async (url, cb, pages) => {
         rendered = { url, pages };
         return ["original-image"];
@@ -391,7 +405,8 @@ test("lazy browser OCR uses local assets, original page and worker cleanup", asy
         assert.equal(options.workerBlobURL, false);
         return {
           recognize: async (image) => {
-            assert.equal(image, "original-image");
+            assert.equal(image.width, 10);
+            assert.equal(image.height, 10);
             return {
               data: {
                 text: "Question",
@@ -413,6 +428,17 @@ test("lazy browser OCR uses local assets, original page and worker cleanup", asy
       },
     },
   });
+  const previousDocument = global.document;
+  global.document = {
+    createElement: () => ({
+      width: 10,
+      height: 10,
+      getContext: () => ({
+        drawImage: () => {},
+        getImageData: () => ({ data: new Uint8ClampedArray(400).fill(255) }),
+      }),
+    }),
+  };
   const r = await browser.readPurchasedPage(
     "original.pdf",
     2,
@@ -430,6 +456,7 @@ test("lazy browser OCR uses local assets, original page and worker cleanup", asy
     browser.readPurchasedPage("original.pdf", 2, c.signal, () => {}),
   );
   assert.equal(loaded, 1);
+  global.document = previousDocument;
 });
 test("vendored browser OCR worker, both WASM variants and gzip languages exist", () => {
   const zlib = require("zlib");
@@ -490,3 +517,114 @@ test("blank-result retry actually reclaims a done page, capped twice, answers pr
       ["ক", "খ"],
     );
   }));
+
+test("text layer selection rejects legacy Bijoy but accepts readable English", () => {
+  const l = load("lib/ready-text-layout.ts");
+  assert.equal(
+    l.usablePDFText("Read the passage and answer the questions. ".repeat(8)),
+    true,
+  );
+  assert.equal(l.usablePDFText("†evW© cixÿvi cÖkœcÎ ".repeat(20)), false);
+  assert.equal(l.usablePDFText("Page 1"), false);
+  assert.equal(
+    l.pdfTextLines([
+      { str: "World", transform: [1, 0, 0, 1, 100, 200] },
+      { str: "Hello", transform: [1, 0, 0, 1, 10, 200] },
+      { str: "next", transform: [1, 0, 0, 1, 10, 180] },
+    ]),
+    "Hello World\nnext",
+  );
+  const width = 300,
+    height = 500,
+    pixels = new Uint8ClampedArray(width * height * 4).fill(255);
+  for (const x of [100, 200])
+    for (let y = 100; y < 480; y++) {
+      const n = (y * width + x) * 4;
+      pixels[n] = pixels[n + 1] = pixels[n + 2] = 0;
+    }
+  assert.deepEqual(
+    l.columnBoundaries(pixels, width, height),
+    [0, 100, 200, 300],
+  );
+});
+test("MCQ option text is allowed only if copied from evidence; old malformed labels still blank", () => {
+  const q = {
+    ...question,
+    answer: null,
+    answerText: "কার্বন",
+    evidence: "পটাশিয়াম ম্যাগনেসিয়াম সোডিয়াম কার্বন",
+  };
+  assert.equal(
+    ai.safeAIPage({ complete: true, questions: [q] }).questions[0].answer,
+    "কার্বন",
+  );
+  assert.equal(
+    ai.safeAIPage({
+      complete: true,
+      questions: [{ ...q, evidence: "different" }],
+    }).questions[0].answer,
+    null,
+  );
+});
+
+test("readable digital page bypasses OCR entirely and keeps prior-page context separate", async () => {
+  let rendered = 0,
+    destroyed = 0;
+  const layout = load("lib/ready-text-layout.ts");
+  const text = "Read the passage and answer the following questions. ".repeat(
+    6,
+  );
+  const browser = load("lib/ready-browser-ocr.ts", {
+    "./ready-text-layout": layout,
+    "./ready-paper-browser": {
+      loadPdfImages: async () => {
+        rendered++;
+        throw Error("must not OCR digital text");
+      },
+      loadReadyPdfEngine: async () => ({
+        getDocument: () => ({
+          promise: Promise.resolve({
+            numPages: 3,
+            getPage: async (n) => ({
+              getTextContent: async () => ({
+                items: [
+                  {
+                    str:
+                      (n === 1 ? "Prior passage " : "Target questions ") + text,
+                    transform: [1, 0, 0, 1, 0, 100],
+                  },
+                ],
+              }),
+              cleanup: () => {},
+            }),
+            destroy: async () => {
+              destroyed++;
+            },
+          }),
+        }),
+      }),
+    },
+  });
+  const result = await browser.readPurchasedPage(
+    "original.pdf",
+    2,
+    new AbortController().signal,
+    () => {},
+  );
+  assert.equal(result.method, "pdf-text");
+  assert.match(result.text, /Target questions/);
+  assert.doesNotMatch(result.text, /Prior passage/);
+  assert.match(result.context, /Prior passage/);
+  assert.equal(rendered, 0);
+  assert.equal(destroyed, 1);
+});
+
+test("unknown option bullets do not erase legible option text; formulas stay uncertain", () => {
+  const l = load("lib/ready-text-layout.ts");
+  assert.equal(
+    l.redactOCRWord({ text: "®", confidence: 20 }),
+    "[LABEL_UNCLEAR]",
+  );
+  assert.equal(l.redactOCRWord({ text: "10^-6", confidence: 20 }), "[UNCLEAR]");
+  assert.equal(l.redactOCRWord({ text: "কার্বন", confidence: 90 }), "কার্বন");
+});

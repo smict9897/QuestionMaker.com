@@ -53,6 +53,17 @@ export async function POST(request: Request) {
         if (
           input.retryBlanks &&
           p.status === "done" &&
+          p.solverVersion !== 3 &&
+          (!p.result?.questions.length ||
+            p.result.questions.some((q) => !q.answer))
+        ) {
+          p.solverVersion = 3;
+          p.blankRetries = 0;
+          p.retryBase = Math.max(3, p.attempts);
+        }
+        if (
+          input.retryBlanks &&
+          p.status === "done" &&
           (!p.result?.questions.length ||
             p.result.questions.some((q) => !q.answer)) &&
           (p.blankRetries ?? 0) < 2
@@ -107,7 +118,8 @@ export async function POST(request: Request) {
         const page = purchase.selected.find(
           (n) =>
             job.pages[n].status === "pending" &&
-            job.pages[n].attempts < 3 + (job.pages[n].blankRetries ?? 0),
+            job.pages[n].attempts <
+              (job.pages[n].retryBase ?? 3) + (job.pages[n].blankRetries ?? 0),
         );
         if (page !== undefined) {
           const source = await tx.setting.findUnique({
@@ -160,7 +172,7 @@ export async function POST(request: Request) {
         p.status = failed ? "error" : "done";
         if (result) {
           p.result = mergeReadyAIResults(p.result, result);
-          p.solverVersion = 2;
+          p.solverVersion = 3;
         }
         if (failed)
           p.error =
