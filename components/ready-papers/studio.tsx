@@ -58,6 +58,9 @@ export default function ReadyStudio({
   adminPreset: boolean;
   answerEntries?: ReadyAnswer[];
 }) {
+  const [liveReviewPage, setLiveReviewPage] = useState(0);
+  const [liveReview, setLiveReview] = useState("");
+  const [reviewPending, setReviewPending] = useState(false);
   const [headerLine, setHeaderLine] = useState(true);
   const [headerGap, setHeaderGap] = useState(2);
   const [placementMode, setPlacementMode] = useState(false);
@@ -151,6 +154,60 @@ export default function ReadyStudio({
       live = false;
     };
   }, [pages, active, edits, step, original]);
+  useEffect(() => {
+    if (step !== "edit" || !pages[active - 1]) return;
+    let live = true;
+    setReviewPending(true);
+    const timer = setTimeout(async () => {
+      try {
+        await document.fonts.ready;
+        const result = await renderEdited(pages[active - 1], edit);
+        if (live) {
+          setLiveReview(result.toDataURL("image/png"));
+          setLiveReviewPage(active);
+        }
+        result.width = result.height = 0;
+      } catch {
+        if (live) setLiveReview("");
+      } finally {
+        if (live) setReviewPending(false);
+      }
+    }, 120);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [pages, active, edits, step]);
+  function renderPageHeader(first: boolean) {
+    return (
+      <>
+        {first && headerStyle === "custom" && headerSettings.header.enabled && (
+          <header
+            className={`rp-custom-print-header rp-adjustable-header ${headerLine ? "" : "rp-header-line-off"}`}
+            style={{ marginBottom: `${headerGap}mm` }}
+          >
+            <HeaderPreview header={currentHeader(headerSettings)} />
+          </header>
+        )}
+        {first &&
+          headerStyle === "simple" &&
+          Object.values(header).some(Boolean) && (
+            <header
+              className={`rp-print-header rp-adjustable-header ${headerLine ? "" : "rp-header-line-off"}`}
+              style={{ marginBottom: `${headerGap}mm` }}
+            >
+              <h2>{header.school}</h2>
+              <h3>{header.exam}</h3>
+              <p>{header.subject}</p>
+              <div>
+                <span>{header.time && `সময়: ${header.time}`}</span>
+                <span>{header.marks && `পূর্ণমান: ${header.marks}`}</span>
+              </div>
+            </header>
+          )}
+      </>
+    );
+  }
   function togglePage(n: number) {
     setSelected((old) => {
       if (old.includes(n)) return old.filter((v) => v !== n);
@@ -364,6 +421,7 @@ export default function ReadyStudio({
           </button>
           {selected.length > 0 && (
             <button
+              className="rp-action-setup"
               disabled={busy}
               onClick={() => {
                 setActive(selected[0]);
@@ -775,7 +833,11 @@ export default function ReadyStudio({
                 Reset page
               </button>
             </div>
-            <button disabled={busy} onClick={preview}>
+            <button
+              className="rp-action-print"
+              disabled={busy}
+              onClick={preview}
+            >
               <Printer size={16} />
               Print preview
             </button>
@@ -803,13 +865,44 @@ export default function ReadyStudio({
               >
                 বড় করে দেখুন ⤢
               </button>
-              <button disabled={busy} onClick={preview}>
+              <button
+                className="rp-action-print"
+                disabled={busy}
+                onClick={preview}
+              >
                 Print preview
               </button>
               <button onClick={() => setOriginal((v) => !v)}>
                 {original ? "Edited দেখুন" : "Original দেখুন"}
               </button>
             </div>
+            <section
+              className="rp-live-review"
+              aria-label="সেটআপের সরাসরি A4 রিভিউ"
+              aria-busy={reviewPending}
+            >
+              <h3>সরাসরি A4 রিভিউ</h3>
+              <p className="rp-muted" role="status">
+                {reviewPending
+                  ? "রিভিউ আপডেট হচ্ছে…"
+                  : "হেডার ও Edit-এর ফল এখানেই দেখুন।"}
+              </p>
+              {liveReview && liveReviewPage === active && (
+                <PrintFrame>
+                  <article className="rp-print-sheet">
+                    {renderPageHeader(active === selected[0])}
+                    <PlacedQuestion
+                      src={liveReview}
+                      page={active}
+                      value={edit}
+                      movable={false}
+                      onChange={() => {}}
+                    />
+                  </article>
+                </PrintFrame>
+              )}
+            </section>
+            <h3>ছবির ওপর Erase / Text edit</h3>
             <canvas
               ref={canvas}
               aria-label={`Page ${active} সম্পাদনা preview`}
@@ -867,7 +960,9 @@ export default function ReadyStudio({
       {step === "preview" && (
         <>
           <div className="rp-toolbar" data-noprint>
-            <button onClick={() => setStep("edit")}>Edit-এ ফিরুন</button>
+            <button className="rp-action-setup" onClick={() => setStep("edit")}>
+              Edit-এ ফিরুন
+            </button>
             <button
               disabled={
                 busy ||
@@ -875,6 +970,7 @@ export default function ReadyStudio({
                 (printKind === "questions" &&
                   printPages.length !== selected.length)
               }
+              className="rp-action-print"
               onClick={() => window.print()}
             >
               <Printer size={16} />
@@ -996,36 +1092,7 @@ export default function ReadyStudio({
               ) : (
                 printPages.map((src, i) => (
                   <article className="rp-print-sheet" key={selected[i]}>
-                    {i === 0 &&
-                      headerStyle === "custom" &&
-                      headerSettings.header.enabled && (
-                        <header
-                          className={`rp-custom-print-header rp-adjustable-header ${headerLine ? "" : "rp-header-line-off"}`}
-                          style={{ marginBottom: `${headerGap}mm` }}
-                        >
-                          <HeaderPreview
-                            header={currentHeader(headerSettings)}
-                          />
-                        </header>
-                      )}
-                    {i === 0 &&
-                      headerStyle === "simple" &&
-                      Object.values(header).some(Boolean) && (
-                        <header
-                          className={`rp-print-header rp-adjustable-header ${headerLine ? "" : "rp-header-line-off"}`}
-                          style={{ marginBottom: `${headerGap}mm` }}
-                        >
-                          <h2>{header.school}</h2>
-                          <h3>{header.exam}</h3>
-                          <p>{header.subject}</p>
-                          <div>
-                            <span>{header.time && `সময়: ${header.time}`}</span>
-                            <span>
-                              {header.marks && `পূর্ণমান: ${header.marks}`}
-                            </span>
-                          </div>
-                        </header>
-                      )}
+                    {renderPageHeader(i === 0)}
                     <PlacedQuestion
                       src={src}
                       page={selected[i]}
