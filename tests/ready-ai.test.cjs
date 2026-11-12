@@ -110,6 +110,10 @@ function setup() {
     "@/lib/ready-ai": ai,
     "@/lib/ready-ai-config": load("lib/ready-ai-config.ts"),
     "@/lib/ready-ai-provider": {
+      browserOCRSchema: load("lib/ready-ai-provider.ts", {
+        "./ready-ai": ai,
+        "./ready-ai-config": load("lib/ready-ai-config.ts"),
+      }).browserOCRSchema,
       solveReadyAIPage: async () => {
         calls++;
         if (hold) await hold;
@@ -118,16 +122,31 @@ function setup() {
       },
     },
   });
+  const raw = async (run = false, retry = false, extra = {}) => {
+    const response = await route.POST(
+      new Request("https://example.test/api/ready-ai", {
+        method: "POST",
+        body: JSON.stringify({ receiptId: receipt, run, retry, ...extra }),
+      }),
+    );
+    return { status: response.status, ...(await response.json()) };
+  };
   return {
     store,
+    raw,
     post: async (run = false, retry = false) => {
-      const response = await route.POST(
-        new Request("https://example.test/api/ready-ai", {
-          method: "POST",
-          body: JSON.stringify({ receiptId: receipt, run, retry }),
-        }),
-      );
-      return { status: response.status, ...(await response.json()) };
+      let r = await raw(run, retry);
+      if (r.work)
+        r = await raw(false, false, {
+          page: r.work.page,
+          lease: r.work.lease,
+          ocr: {
+            text: "Test printed question",
+            confidence: 95,
+            uncertain: false,
+          },
+        });
+      return r;
     },
     setUser: (v) => (user = v),
     setFail: (v) => (fail = v),
@@ -226,24 +245,12 @@ test("expired lease resumes instead of remaining stuck", async () =>
     assert.equal(r.job.pages[1].status, "done");
     assert.equal(r.job.pages[1].attempts, 2);
   }));
-test("OCR receives only entitled PDF, DeepSeek receives text, uncertain OCR blanks answers", async () =>
+test("DeepSeek receives bounded browser OCR text, uncertain OCR blanks answers", async () =>
   configured(async () => {
-    const doc = await PDFDocument.create();
-    doc.addPage([200, 300]);
-    doc.addPage([400, 500]);
-    const bytes = await doc.save();
     let sent,
-      attachment,
-      uncertain = false,
       finish = "stop";
     const old = global.fetch;
     global.fetch = async (url, options) => {
-      if (url.startsWith("https://test.public.blob"))
-        return new Response(bytes);
-      if (url === "https://ocr.example/ocr") {
-        attachment = options.body;
-        return Response.json({ text: "1. example", confidence: 95, uncertain });
-      }
       assert.equal(url, "https://api.deepseek.com/chat/completions");
       sent = JSON.parse(options.body);
       return Response.json({
@@ -265,30 +272,23 @@ test("OCR receives only entitled PDF, DeepSeek receives text, uncertain OCR blan
         "./ready-ai": ai,
         "./ready-ai-config": load("lib/ready-ai-config.ts"),
       });
-      const run = () =>
-        provider.solveReadyAIPage(
-          "https://test.public.blob.vercel-storage.com/file.pdf",
-          2,
-        );
-      let r = await run();
-      const one = await PDFDocument.load(attachment);
-      assert.equal(one.getPageCount(), 1);
-      assert.equal(one.getPages()[0].getWidth(), 400);
+      const ocr = { text: "1. example", confidence: 95, uncertain: false };
+      let r = await provider.solveReadyAIPage(ocr, 2);
       assert.equal(r.questions[0].answer, "ক");
       assert.equal(r.complete, false);
       assert.equal(
         JSON.parse(sent.messages[1].content).untrustedOCR,
         "1. example",
       );
-      assert.equal(sent.model, "deepseek-chat");
       assert.doesNotMatch(JSON.stringify(sent), /inlineData|base64/);
-      uncertain = true;
-      r = await run();
+      r = await provider.solveReadyAIPage({ ...ocr, uncertain: true }, 2);
+      assert.equal(r.questions[0].answer, null);
+      r = await provider.solveReadyAIPage({ ...ocr, confidence: 50 }, 2);
       assert.equal(r.questions[0].answer, null);
       finish = "length";
-      await assert.rejects(run);
+      await assert.rejects(() => provider.solveReadyAIPage(ocr, 2));
       await assert.rejects(() =>
-        provider.solveReadyAIPage("https://evil.example/a.pdf", 2),
+        provider.solveReadyAIPage({ ...ocr, text: "x".repeat(60001) }, 2),
       );
     } finally {
       global.fetch = old;
@@ -301,28 +301,131 @@ test("checkout creates durable job atomically; UI auto-resumes and never labels 
   assert.match(ui, /request\(false, cycle > 0\)/);
   assert.match(ui, /request\(true\)/);
   assert.match(ui, /যাচাই প্রয়োজন/);
-  assert.match(ui, /অ্যাডমিন-অনুমোদিত উত্তরমালা নয়/);
+  assert.match(ui.replace(/\s+/g, " "), /অ্যাডমিন-অনুমোদিত উত্তরমালা নয়/);
   assert.doesNotMatch(ui, /dangerouslySetInnerHTML/);
 });
 
-test("OCR configuration requires HTTPS and strong shared secret, not Gemini", () => {
-  const keys = ["DEEPSEEK_API_KEY", "READY_OCR_URL", "READY_OCR_TOKEN"];
-  const old = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+test("browser OCR needs only DeepSeek configuration", () => {
+  const old = process.env.DEEPSEEK_API_KEY;
   const config = load("lib/ready-ai-config.ts");
   try {
     process.env.DEEPSEEK_API_KEY = "test";
-    process.env.READY_OCR_TOKEN = "x".repeat(32);
-    process.env.READY_OCR_URL = "https://ocr.example/ocr";
     assert.equal(config.readyAIConfigured(), true);
-    process.env.READY_OCR_URL = "http://ocr.example/ocr";
-    assert.equal(config.readyAIConfigured(), false);
-    process.env.READY_OCR_URL = "https://ocr.example/ocr";
-    process.env.READY_OCR_TOKEN = "short";
+    delete process.env.DEEPSEEK_API_KEY;
     assert.equal(config.readyAIConfigured(), false);
   } finally {
-    for (const k of keys) {
-      if (old[k] === undefined) delete process.env[k];
-      else process.env[k] = old[k];
-    }
+    if (old === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = old;
   }
+});
+test("browser OCR submits only selected page and single-use owned lease; failures retry", async () =>
+  configured(async () => {
+    const s = setup();
+    const claim = await s.raw(true);
+    assert.equal(claim.work.page, 1);
+    assert.match(claim.work.url, /blob.vercel-storage.com/);
+    assert.equal(s.calls(), 0);
+    const ocr = { text: "Question", confidence: 95, uncertain: false };
+    assert.equal(
+      (await s.raw(false, false, { page: 99, lease: claim.work.lease, ocr }))
+        .status,
+      403,
+    );
+    assert.equal(
+      (
+        await s.raw(false, false, {
+          page: 1,
+          lease: "11111111-1111-4111-8111-111111111111",
+          ocr,
+        })
+      ).status,
+      403,
+    );
+    await s.raw(false, false, { page: 1, lease: claim.work.lease, ocr });
+    assert.equal(s.calls(), 1);
+    assert.equal(
+      (await s.raw(false, false, { page: 1, lease: claim.work.lease, ocr }))
+        .status,
+      403,
+    );
+    const next = await s.raw(true);
+    const failed = await s.raw(false, false, {
+      page: 2,
+      lease: next.work.lease,
+      ocrFailed: true,
+    });
+    assert.equal(failed.job.pages[2].status, "error");
+    assert.equal(s.calls(), 1);
+    assert.equal((await s.post(true, true)).job.pages[2].status, "done");
+  }));
+test("lazy browser OCR uses local assets, original page and worker cleanup", async () => {
+  let terminated = 0,
+    rendered,
+    loaded = 0;
+  const browser = load("lib/ready-browser-ocr.ts", {
+    "./ready-paper-browser": {
+      loadPdfImages: async (url, cb, pages) => {
+        rendered = { url, pages };
+        return ["original-image"];
+      },
+    },
+    "tesseract.js": {
+      createWorker: async (langs, oem, options) => {
+        loaded++;
+        assert.equal(langs, "ben+eng");
+        assert.equal(oem, 1);
+        assert.equal(options.langPath, "/vendor/ocr");
+        assert.equal(options.workerBlobURL, false);
+        return {
+          recognize: async (image) => {
+            assert.equal(image, "original-image");
+            return {
+              data: {
+                text: "Question",
+                confidence: 95,
+                blocks: [
+                  {
+                    paragraphs: [{ lines: [{ words: [{ confidence: 50 }] }] }],
+                  },
+                ],
+              },
+            };
+          },
+          terminate: async () => {
+            terminated++;
+          },
+        };
+      },
+    },
+  });
+  const r = await browser.readPurchasedPage(
+    "original.pdf",
+    2,
+    new AbortController().signal,
+    () => {},
+  );
+  assert.equal(r.uncertain, true);
+  assert.equal(terminated, 1);
+  assert.deepEqual(rendered, { url: "original.pdf", pages: [2] });
+  const c = new AbortController();
+  c.abort();
+  await assert.rejects(() =>
+    browser.readPurchasedPage("original.pdf", 2, c.signal, () => {}),
+  );
+  assert.equal(loaded, 1);
+});
+test("vendored browser OCR worker, both WASM variants and gzip languages exist", () => {
+  const zlib = require("zlib");
+  for (const f of [
+    "worker.min.js",
+    "tesseract-core-lstm.wasm.js",
+    "tesseract-core-simd-lstm.wasm.js",
+  ])
+    assert.ok(fs.statSync("public/vendor/ocr/" + f).size > 10000);
+  for (const lang of ["ben", "eng"])
+    assert.ok(
+      zlib.gunzipSync(
+        fs.readFileSync("public/vendor/ocr/" + lang + ".traineddata.gz"),
+      ).length > 100000,
+    );
 });

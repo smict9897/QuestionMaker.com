@@ -17,12 +17,10 @@ export default async function ReadyAdmin() {
       </p>
       {!readyAIConfigured() && (
         <section className="rp-panel" role="alert">
-          <h2>স্বয়ংক্রিয় AI উত্তরের OCR সংযোগ বাকি</h2>
+          <h2>DeepSeek সংযোগ বাকি</h2>
           <p>
-            এই প্রজেক্টের Vercel Environment Variables-এ READY_OCR_URL ও
-            READY_OCR_TOKEN (Production/Preview) যুক্ত করে redeploy করুন। Key চ্যাটে
-            বা source code-এ দেবেন না। DeepSeek উত্তর তৈরি করবে; আলাদা OCR সার্ভিস
-            PDF-এর লেখা পড়বে। DEEPSEEK_API_KEY-ও প্রয়োজন।
+            Vercel-এ DEEPSEEK_API_KEY যুক্ত করে redeploy করুন। OCR ব্রাউজারে চলে;
+            Gemini বা আলাদা OCR hosting লাগে না। Key চ্যাটে দেবেন না।
           </p>
         </section>
       )}

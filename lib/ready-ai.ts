@@ -16,6 +16,7 @@ export type AIPageResult = z.infer<typeof aiPageSchema>;
 export type AIPageState = {
   status: "pending" | "running" | "done" | "error";
   attempts: number;
+  submitted?: boolean;
   lease?: string;
   leaseUntil?: number;
   error?: string;

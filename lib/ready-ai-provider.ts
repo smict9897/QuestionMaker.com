@@ -1,74 +1,18 @@
-import { PDFDocument } from "pdf-lib";
 import { READY_AI_PROMPT, safeAIPage } from "./ready-ai";
 import { readyAIConfigured } from "./ready-ai-config";
 import { z } from "zod";
-export async function solveReadyAIPage(url: string, page: number) {
+export const browserOCRSchema = z.object({
+  text: z.string().trim().min(1).max(60000),
+  confidence: z.number().min(0).max(100),
+  uncertain: z.boolean(),
+});
+export async function solveReadyAIPage(
+  ocr: z.infer<typeof browserOCRSchema>,
+  page: number,
+) {
   const key = process.env.DEEPSEEK_API_KEY;
-  if (!readyAIConfigured()) throw Error("OCR/DeepSeek সংযোগ নেই।");
-  const u = new URL(url);
-  if (
-    u.protocol !== "https:" ||
-    !u.hostname.endsWith(".public.blob.vercel-storage.com") ||
-    u.username ||
-    u.password
-  )
-    throw Error("Invalid source");
-  const res = await fetch(url, {
-    redirect: "error",
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!res.ok) throw Error("Source unavailable");
-  const reader = res.body?.getReader();
-  if (!reader) throw Error("Source unavailable");
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    while (true) {
-      const r = await reader.read();
-      if (r.done) break;
-      size += r.value.length;
-      if (size > 10_000_000) throw Error("Source too large");
-      chunks.push(r.value);
-    }
-  } finally {
-    await reader.cancel();
-  }
-  const bytes = new Uint8Array(size);
-  let offset = 0;
-  for (const c of chunks) {
-    bytes.set(c, offset);
-    offset += c.length;
-  }
-  const doc = await PDFDocument.load(bytes);
-  if (
-    !Number.isInteger(page) ||
-    page < 1 ||
-    page > doc.getPageCount() ||
-    doc.getPageCount() > 100
-  )
-    throw Error("Page unavailable");
-  const out = await PDFDocument.create();
-  out.addPage((await out.copyPages(doc, [page - 1]))[0]);
-  const pdf = await out.save();
-  if (pdf.length > 10_000_000) throw Error("Page too large");
-  const ocrResponse = await fetch(process.env.READY_OCR_URL!, {
-    method: "POST",
-    redirect: "error",
-    headers: {
-      "Content-Type": "application/pdf",
-      Authorization: `Bearer ${process.env.READY_OCR_TOKEN}`,
-    },
-    body: Buffer.from(pdf),
-    signal: AbortSignal.timeout(65000),
-  });
-  if (!ocrResponse.ok) throw Error("OCR service unavailable");
-  const ocr = z
-    .object({
-      text: z.string().min(1).max(60000),
-      confidence: z.number().min(0).max(100),
-      uncertain: z.boolean(),
-    })
-    .parse(await ocrResponse.json());
+  if (!readyAIConfigured()) throw Error("DeepSeek সংযোগ নেই।");
+  ocr = browserOCRSchema.parse(ocr);
   const response = await fetch("https://api.deepseek.com/chat/completions", {
     method: "POST",
     headers: {
