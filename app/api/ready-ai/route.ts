@@ -53,11 +53,11 @@ export async function POST(request: Request) {
         if (
           input.retryBlanks &&
           p.status === "done" &&
-          p.solverVersion !== 3 &&
+          p.solverVersion !== 4 &&
           (!p.result?.questions.length ||
             p.result.questions.some((q) => !q.answer))
         ) {
-          p.solverVersion = 3;
+          p.solverVersion = 4;
           p.blankRetries = 0;
           p.retryBase = Math.max(3, p.attempts);
         }
@@ -172,7 +172,7 @@ export async function POST(request: Request) {
         p.status = failed ? "error" : "done";
         if (result) {
           p.result = mergeReadyAIResults(p.result, result);
-          p.solverVersion = 3;
+          p.solverVersion = 4;
         }
         if (failed)
           p.error =

@@ -1,3 +1,4 @@
+import { transcriptionSchema } from "./ready-ai-repair";
 import { z } from "zod";
 export const READY_AI_PREFIX = "readyai:v1:";
 export const aiQuestionSchema = z.object({
@@ -12,6 +13,7 @@ export const aiQuestionSchema = z.object({
   blankReason: z.string().max(300).optional(),
 });
 export const aiPageSchema = z.object({
+  transcription: transcriptionSchema.optional(),
   complete: z.boolean(),
   questions: z.array(aiQuestionSchema).max(100),
 });
