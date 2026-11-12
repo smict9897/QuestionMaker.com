@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { updateReadyPaper } from "@/app/actions/ready-papers";
+import { deleteReadyPaper, updateReadyPaper } from "@/app/actions/ready-papers";
 import type { ReadyPaper } from "@/lib/ready-papers";
 import ReadyClassSubject, { type ReadyCatalog } from "./class-subject";
 export default function ReadyUpload({
@@ -198,6 +198,34 @@ export default function ReadyUpload({
               }}
             >
               {p.published ? "প্রকাশ বন্ধ" : "প্রকাশ করুন"}
+            </button>
+            <button
+              className="rp-delete-button"
+              disabled={busy}
+              onClick={async () => {
+                if (
+                  !window.confirm(
+                    `“${p.title}” তালিকা থেকে Delete করবেন? শুধু এই পার্ট সরবে। আগে কেনা কপি ও মূল PDF রাখা হবে।`,
+                  )
+                )
+                  return;
+                setBusy(true);
+                try {
+                  const r = await deleteReadyPaper(p.id);
+                  setMessage(
+                    r.ok
+                      ? "প্রশ্নপত্র তালিকা থেকে সরানো হয়েছে; কেনা কপি অক্ষত আছে।"
+                      : r.error,
+                  );
+                  if (r.ok) router.refresh();
+                } catch {
+                  setMessage("Delete হয়নি। আবার চেষ্টা করুন।");
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Delete
             </button>
           </div>
         ))}

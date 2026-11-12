@@ -48,9 +48,21 @@ export async function readPurchasedPage(
           b.paragraphs.flatMap((p) => p.lines.flatMap((l) => l.words)),
         ) ?? [];
       const uncertain = !words.length || words.some((w) => w.confidence < 80);
-      const text = data.text.trim();
+      // Scope uncertainty to its original line instead of poisoning the entire page.
+      const lines =
+        data.blocks?.flatMap((b) => b.paragraphs.flatMap((p) => p.lines)) ?? [];
+      const text = lines.length
+        ? lines
+            .map((l) =>
+              l.words
+                .map((w) => (w.confidence < 45 ? "[UNCLEAR]" : w.text))
+                .join(" "),
+            )
+            .join("\n")
+            .trim()
+        : data.text.trim();
       if (!text || text.length > 60000) throw Error("OCR-এ প্রশ্ন পড়া যায়নি।");
-      return { text, confidence: data.confidence, uncertain };
+      return { text, confidence: data.confidence, uncertain, scoped: true };
     })();
     return await Promise.race([
       task,

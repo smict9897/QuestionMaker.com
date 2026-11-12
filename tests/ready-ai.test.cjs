@@ -260,7 +260,7 @@ test("DeepSeek receives bounded browser OCR text, uncertain OCR blanks answers",
             message: {
               content: JSON.stringify({
                 complete: true,
-                questions: [question],
+                questions: [{ ...question, evidence: "1. example" }],
               }),
             },
           },
@@ -272,7 +272,12 @@ test("DeepSeek receives bounded browser OCR text, uncertain OCR blanks answers",
         "./ready-ai": ai,
         "./ready-ai-config": load("lib/ready-ai-config.ts"),
       });
-      const ocr = { text: "1. example", confidence: 95, uncertain: false };
+      const ocr = {
+        text: "1. example",
+        confidence: 95,
+        uncertain: false,
+        scoped: true,
+      };
       let r = await provider.solveReadyAIPage(ocr, 2);
       assert.equal(r.questions[0].answer, "ক");
       assert.equal(r.complete, false);
@@ -282,8 +287,16 @@ test("DeepSeek receives bounded browser OCR text, uncertain OCR blanks answers",
       );
       assert.doesNotMatch(JSON.stringify(sent), /inlineData|base64/);
       r = await provider.solveReadyAIPage({ ...ocr, uncertain: true }, 2);
-      assert.equal(r.questions[0].answer, null);
+      assert.equal(r.questions[0].answer, "ক");
       r = await provider.solveReadyAIPage({ ...ocr, confidence: 50 }, 2);
+      assert.equal(r.questions[0].answer, "ক");
+      r = await provider.solveReadyAIPage(
+        { ...ocr, text: "different text" },
+        2,
+      );
+      assert.equal(r.questions[0].answer, null);
+      assert.match(r.questions[0].blankReason, /প্রমাণ/);
+      r = await provider.solveReadyAIPage({ ...ocr, scoped: false }, 2);
       assert.equal(r.questions[0].answer, null);
       finish = "length";
       await assert.rejects(() => provider.solveReadyAIPage(ocr, 2));
@@ -298,7 +311,7 @@ test("checkout creates durable job atomically; UI auto-resumes and never labels 
   const c = fs.readFileSync("app/actions/ready-commerce.ts", "utf8"),
     ui = fs.readFileSync("components/ready-papers/ai-answers.tsx", "utf8");
   assert.match(c, /initialReadyAIJob\(q.receiptId, input.selected\)/);
-  assert.match(ui, /request\(false, cycle > 0\)/);
+  assert.match(ui, /retryBlanks: blankRetry.current/);
   assert.match(ui, /request\(true\)/);
   assert.match(ui, /যাচাই প্রয়োজন/);
   assert.match(ui.replace(/\s+/g, " "), /অ্যাডমিন-অনুমোদিত উত্তরমালা নয়/);
@@ -385,7 +398,9 @@ test("lazy browser OCR uses local assets, original page and worker cleanup", asy
                 confidence: 95,
                 blocks: [
                   {
-                    paragraphs: [{ lines: [{ words: [{ confidence: 50 }] }] }],
+                    paragraphs: [
+                      { lines: [{ words: [{ confidence: 20, text: "bad" }] }] },
+                    ],
                   },
                 ],
               },
@@ -405,6 +420,8 @@ test("lazy browser OCR uses local assets, original page and worker cleanup", asy
     () => {},
   );
   assert.equal(r.uncertain, true);
+  assert.equal(r.text, "[UNCLEAR]");
+  assert.equal(r.scoped, true);
   assert.equal(terminated, 1);
   assert.deepEqual(rendered, { url: "original.pdf", pages: [2] });
   const c = new AbortController();
@@ -429,3 +446,47 @@ test("vendored browser OCR worker, both WASM variants and gzip languages exist",
       ).length > 100000,
     );
 });
+
+test("blank-result retry actually reclaims a done page, capped twice, answers preserved", async () =>
+  configured(async () => {
+    const s = setup();
+    await s.post(true);
+    await s.post(true);
+    const key = ai.READY_AI_PREFIX + "u:" + receipt;
+    let job = JSON.parse(s.store.get(key));
+    job.pages[1].result.questions[0].answer = null;
+    job.pages[1].attempts = 3;
+    s.store.set(key, JSON.stringify(job));
+    const retry = await s.raw(false, false, { retryBlanks: true });
+    assert.equal(retry.job.pages[1].status, "pending");
+    assert.equal(retry.job.pages[1].blankRetries, 1);
+    const result = await s.post(true);
+    assert.equal(result.job.pages[1].attempts, 4);
+    assert.equal(result.job.pages[1].result.questions[0].answer, "ক");
+    for (let i = 0; i < 2; i++) {
+      job = JSON.parse(s.store.get(key));
+      job.pages[1].status = "done";
+      job.pages[1].result.questions[0].answer = null;
+      s.store.set(key, JSON.stringify(job));
+      await s.raw(false, false, { retryBlanks: true });
+    }
+    job = JSON.parse(s.store.get(key));
+    assert.equal(job.pages[1].blankRetries, 2);
+    assert.equal(job.pages[1].status, "done");
+    const old = {
+      complete: false,
+      questions: [question, { ...question, number: "2", answer: null }],
+    };
+    const next = {
+      complete: false,
+      questions: [
+        { ...question, answer: null },
+        { ...question, number: "2", answer: "খ" },
+      ],
+    };
+    const merged = ai.mergeReadyAIResults(old, next);
+    assert.deepEqual(
+      merged.questions.map((q) => q.answer),
+      ["ক", "খ"],
+    );
+  }));

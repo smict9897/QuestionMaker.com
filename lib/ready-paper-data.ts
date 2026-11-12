@@ -9,7 +9,9 @@ export async function readyLibrary(admin = false) {
   return rows
     .flatMap((r) => {
       const paper = parseReady(r.value);
-      return paper && (admin || paper.published) ? [paper] : [];
+      return paper && !paper.deletedAt && (admin || paper.published)
+        ? [paper]
+        : [];
     })
     .sort((a, b) => b.at.localeCompare(a.at));
 }

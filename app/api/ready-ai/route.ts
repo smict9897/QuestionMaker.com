@@ -6,6 +6,7 @@ import { READY_PREFIX, parseReady } from "@/lib/ready-papers";
 import {
   READY_AI_PREFIX,
   initialReadyAIJob,
+  mergeReadyAIResults,
   type ReadyAIJob,
   type AIPageResult,
 } from "@/lib/ready-ai";
@@ -48,6 +49,16 @@ export async function POST(request: Request) {
         if (p.status === "running" && (p.leaseUntil ?? 0) < Date.now()) {
           p.status = p.attempts >= 3 ? "error" : "pending";
           p.error = "আগের কাজের সময় শেষ হয়েছে।";
+        }
+        if (
+          input.retryBlanks &&
+          p.status === "done" &&
+          (!p.result?.questions.length ||
+            p.result.questions.some((q) => !q.answer)) &&
+          (p.blankRetries ?? 0) < 2
+        ) {
+          p.status = "pending";
+          p.blankRetries = (p.blankRetries ?? 0) + 1;
         }
         if (input.retry && p.status === "error" && p.attempts < 3) {
           p.status = "pending";
@@ -94,7 +105,9 @@ export async function POST(request: Request) {
         !Object.values(job.pages).some((p) => p.status === "running")
       ) {
         const page = purchase.selected.find(
-          (n) => job.pages[n].status === "pending" && job.pages[n].attempts < 3,
+          (n) =>
+            job.pages[n].status === "pending" &&
+            job.pages[n].attempts < 3 + (job.pages[n].blankRetries ?? 0),
         );
         if (page !== undefined) {
           const source = await tx.setting.findUnique({
@@ -145,7 +158,10 @@ export async function POST(request: Request) {
       const p = job.pages[work.page];
       if (p.lease === work.lease) {
         p.status = failed ? "error" : "done";
-        if (result) p.result = result;
+        if (result) {
+          p.result = mergeReadyAIResults(p.result, result);
+          p.solverVersion = 2;
+        }
         if (failed)
           p.error =
             "এই পৃষ্ঠার AI উত্তর তৈরি হয়নি। ফাঁকা রাখা হয়েছে; আবার চেষ্টা করুন।";
@@ -172,6 +188,7 @@ const inputSchema = z
     receiptId: z.string().regex(/^[a-f0-9]{64}$/),
     run: z.boolean().default(false),
     retry: z.boolean().default(false),
+    retryBlanks: z.boolean().default(false),
     page: z.number().int().min(1).max(100).optional(),
     lease: z.string().uuid().optional(),
     ocr: browserOCRSchema.optional(),
