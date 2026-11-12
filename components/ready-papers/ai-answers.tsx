@@ -101,7 +101,9 @@ export default function AIAnswers({
                 throw e;
               }
               if (!live) break;
-              setMessage(`পৃষ্ঠা ${work.page}: DeepSeek উত্তর তৈরি করছে…`);
+              setMessage(
+                `পৃষ্ঠা ${work.page}: DeepSeek লেখা সংশোধন → উত্তর তৈরি করছে…`,
+              );
               data = await request(false, false, {
                 page: work.page,
                 lease: work.lease,
@@ -139,6 +141,10 @@ export default function AIAnswers({
         নামবে; ট্যাব খোলা রাখুন। দুর্বল মোবাইলে ধীর হতে পারে। OCR-এর লেখা DeepSeek-এ
         যায়; DeepSeek API-এর খরচ আলাদা।
       </p>
+      <p className="rp-muted">
+        ধাপ: লেখা বের করা → AI সংশোধন → উত্তর তৈরি। ✓ মানে ধাপ সম্পন্ন; সঠিকতা বা
+        অ্যাডমিন যাচাই নয়। সংশোধনে DeepSeek-এর অতিরিক্ত API ব্যবহার হয়।
+      </p>
       <p className="rp-ai-warning">
         AI-তৈরি উত্তর—যাচাই প্রয়োজন। OCR-এর পড়া লেখা ও মডেলের উত্তর দুটোতেই ভুল হতে
         পারে। অস্পষ্ট/অনিশ্চিত উত্তর ফাঁকা রাখা হয়েছে; এটি অ্যাডমিন-অনুমোদিত উত্তরমালা
@@ -168,7 +174,7 @@ export default function AIAnswers({
                 p.status === "done" &&
                 (!p.result?.questions.length ||
                   p.result.questions.some((q) => !q.answer)) &&
-                (p.solverVersion !== 3 || (p.blankRetries ?? 0) < 2),
+                (p.solverVersion !== 4 || (p.blankRetries ?? 0) < 2),
             )
           }
           onClick={() => {
@@ -192,6 +198,47 @@ export default function AIAnswers({
               <h3>মূল প্রশ্ন পৃষ্ঠা {n}</h3>
               {p.result ? (
                 <>
+                  {p.result.transcription && (
+                    <section className="rp-transcription">
+                      <p>
+                        ✓ লেখা বের করা ·{" "}
+                        {p.result.transcription.status === "accepted"
+                          ? "✓ সংশোধন ধাপ সম্পন্ন (AI)"
+                          : "⚠ সংশোধন গ্রহণ হয়নি—মূল লেখা রাখা হয়েছে"}{" "}
+                        · ✓ উত্তর তৈরির চেষ্টা সম্পন্ন
+                      </p>
+                      <p className="rp-ai-warning">
+                        {p.result.transcription.warning}
+                      </p>
+                      <details>
+                        <summary>মূল লেখা ও সংশোধিত লেখা / পরিবর্তন দেখুন</summary>
+                        <div className="rp-transcription-compare">
+                          <div>
+                            <h4>মূল extracted লেখা</h4>
+                            <pre>{p.result.transcription.originalText}</pre>
+                          </div>
+                          <div>
+                            <h4>AI সংশোধিত / ব্যবহৃত লেখা</h4>
+                            <pre>{p.result.transcription.correctedText}</pre>
+                          </div>
+                        </div>
+                        <ul>
+                          {p.result.transcription.changes.map((c, i) => (
+                            <li key={i}>
+                              <del>{c.before}</del> → <ins>{c.after}</ins> —{" "}
+                              {c.reason}
+                            </li>
+                          ))}
+                        </ul>
+                        {!p.result.transcription.changes.length && (
+                          <p>কোনো সংশোধন প্রয়োগ করা হয়নি।</p>
+                        )}
+                        {p.result.transcription.uncertainties.map((note, i) => (
+                          <p key={i}>⚠ {note}</p>
+                        ))}
+                      </details>
+                    </section>
+                  )}
                   <p className="rp-muted">
                     {p.result.complete
                       ? "পৃষ্ঠার প্রশ্ন পড়ার চেষ্টা সম্পন্ন।"
@@ -204,8 +251,9 @@ export default function AIAnswers({
                           {q.number}. {q.question}
                         </strong>
                         <p>
-                          {q.answer ||
-                            "________________ (সমাধান অনিশ্চিত / ফাঁকা)"}
+                          {q.answer
+                            ? `✓ ${q.answer}`
+                            : "________________ (সমাধান অনিশ্চিত / ফাঁকা)"}
                         </p>
                         {!q.answer && (
                           <small>
@@ -260,9 +308,9 @@ export function AIAnswerSheets({
       continuation: boolean;
     }[] = [];
     for (const q of p?.result?.questions ?? []) {
-      const answer =
-        q.answer ||
-        `________________\n${q.blankReason || "সমাধান পাওয়া যায়নি।"}`;
+      const answer = q.answer
+        ? `✓ ${q.answer}`
+        : `________________\n${q.blankReason || "সমাধান পাওয়া যায়নি।"}`;
       for (let start = 0; start < answer.length; start += 600)
         blocks.push({
           number: q.number,

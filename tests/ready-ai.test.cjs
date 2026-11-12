@@ -7,7 +7,9 @@ const { test } = require("node:test"),
 function load(file, mocks = {}) {
   const m = new Module(file, module);
   m.paths = module.paths;
-  m.require = (n) => mocks[n] || require(n);
+  m.require = (n) =>
+    mocks[n] ||
+    (n === "./ready-ai-repair" ? load("lib/ready-ai-repair.ts") : require(n));
   m._compile(
     ts.transpileModule(fs.readFileSync(file, "utf8"), {
       compilerOptions: {
@@ -253,6 +255,23 @@ test("DeepSeek receives bounded browser OCR text, uncertain OCR blanks answers",
     global.fetch = async (url, options) => {
       assert.equal(url, "https://api.deepseek.com/chat/completions");
       sent = JSON.parse(options.body);
+      if (sent.messages[0].content.includes("transcription repair editor")) {
+        const payload = JSON.parse(sent.messages[1].content);
+        return Response.json({
+          choices: [
+            {
+              finish_reason: finish,
+              message: {
+                content: JSON.stringify({
+                  correctedText: payload.originalText,
+                  changes: [],
+                  uncertainties: [],
+                }),
+              },
+            },
+          ],
+        });
+      }
       return Response.json({
         choices: [
           {
@@ -628,3 +647,189 @@ test("unknown option bullets do not erase legible option text; formulas stay unc
   assert.equal(l.redactOCRWord({ text: "10^-6", confidence: 20 }), "[UNCLEAR]");
   assert.equal(l.redactOCRWord({ text: "কার্বন", confidence: 90 }), "কার্বন");
 });
+test("repair permits explicit spelling edits but rejects numeric, unit, negation, formula and hidden changes", () => {
+  const { validateRepair } = load("lib/ready-ai-repair.ts");
+  const original =
+    "Read the pass age. A mass of 10 kg is not 20 kg. F=ma. [UNCLEAR]";
+  const corrected = original.replace("pass age", "passage");
+  const safe = validateRepair(original, {
+    correctedText: corrected,
+    changes: [
+      { before: "pass age", after: "passage", reason: "Join broken word" },
+    ],
+    uncertainties: ["Remaining word unclear"],
+  });
+  assert.equal(safe.status, "accepted");
+  assert.equal(safe.correctedText, corrected);
+  assert.equal(safe.originalText, original);
+  for (const [before, after] of [
+    ["10", "11"],
+    ["kg", "mg"],
+    ["not", ""],
+    ["[UNCLEAR]", "force"],
+    ["F=ma", "F=mb"],
+  ]) {
+    const text = original.replace(before, after);
+    let result;
+    if (after === "")
+      result = validateRepair(original, {
+        correctedText: text,
+        changes: [{ before: "is not", after: "is", reason: "bad" }],
+        uncertainties: [],
+      });
+    else
+      result = validateRepair(original, {
+        correctedText: text,
+        changes: [{ before, after, reason: "bad" }],
+        uncertainties: [],
+      });
+    assert.equal(result.status, "rejected", before);
+    assert.equal(result.correctedText, original);
+  }
+  const hidden = validateRepair(original, {
+    correctedText: corrected,
+    changes: [],
+    uncertainties: [],
+  });
+  assert.equal(hidden.status, "rejected");
+  const repeated = validateRepair("word word", {
+    correctedText: "WORD word",
+    changes: [{ before: "word", after: "WORD", reason: "ambiguous location" }],
+    uncertainties: [],
+  });
+  assert.equal(repeated.status, "rejected");
+});
+test("two-stage provider solves accepted corrected text and persists audit; unsafe correction falls back to raw", async () =>
+  configured(async () => {
+    const old = global.fetch,
+      provider = load("lib/ready-ai-provider.ts", {
+        "./ready-ai": ai,
+        "./ready-ai-config": load("lib/ready-ai-config.ts"),
+      });
+    let requests = [],
+      unsafe = false;
+    global.fetch = async (url, options) => {
+      const b = JSON.parse(options.body);
+      requests.push(b);
+      const first = b.messages[0].content.includes(
+        "transcription repair editor",
+      );
+      const value = first
+        ? {
+            correctedText: unsafe ? "A mass of 11 kg." : "Read the passage.",
+            changes: [
+              {
+                before: unsafe ? "10" : "pass age",
+                after: unsafe ? "11" : "passage",
+                reason: "test",
+              },
+            ],
+            uncertainties: [],
+          }
+        : {
+            complete: false,
+            questions: [
+              {
+                ...question,
+                kind: "SQ",
+                question: "Read the passage.",
+                answer: "Example answer",
+                evidence: unsafe ? "A mass of 10 kg." : "Read the passage.",
+              },
+            ],
+          };
+      return Response.json({
+        choices: [
+          {
+            finish_reason: "stop",
+            message: { content: JSON.stringify(value) },
+          },
+        ],
+      });
+    };
+    try {
+      let r = await provider.solveReadyAIPage(
+        {
+          text: "Read the pass age.",
+          confidence: 90,
+          uncertain: false,
+          scoped: true,
+        },
+        1,
+      );
+      assert.equal(requests.length, 2);
+      assert.equal(
+        JSON.parse(requests[1].messages[1].content).untrustedOCR,
+        "Read the passage.",
+      );
+      assert.equal(r.transcription.status, "accepted");
+      assert.equal(r.questions[0].answer, "Example answer");
+      assert.equal(r.transcription.changes.length, 1);
+      requests = [];
+      unsafe = true;
+      r = await provider.solveReadyAIPage(
+        {
+          text: "A mass of 10 kg.",
+          confidence: 90,
+          uncertain: false,
+          scoped: true,
+        },
+        1,
+      );
+      assert.equal(r.transcription.status, "rejected");
+      assert.equal(
+        JSON.parse(requests[1].messages[1].content).untrustedOCR,
+        "A mass of 10 kg.",
+      );
+      const ui = fs
+        .readFileSync("components/ready-papers/ai-answers.tsx", "utf8")
+        .replace(/\s+/g, " ");
+      assert.match(ui, /✓ মানে ধাপ সম্পন্ন/);
+      assert.match(ui, /মূল extracted লেখা/);
+      assert.match(ui, /p.result.transcription.correctedText/);
+    } finally {
+      global.fetch = old;
+    }
+  }));
+test("invalid or truncated repair response stops before answer call and never claims completed audit", async () =>
+  configured(async () => {
+    const old = global.fetch;
+    let calls = 0;
+    const provider = load("lib/ready-ai-provider.ts", {
+      "./ready-ai": ai,
+      "./ready-ai-config": load("lib/ready-ai-config.ts"),
+    });
+    global.fetch = async () => {
+      calls++;
+      return Response.json({
+        choices: [
+          {
+            finish_reason: "stop",
+            message: {
+              content: JSON.stringify({
+                correctedText: "invented",
+                changes: "invalid",
+                uncertainties: [],
+              }),
+            },
+          },
+        ],
+      });
+    };
+    try {
+      await assert.rejects(() =>
+        provider.solveReadyAIPage(
+          {
+            text: "Original question",
+            confidence: 90,
+            uncertain: false,
+            scoped: true,
+          },
+          1,
+        ),
+      );
+      assert.equal(calls, 1);
+    } finally {
+      global.fetch = old;
+    }
+  }));
