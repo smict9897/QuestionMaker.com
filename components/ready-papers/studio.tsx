@@ -51,6 +51,8 @@ import {
 } from "@/lib/ready-paper-browser";
 import { updateReadyPaper } from "@/app/actions/ready-papers";
 import "./ready.css";
+import AIAnswers, { AIAnswerSheets } from "./ai-answers";
+import type { ReadyAIJob } from "@/lib/ready-ai";
 import AnswerAssistant, { AnswerSheets } from "./answer-assistant";
 import type { ReadyAnswer } from "@/lib/ready-answers";
 type Header = {
@@ -73,6 +75,7 @@ export default function ReadyStudio({
   answerEntries?: ReadyAnswer[];
   initialPurchase?: ReadyPurchase;
 }) {
+  const [aiJob, setAIJob] = useState<ReadyAIJob | null>(null);
   const [checkout, setCheckout] = useState(false);
   const [receipt, setReceipt] = useState(initialPurchase?.id ?? "");
   const [paidSelection, setPaidSelection] = useState(
@@ -101,9 +104,9 @@ export default function ReadyStudio({
   } | null>(null);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [entries, setEntries] = useState(answerEntries);
-  const [printKind, setPrintKind] = useState<"questions" | "blank" | "answers">(
-    "questions",
-  );
+  const [printKind, setPrintKind] = useState<
+    "questions" | "blank" | "answers" | "ai"
+  >("questions");
   const [pages, setPages] = useState<string[]>([]),
     [selected, setSelected] = useState<number[]>([]),
     [edits, setEdits] = useState<Record<string, PageEdit>>(paper.presets),
@@ -566,6 +569,16 @@ export default function ReadyStudio({
             </button>
           )}
         </div>
+      )}
+      {paid && receipt && !adminPreset && (
+        <AIAnswers
+          receiptId={receipt}
+          onJob={setAIJob}
+          onPrint={() => {
+            setPrintKind("ai");
+            setStep("preview");
+          }}
+        />
       )}
       {pages.length > 0 && (
         <AnswerAssistant
@@ -1217,7 +1230,9 @@ export default function ReadyStudio({
           )}
           <PrintFrame>
             <section id="ready-print">
-              {printKind !== "questions" ? (
+              {printKind === "ai" ? (
+                <AIAnswerSheets job={aiJob} selected={selected} />
+              ) : printKind !== "questions" ? (
                 <AnswerSheets
                   selected={selected}
                   entries={entries}

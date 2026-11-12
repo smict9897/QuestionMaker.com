@@ -1477,3 +1477,32 @@
     transform: none;
   }
 }
+.rp-ai-warning {
+  padding: 12px 14px;
+  border: 1px solid #efdbab;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #775721;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.rp-ai-page {
+  padding: 12px 0;
+  border-bottom: 1px solid #dce7eb;
+}
+.rp-ai-answer {
+  margin: 16px 0;
+  overflow-wrap: anywhere;
+}
+.rp-ai-answer p {
+  white-space: pre-wrap;
+  line-height: 1.8;
+}
+.rp-ai-sheet {
+  font-size: 11pt;
+  line-height: 1.7;
+}
+.rp-ai-sheet .rp-ai-answer {
+  font-size: 11pt;
+  line-height: 1.7;
+}

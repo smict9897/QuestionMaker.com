@@ -35,6 +35,7 @@ export const readySnapshotSchema = z.object({
 });
 export type ReadySnapshot = z.infer<typeof readySnapshotSchema>;
 export type ReadyQuote = {
+  aiAvailable: boolean;
   receiptId: string;
   units: number;
   total: number;
