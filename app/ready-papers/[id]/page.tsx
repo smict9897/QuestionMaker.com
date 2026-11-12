@@ -1,3 +1,4 @@
+import { getReadyPurchase } from "@/app/actions/ready-commerce";
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/lib/db";
@@ -14,17 +15,25 @@ export default async function Paper({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ preset?: string }>;
+  searchParams: Promise<{ preset?: string; saved?: string }>;
 }) {
   const { id } = await params;
   if (!/^[a-f0-9-]{36}$/.test(id)) notFound();
   const s = await auth();
   if (!s?.user?.id) redirect(`/login?next=/ready-papers/${id}`);
+  const savedId = (await searchParams).saved;
+  const initialPurchase = savedId ? await getReadyPurchase(savedId) : null;
+  if (savedId && (!initialPurchase || initialPurchase.paperId !== id))
+    notFound();
   const row = await db.setting.findUnique({
     where: { key: READY_PREFIX + id },
   });
   const paper = row && parseReady(row.value);
-  if (!paper || (!paper.published && s.user.role !== "ADMIN")) notFound();
+  if (
+    !paper ||
+    (!paper.published && s.user.role !== "ADMIN" && !initialPurchase)
+  )
+    notFound();
   const isAdminPreset =
     s.user.role === "ADMIN" && (await searchParams).preset === "1";
   const rows = await db.setting.findMany({
@@ -42,7 +51,8 @@ export default async function Paper({
   return (
     <ReadyStudio
       paper={paper}
-      answerEntries={answerEntries}
+      initialPurchase={initialPurchase ?? undefined}
+      answerEntries={initialPurchase?.answers ?? answerEntries}
       userId={s.user.id}
       adminPreset={
         s.user.role === "ADMIN" && (await searchParams).preset === "1"
