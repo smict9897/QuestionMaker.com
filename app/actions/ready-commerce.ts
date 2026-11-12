@@ -19,6 +19,7 @@ import {
 } from "@/lib/ready-commerce";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { READY_AI_PREFIX, initialReadyAIJob } from "@/lib/ready-ai";
 type Tx = Prisma.TransactionClient;
 type Plan = { id: string; expiresAt: string; remaining: number };
 export type ReadyPurchase = {
@@ -91,6 +92,7 @@ async function quote(tx: Tx, id: string, raw: unknown) {
   const total =
     owned || wallet.admin ? 0 : (units - packageUnits) * READY_UNIT_PAISA;
   const q: ReadyQuote = {
+    aiAvailable: !!process.env.GEMINI_API_KEY?.trim(),
     receiptId,
     units,
     total,
@@ -171,6 +173,12 @@ export async function checkoutReadyPaper(
         data: {
           key: receiptKey(id, q.receiptId),
           value: JSON.stringify(purchase),
+        },
+      });
+      await tx.setting.create({
+        data: {
+          key: `${READY_AI_PREFIX}${id}:${q.receiptId}`,
+          value: JSON.stringify(initialReadyAIJob(q.receiptId, input.selected)),
         },
       });
       if (q.total > 0)

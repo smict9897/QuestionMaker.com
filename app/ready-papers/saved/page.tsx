@@ -59,6 +59,10 @@ export default async function SavedReady() {
               উত্তরমালা সংরক্ষিত। বাকি পৃষ্ঠার উত্তর অনুমোদিত নেই।
             </p>
             <p>
+              AI উত্তরপত্রের চেষ্টা ও ফলও এই অ্যাকাউন্টে থাকে। নিচের লিংক খুলে AI উত্তর
+              দেখুন; অনিশ্চিত উত্তর ফাঁকা থাকবে।
+            </p>
+            <p>
               {new Date(p.updatedAt).toLocaleString("bn-BD", {
                 timeZone: "Asia/Dhaka",
               })}

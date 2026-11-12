@@ -14,6 +14,16 @@ export default async function ReadyAdmin() {
       <p>
         মূল PDF অপরিবর্তিত থাকে। Preset save করার আগে প্রতিটি page preview দেখুন।
       </p>
+      {!process.env.GEMINI_API_KEY?.trim() && (
+        <section className="rp-panel" role="alert">
+          <h2>স্বয়ংক্রিয় AI উত্তরের vision সংযোগ বাকি</h2>
+          <p>
+            এই প্রজেক্টের Vercel Environment Variables-এ GEMINI_API_KEY
+            (Production/Preview) যুক্ত করে redeploy করুন। Key চ্যাটে বা source
+            code-এ দেবেন না। DeepSeek text key স্ক্যান/PDF পড়তে পারে না।
+          </p>
+        </section>
+      )}
       <ReadyUpload
         papers={papers}
         catalog={readyPaperCatalog}
