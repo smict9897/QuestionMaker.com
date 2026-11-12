@@ -26,3 +26,14 @@ export function placementAfterDrag(
     printY: slackY > 1 ? clamp(value.printY + dy / slackY) : value.printY,
   };
 }
+
+export function placementAfterZoom(
+  value: Placement,
+  factor: number,
+): Placement {
+  if (!Number.isFinite(factor) || factor <= 0) return value;
+  return {
+    ...value,
+    printScale: Math.max(0.4, Math.min(1, value.printScale * factor)),
+  };
+}
