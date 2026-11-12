@@ -44,7 +44,7 @@ export default function AIAnswers({
         while (live) {
           if (!data.configured) {
             setMessage(
-              "স্ক্যান/PDF পড়ার AI সংযোগ নেই। অ্যাডমিনকে GEMINI_API_KEY যুক্ত করতে হবে। প্রশ্নপত্র ব্যবহার করা যাবে; উত্তর এখনো প্রস্তুত হয়নি।",
+              "স্ক্যান/PDF পড়ার AI সংযোগ নেই। অ্যাডমিনকে READY_OCR_URL ও READY_OCR_TOKEN যুক্ত করতে হবে। প্রশ্নপত্র ব্যবহার করা যাবে; উত্তর এখনো প্রস্তুত হয়নি।",
             );
             break;
           }

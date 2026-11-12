@@ -108,6 +108,7 @@ function setup() {
     "@/lib/wallet": { walletTransaction },
     "@/lib/ready-papers": model,
     "@/lib/ready-ai": ai,
+    "@/lib/ready-ai-config": load("lib/ready-ai-config.ts"),
     "@/lib/ready-ai-provider": {
       solveReadyAIPage: async () => {
         calls++;
@@ -135,13 +136,15 @@ function setup() {
   };
 }
 async function configured(fn) {
-  const before = process.env.GEMINI_API_KEY;
-  process.env.GEMINI_API_KEY = "test-key";
+  const before = process.env.DEEPSEEK_API_KEY;
+  process.env.DEEPSEEK_API_KEY = "test-key";
+  process.env.READY_OCR_URL = "https://ocr.example/ocr";
+  process.env.READY_OCR_TOKEN = "x".repeat(32);
   try {
     await fn();
   } finally {
-    if (before === undefined) delete process.env.GEMINI_API_KEY;
-    else process.env.GEMINI_API_KEY = before;
+    if (before === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = before;
   }
 }
 test("anonymous and other owner cannot generate or read answers", async () => {
@@ -152,17 +155,17 @@ test("anonymous and other owner cannot generate or read answers", async () => {
   assert.equal((await s.post(true)).status, 403);
   assert.equal(s.calls(), 0);
 });
-test("missing vision key is honest and does not spend attempts", async () => {
+test("missing DeepSeek key is honest and does not spend attempts", async () => {
   const s = setup(),
-    old = process.env.GEMINI_API_KEY;
-  delete process.env.GEMINI_API_KEY;
+    old = process.env.DEEPSEEK_API_KEY;
+  delete process.env.DEEPSEEK_API_KEY;
   try {
     const r = await s.post(true);
     assert.equal(r.configured, false);
     assert.equal(r.job.pages[1].attempts, 0);
     assert.equal(s.calls(), 0);
   } finally {
-    if (old !== undefined) process.env.GEMINI_API_KEY = old;
+    if (old !== undefined) process.env.DEEPSEEK_API_KEY = old;
   }
 });
 test("paid jobs backfill, persist page results, do not rerun done pages or touch wallet", async () =>
@@ -223,66 +226,72 @@ test("expired lease resumes instead of remaining stuck", async () =>
     assert.equal(r.job.pages[1].status, "done");
     assert.equal(r.job.pages[1].attempts, 2);
   }));
-test("vision provider sends one server-selected PDF page, blanks low confidence and rejects truncated output", async () =>
+test("OCR receives only entitled PDF, DeepSeek receives text, uncertain OCR blanks answers", async () =>
   configured(async () => {
-    const d = await PDFDocument.create();
-    d.addPage([200, 300]);
-    d.addPage([400, 500]);
-    const bytes = await d.save();
-    let request,
-      finish = "STOP";
-    const oldFetch = global.fetch;
+    const doc = await PDFDocument.create();
+    doc.addPage([200, 300]);
+    doc.addPage([400, 500]);
+    const bytes = await doc.save();
+    let sent,
+      attachment,
+      uncertain = false,
+      finish = "stop";
+    const old = global.fetch;
     global.fetch = async (url, options) => {
       if (url.startsWith("https://test.public.blob"))
         return new Response(bytes);
-      request = JSON.parse(options.body);
+      if (url === "https://ocr.example/ocr") {
+        attachment = options.body;
+        return Response.json({ text: "1. example", confidence: 95, uncertain });
+      }
+      assert.equal(url, "https://api.deepseek.com/chat/completions");
+      sent = JSON.parse(options.body);
       return Response.json({
-        candidates: [
+        choices: [
           {
-            finishReason: finish,
-            content: {
-              parts: [
-                {
-                  text: JSON.stringify({
-                    complete: true,
-                    questions: [
-                      question,
-                      { ...question, number: "2", confidence: "unknown" },
-                    ],
-                  }),
-                },
-              ],
+            finish_reason: finish,
+            message: {
+              content: JSON.stringify({
+                complete: true,
+                questions: [question],
+              }),
             },
           },
         ],
       });
     };
     try {
-      const provider = load("lib/ready-ai-provider.ts", { "./ready-ai": ai });
-      const r = await provider.solveReadyAIPage(
-        "https://test.public.blob.vercel-storage.com/file.pdf",
-        2,
-      );
-      const attachment = request.contents[0].parts[1].inlineData;
-      assert.equal(attachment.mimeType, "application/pdf");
-      const out = await PDFDocument.load(
-        Buffer.from(attachment.data, "base64"),
-      );
-      assert.equal(out.getPageCount(), 1);
-      assert.equal(out.getPages()[0].getWidth(), 400);
-      assert.equal(r.questions[1].answer, null);
-      finish = "MAX_TOKENS";
-      await assert.rejects(() =>
+      const provider = load("lib/ready-ai-provider.ts", {
+        "./ready-ai": ai,
+        "./ready-ai-config": load("lib/ready-ai-config.ts"),
+      });
+      const run = () =>
         provider.solveReadyAIPage(
           "https://test.public.blob.vercel-storage.com/file.pdf",
           2,
-        ),
+        );
+      let r = await run();
+      const one = await PDFDocument.load(attachment);
+      assert.equal(one.getPageCount(), 1);
+      assert.equal(one.getPages()[0].getWidth(), 400);
+      assert.equal(r.questions[0].answer, "ক");
+      assert.equal(r.complete, false);
+      assert.equal(
+        JSON.parse(sent.messages[1].content).untrustedOCR,
+        "1. example",
       );
+      assert.equal(sent.model, "deepseek-chat");
+      assert.doesNotMatch(JSON.stringify(sent), /inlineData|base64/);
+      uncertain = true;
+      r = await run();
+      assert.equal(r.questions[0].answer, null);
+      finish = "length";
+      await assert.rejects(run);
       await assert.rejects(() =>
-        provider.solveReadyAIPage("https://evil.example/file.pdf", 2),
+        provider.solveReadyAIPage("https://evil.example/a.pdf", 2),
       );
     } finally {
-      global.fetch = oldFetch;
+      global.fetch = old;
     }
   }));
 test("checkout creates durable job atomically; UI auto-resumes and never labels AI approved", () => {
@@ -294,4 +303,26 @@ test("checkout creates durable job atomically; UI auto-resumes and never labels 
   assert.match(ui, /যাচাই প্রয়োজন/);
   assert.match(ui, /অ্যাডমিন-অনুমোদিত উত্তরমালা নয়/);
   assert.doesNotMatch(ui, /dangerouslySetInnerHTML/);
+});
+
+test("OCR configuration requires HTTPS and strong shared secret, not Gemini", () => {
+  const keys = ["DEEPSEEK_API_KEY", "READY_OCR_URL", "READY_OCR_TOKEN"];
+  const old = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+  const config = load("lib/ready-ai-config.ts");
+  try {
+    process.env.DEEPSEEK_API_KEY = "test";
+    process.env.READY_OCR_TOKEN = "x".repeat(32);
+    process.env.READY_OCR_URL = "https://ocr.example/ocr";
+    assert.equal(config.readyAIConfigured(), true);
+    process.env.READY_OCR_URL = "http://ocr.example/ocr";
+    assert.equal(config.readyAIConfigured(), false);
+    process.env.READY_OCR_URL = "https://ocr.example/ocr";
+    process.env.READY_OCR_TOKEN = "short";
+    assert.equal(config.readyAIConfigured(), false);
+  } finally {
+    for (const k of keys) {
+      if (old[k] === undefined) delete process.env[k];
+      else process.env[k] = old[k];
+    }
+  }
 });
