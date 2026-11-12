@@ -26,7 +26,8 @@
     "mammoth": "^1.9.0",
     "katex": "^0.16.11",
     "pdf-parse": "^1.1.1",
-    "pdfjs-dist": "3.11.174"
+    "pdfjs-dist": "3.11.174",
+    "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
     "typescript": "^5",

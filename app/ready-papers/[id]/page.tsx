@@ -38,7 +38,7 @@ export default async function Paper({
     s.user.role === "ADMIN" && (await searchParams).preset === "1";
   const rows = await db.setting.findMany({
     where: { key: { startsWith: ANSWER_PREFIX + id + ":" } },
-    take: 40,
+    take: 100,
   });
   const answerEntries = rows.flatMap((row) => {
     try {

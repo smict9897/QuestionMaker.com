@@ -41,7 +41,7 @@ test("ready metadata restricts categories, trusted HTTPS storage, years and boun
     { url: "http://127.0.0.1/x" },
     { url: "https://test.public.blob.vercel-storage.com.evil.test/x" },
     { year: "x" },
-    { presets: { 41: model.freshEdit() } },
+    { presets: { 101: model.freshEdit() } },
   ])
     assert.equal(
       model.readyRecordSchema.safeParse({ ...record, ...patch }).success,

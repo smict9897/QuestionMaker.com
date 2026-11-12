@@ -7,7 +7,7 @@ export const READY_MONTH_UNITS = 30;
 export const readySelectionSchema = z.object({
   paperId: z.string().uuid(),
   selected: z
-    .array(z.number().int().min(1).max(40))
+    .array(z.number().int().min(1).max(100))
     .min(1)
     .max(10)
     .refine((p) => new Set(p).size === p.length, "একই page দুবার নয়।"),
@@ -19,7 +19,7 @@ export function readyUnits(pages: number) {
 }
 export const readySnapshotSchema = z.object({
   edits: z
-    .record(z.string().regex(/^([1-9]|[1-3]\d|40)$/), pageEditSchema)
+    .record(z.string().regex(/^([1-9]|[1-9]\d|100)$/), pageEditSchema)
     .default({}),
   header: z.object({
     school: z.string().max(160),

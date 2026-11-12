@@ -88,9 +88,14 @@ export const readyRecordSchema = readyMetadataSchema.extend({
         return false;
       }
     }, "Trusted PDF storage required"),
+  groupId: z.string().uuid().optional(),
+  groupTitle: z.string().max(160).optional(),
+  partIndex: z.number().int().min(1).max(500).optional(),
+  pageStart: z.number().int().min(1).max(500).optional(),
+  pageEnd: z.number().int().min(1).max(500).optional(),
   at: z.string().datetime(),
   presets: z
-    .record(z.string().regex(/^([1-9]|[1-3]\d|40)$/), pageEditSchema)
+    .record(z.string().regex(/^([1-9]|[1-9]\d|100)$/), pageEditSchema)
     .default({}),
 });
 export type ReadyPaper = z.infer<typeof readyRecordSchema>;

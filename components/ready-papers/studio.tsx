@@ -128,6 +128,24 @@ export default function ReadyStudio({
     key = `${userId}:${paper.id}`,
     edit = edits[String(active)] || freshEdit();
   const rasterKey = rasterEditKey(edit);
+  const qualityCache = useRef(new Map<number, Promise<string>>());
+  function qualityPage(n: number) {
+    let promise = qualityCache.current.get(n);
+    if (!promise) {
+      promise = loadPdfImages(paper.url, () => {}, [n])
+        .then((p) => p[0])
+        .catch((e) => {
+          qualityCache.current.delete(n);
+          throw e;
+        });
+      qualityCache.current.set(n, promise);
+      if (qualityCache.current.size > 10) {
+        const oldest = qualityCache.current.keys().next().value;
+        if (oldest !== undefined) qualityCache.current.delete(oldest);
+      }
+    }
+    return promise;
+  }
   function snapshot(): ReadySnapshot {
     return {
       edits,
@@ -164,6 +182,7 @@ export default function ReadyStudio({
   useEffect(() => {
     let live = true;
     setBusy(true);
+    qualityCache.current.clear();
     setPageLoading(true);
     setPages([]);
     setPageProgress({ completed: 0, total: 0 });
@@ -198,7 +217,7 @@ export default function ReadyStudio({
         await document.fonts.ready;
         const rasterEdit = JSON.parse(rasterKey) as PageEdit;
         const result = await renderEdited(
-          pages[active - 1],
+          await qualityPage(active),
           original
             ? { ...freshEdit(), rotation: rasterEdit.rotation }
             : rasterEdit,
@@ -363,7 +382,10 @@ export default function ReadyStudio({
       await document.fonts.ready;
       const out = [];
       for (const n of selected) {
-        const c = await renderEdited(pages[n - 1], edits[n] || freshEdit());
+        const c = await renderEdited(
+          await qualityPage(n),
+          edits[n] || freshEdit(),
+        );
         out.push(c.toDataURL("image/png"));
         c.width = c.height = 0;
       }
@@ -581,9 +603,20 @@ export default function ReadyStudio({
                   type="button"
                   className="rp-page-open"
                   aria-label={`Page ${i + 1} বড় করে দেখতে এখানে ক্লিক করুন`}
-                  onClick={() =>
-                    setViewer({ src, page: i + 1, selectable: true })
-                  }
+                  onClick={() => {
+                    setViewer({ src, page: i + 1, selectable: true });
+                    qualityPage(i + 1)
+                      .then((high) =>
+                        setViewer((old) =>
+                          old?.page === i + 1 && old.selectable
+                            ? { ...old, src: high }
+                            : old,
+                        ),
+                      )
+                      .catch(() =>
+                        setMessage("বড় ছবি প্রস্তুত হয়নি। আবার খুলে চেষ্টা করুন।"),
+                      );
+                  }}
                 >
                   <img src={src} alt={`মূল PDF page ${i + 1}`} loading="lazy" />
                   <span className="rp-page-open-rail">
@@ -1218,7 +1251,7 @@ export default function ReadyStudio({
             for (const n of selected) {
               if (!pages[n - 1]) throw new Error("Page unavailable");
               const c = await renderEdited(
-                pages[n - 1],
+                await qualityPage(n),
                 edits[n] || freshEdit(),
               );
               c.width = c.height = 0;

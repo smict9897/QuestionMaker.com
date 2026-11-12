@@ -2,8 +2,8 @@ import { z } from "zod";
 export const ANSWER_PREFIX = "readyanswers:v1:";
 export const answerEntrySchema = z
   .object({
-    questionPage: z.number().int().min(1).max(40),
-    sourcePage: z.number().int().min(1).max(40),
+    questionPage: z.number().int().min(1).max(100),
+    sourcePage: z.number().int().min(1).max(100),
     label: z.string().trim().min(1).max(120),
     answers: z
       .array(z.enum(["ক", "খ", "গ", "ঘ", "?"]))
