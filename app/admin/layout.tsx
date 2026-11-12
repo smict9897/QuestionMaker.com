@@ -7,13 +7,10 @@ import {
   FolderOpen,
   SlidersHorizontal,
   Sparkles,
-  Layers,
   ListChecks,
   Crown,
   Wallet,
   Trophy,
-  Globe,
-  FileText,
   Eye,
   type LucideIcon,
 } from "lucide-react";
@@ -65,24 +62,6 @@ const QB_LINKS: QuickLink[] = [
     label: "সংরক্ষিত প্রশ্নপত্র",
     sub: "আগে সেভ করা প্রশ্নপত্র",
     Icon: FolderOpen,
-  },
-];
-
-const CONTENT_LINKS: QuickLink[] = [
-  {
-    href: "/admin/pdf",
-    label: "ম্যাটেরিয়াল / PDF",
-    sub: "নতুন ম্যাটেরিয়াল যোগ",
-    Icon: FileText,
-  },
-  { href: "/", label: "হোম পেজ দেখুন", sub: "লাইভ সাইট", Icon: Globe },
-  { href: "/exam", label: "Instant Exam", sub: "/exam পেজ", Icon: Eye },
-  { href: "/tests", label: "Practice Test", sub: "/tests পেজ", Icon: Eye },
-  {
-    href: "/profile",
-    label: "প্রোফাইল ড্যাশবোর্ড",
-    sub: "ছাত্রের প্রোফাইল দেখুন",
-    Icon: Eye,
   },
 ];
 
@@ -179,7 +158,11 @@ export default async function AdminLayout({
   return (
     <div className="bg-gradient-to-br from-slate-50 via-blue-50/50 to-orange-50/50 min-h-screen">
       <div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-4 lg:flex-row">
-        <AdminNav name={u?.name ?? "Admin"} role={u?.role} />
+        <AdminNav
+          name={u?.name ?? "Admin"}
+          role={u?.role}
+          pendingPayments={pending}
+        />
 
         <div className="min-w-0 flex-1">
           <Link
@@ -229,23 +212,6 @@ export default async function AdminLayout({
               </span>
             </summary>
             <QuickGrid links={QB_LINKS} />
-          </details>
-
-          {/* ৪. 🌐 কনটেন্ট ও সাইট */}
-          <details className="group mb-4 rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 font-semibold">
-              <span className="flex items-center gap-2">
-                <Layers size={18} className="text-purple-600" />
-                কনটেন্ট ও সাইট
-              </span>
-              <span className="text-xs font-normal text-slate-500 group-open:hidden">
-                খুলুন ›
-              </span>
-              <span className="hidden text-xs font-normal text-slate-500 group-open:inline">
-                বন্ধ করুন ˅
-              </span>
-            </summary>
-            <QuickGrid links={CONTENT_LINKS} />
           </details>
 
           {children}
