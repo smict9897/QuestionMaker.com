@@ -1,6 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import HeaderManager from "@/components/paper-builder/header-manager";
+import HeaderPreview from "@/components/paper-builder/header-preview";
+import { settingsSchema } from "@/lib/paper-builder";
+import { currentHeader } from "@/lib/paper-header";
+import "@/components/paper-builder/header.css";
 import { PageViewer, PrintFrame } from "./page-viewer";
 import {
   ArrowLeft,
@@ -51,6 +56,14 @@ export default function ReadyStudio({
   adminPreset: boolean;
   answerEntries?: ReadyAnswer[];
 }) {
+  const [headerStyle, setHeaderStyle] = useState<"simple" | "custom" | "none">(
+    "simple",
+  );
+  const [headerSettings, setHeaderSettings] = useState(() =>
+    settingsSchema.parse({
+      info: { subject: paper.subject, cls: paper.grade },
+    }),
+  );
   const [viewer, setViewer] = useState<{
     src: string;
     page: number;
@@ -214,7 +227,13 @@ export default function ReadyStudio({
         const r = await updateReadyPaper(paper.id, paper, edits);
         setMessage(r.ok ? "Admin preset save হয়েছে। মূল PDF বদলায়নি।" : r.error);
       } else {
-        await saveLocal(key, { selected, edits, header });
+        await saveLocal(key, {
+          selected,
+          edits,
+          header,
+          headerStyle,
+          headerSettings,
+        });
         setMessage(
           "এই browser-এ draft save হয়েছে। অন্য device-এ পাওয়া যাবে না।",
         );
@@ -262,6 +281,18 @@ export default function ReadyStudio({
           marks: "",
           ...data.header,
         });
+      setHeaderStyle(
+        ["simple", "custom", "none"].includes(data.headerStyle)
+          ? data.headerStyle
+          : "simple",
+      );
+      setHeaderSettings(
+        settingsSchema.parse(
+          data.headerSettings || {
+            info: { subject: paper.subject, cls: paper.grade },
+          },
+        ),
+      );
       undo.current = {};
       redo.current = {};
       setPrintPages([]);
@@ -440,28 +471,73 @@ export default function ReadyStudio({
             </div>
             <details open>
               <summary>প্রথম selected page-এর Header</summary>
-              {(["school", "exam", "subject", "time", "marks"] as const).map(
-                (field, i) => (
-                  <label key={field}>
-                    {
-                      [
-                        "প্রতিষ্ঠানের নাম",
-                        "পরীক্ষার নাম",
-                        "বিষয়",
-                        "সময়",
-                        "পূর্ণমান",
-                      ][i]
-                    }
-                    <input
-                      value={header[field]}
-                      maxLength={160}
-                      onChange={(e) => {
-                        setHeader((v) => ({ ...v, [field]: e.target.value }));
-                        setPrintPages([]);
-                      }}
-                    />
-                  </label>
-                ),
+              {adminPreset && (
+                <p className="rp-muted">
+                  Admin preset save শুধু page-এর image edits সংরক্ষণ করে। নিজের
+                  header account-এ রাখতে Header Manager-এর Save ব্যবহার করুন; এটি
+                  সবার PDF preset-এ যুক্ত হবে না।
+                </p>
+              )}
+              <label>
+                হেডারের ধরন
+                <select
+                  value={headerStyle}
+                  onChange={(e) => {
+                    setHeaderStyle(e.target.value as typeof headerStyle);
+                    setPrintPages([]);
+                  }}
+                >
+                  <option value="simple">সাধারণ হেডার</option>
+                  <option value="custom">Smart Header / Dynamic Header</option>
+                  <option value="none">হেডার ছাড়া</option>
+                </select>
+              </label>
+              {headerStyle === "custom" && (
+                <>
+                  <HeaderManager
+                    settings={headerSettings}
+                    update={(value) => {
+                      setHeaderSettings(value);
+                      setPrintPages([]);
+                    }}
+                  />
+                  <p className="rp-muted">
+                    আপনার আগে save করা Smart/Dynamic header-ও এখানে পাবেন। একটি
+                    header নির্বাচন করুন; header শুধু প্রথম selected page-এ।
+                  </p>
+                  {headerSettings.header.enabled && (
+                    <div className="rp-custom-header-preview">
+                      <HeaderPreview header={currentHeader(headerSettings)} />
+                    </div>
+                  )}
+                </>
+              )}
+              {headerStyle === "simple" && (
+                <>
+                  {(
+                    ["school", "exam", "subject", "time", "marks"] as const
+                  ).map((field, i) => (
+                    <label key={field}>
+                      {
+                        [
+                          "প্রতিষ্ঠানের নাম",
+                          "পরীক্ষার নাম",
+                          "বিষয়",
+                          "সময়",
+                          "পূর্ণমান",
+                        ][i]
+                      }
+                      <input
+                        value={header[field]}
+                        maxLength={160}
+                        onChange={(e) => {
+                          setHeader((v) => ({ ...v, [field]: e.target.value }));
+                          setPrintPages([]);
+                        }}
+                      />
+                    </label>
+                  ))}
+                </>
               )}
               <p className="rp-muted">
                 Header শুধু প্রথম selected page-এ; প্রশ্নের ওপর বসবে না।
@@ -767,19 +843,30 @@ export default function ReadyStudio({
               ) : (
                 printPages.map((src, i) => (
                   <article className="rp-print-sheet" key={selected[i]}>
-                    {i === 0 && Object.values(header).some(Boolean) && (
-                      <header className="rp-print-header">
-                        <h2>{header.school}</h2>
-                        <h3>{header.exam}</h3>
-                        <p>{header.subject}</p>
-                        <div>
-                          <span>{header.time && `সময়: ${header.time}`}</span>
-                          <span>
-                            {header.marks && `পূর্ণমান: ${header.marks}`}
-                          </span>
-                        </div>
-                      </header>
-                    )}
+                    {i === 0 &&
+                      headerStyle === "custom" &&
+                      headerSettings.header.enabled && (
+                        <header className="rp-custom-print-header">
+                          <HeaderPreview
+                            header={currentHeader(headerSettings)}
+                          />
+                        </header>
+                      )}
+                    {i === 0 &&
+                      headerStyle === "simple" &&
+                      Object.values(header).some(Boolean) && (
+                        <header className="rp-print-header">
+                          <h2>{header.school}</h2>
+                          <h3>{header.exam}</h3>
+                          <p>{header.subject}</p>
+                          <div>
+                            <span>{header.time && `সময়: ${header.time}`}</span>
+                            <span>
+                              {header.marks && `পূর্ণমান: ${header.marks}`}
+                            </span>
+                          </div>
+                        </header>
+                      )}
                     <div className="rp-print-content">
                       <img src={src} alt={`সম্পাদিত page ${selected[i]}`} />
                     </div>
