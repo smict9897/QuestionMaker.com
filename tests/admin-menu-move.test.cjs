@@ -18,7 +18,7 @@ test("marked dashboard controls and overview shortcut are removed while generato
     /CONTENT_LINKS|কনটেন্ট ও সাইট/,
   );
 });
-test("admin menu contains all relocated destinations and pending count in native disclosure groups", () => {
+test("admin menu contains all relocated destinations at the end without dashboard cards", () => {
   const m = new Module("admin-menu", module);
   m.paths = module.paths;
   m.require = (n) =>
@@ -64,9 +64,26 @@ test("admin menu contains all relocated destinations and pending count in native
     "/profile",
   ])
     assert.ok(html.includes(`href="${route}"`), route);
-  assert.equal((html.match(/<details/g) || []).length, 3);
-  assert.match(html, /কন্ট্রোল প্যানেল মেনু/);
-  assert.match(html, /প্যাকেজ ও পেমেন্ট/);
+  assert.equal((html.match(/<details/g) || []).length, 0);
+  const nav = html.slice(html.indexOf("<nav"), html.indexOf("</nav>"));
+  const routes = [...nav.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(routes.slice(0, 4), [
+    "/admin",
+    "/admin/questions",
+    "/admin/posts",
+    "/admin/blog",
+  ]);
+  assert.equal(new Set(routes).size, routes.length);
+  assert.ok(routes.indexOf("/admin/promo") > routes.indexOf("/admin/manage"));
+  assert.ok(
+    routes.indexOf("/admin/model-test") > routes.indexOf("/admin/manage"),
+  );
+  assert.doesNotMatch(
+    fs.readFileSync("app/admin/layout.tsx", "utf8"),
+    /href="\/admin\/promo"/,
+  );
+  assert.match(html, /aria-label="Admin"/);
+  assert.match(html, /পেমেন্ট অনুরোধ/);
   assert.match(html, />3</);
   assert.doesNotMatch(
     html,

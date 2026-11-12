@@ -165,13 +165,6 @@ export default async function AdminLayout({
         />
 
         <div className="min-w-0 flex-1">
-          <Link
-            href="/admin/promo"
-            className="mb-4 block rounded-2xl border border-emerald-200 bg-emerald-50 p-4 font-semibold text-emerald-900"
-          >
-            হোমপেজ পপ-আপ পরিচালনা
-          </Link>
-
           {/* ২. 🎯 মডেল টেস্ট ও প্যাকেজ (পেন্ডিং থাকলে নিজে খোলা থাকবে) */}
           <details
             open={pending > 0}
