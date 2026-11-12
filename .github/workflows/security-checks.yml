@@ -17,4 +17,14 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
       - run: npm run typecheck
-      - run: npm run test:security
+      - name: Security tests (report failing TAP blocks)
+        shell: bash
+        run: |
+          set +e
+          npm run test:security > "$RUNNER_TEMP/security-tests.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/security-tests.log"
+          if [ "$status" -ne 0 ]; then
+            awk '/^not ok / { remaining=30 } remaining>0 { print "::error::" $0; remaining-- }' "$RUNNER_TEMP/security-tests.log"
+          fi
+          exit "$status"
