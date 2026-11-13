@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ReadyCheckout from "./checkout";
+import { selectionWithPage } from "@/lib/ready-page-selection";
 import {
   getReadyPurchase,
   saveReadyPurchase,
@@ -162,12 +163,31 @@ export default function ReadyStudio({
   const paid =
     adminPreset ||
     (!!receipt && paidSelection === readySelectionIdentity(selected));
-  function startSetup() {
-    if (!selected.length) return;
-    if (paid) {
-      setActive(selected[0]);
+  function openSetup(selection: number[]) {
+    if (busy || !selection.length) return;
+    // Check the new selection, not the previous render's paid flag.
+    const selectionPaid =
+      adminPreset ||
+      (!!receipt && paidSelection === readySelectionIdentity(selection));
+    if (selectionPaid) {
+      setActive(selection[0]);
       setStep("edit");
     } else setCheckout(true);
+  }
+  function startSetup() {
+    openSetup(selected);
+  }
+  function createFromPage(page: number) {
+    if (busy) return;
+    const next = selectionWithPage(selected, page);
+    if (!next) {
+      setMessage(
+        "একবারে সর্বোচ্চ ১০ page নির্বাচন করুন। নতুন পেজ নিতে আগে একটি টিক সরান।",
+      );
+      return;
+    }
+    setSelected(next);
+    openSetup(next);
   }
   useEffect(() => {
     if (!initialPurchase) return;
@@ -638,14 +658,25 @@ export default function ReadyStudio({
                     </span>
                   </span>
                 </button>
-                <label className="rp-page-choice">
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(i + 1)}
-                    onChange={() => togglePage(i + 1)}
-                  />
-                  Page {(i + 1).toLocaleString("bn-BD")}
-                </label>
+                <div className="rp-page-actions">
+                  <label className="rp-page-choice">
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(i + 1)}
+                      onChange={() => togglePage(i + 1)}
+                    />
+                    Page {(i + 1).toLocaleString("bn-BD")}
+                  </label>
+                  <button
+                    type="button"
+                    className="rp-page-create"
+                    disabled={busy}
+                    aria-label={`Page ${(i + 1).toLocaleString("bn-BD")} দিয়ে প্রশ্নপত্র তৈরি করুন`}
+                    onClick={() => createFromPage(i + 1)}
+                  >
+                    প্রশ্নপত্র তৈরি করুন
+                  </button>
+                </div>
               </div>
             ))}
           </div>

@@ -1788,3 +1788,45 @@ fieldset:disabled .rp-file-picker input {
     flex-wrap: wrap;
   }
 }
+
+/* Page-level shortcut; checkbox remains independent for multi-page selection. */
+.rp-page-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 12px 14px;
+  border-top: 1px solid #e6edf2;
+}
+.rp-root .rp-page-actions .rp-page-choice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  min-height: 44px;
+  flex-shrink: 0;
+}
+.rp-root .rp-page-create {
+  background: linear-gradient(125deg, #7c3aed, #4f46e5);
+  border-color: #7856d7;
+  color: white;
+  font-size: 14px;
+  min-height: 44px;
+  padding: 10px 12px;
+  max-width: 100%;
+  white-space: normal;
+  line-height: 1.6;
+}
+.rp-root .rp-page-create:hover:not(:disabled) {
+  background: linear-gradient(125deg, #6d28d9, #4338ca);
+}
+.rp-root .rp-page-create:focus-visible {
+  outline: 3px solid #a78bfa;
+  outline-offset: 3px;
+}
+@media screen and (max-width: 420px) {
+  .rp-page-actions { padding: 10px; }
+  .rp-root .rp-page-create { flex: 1 1 auto; }
+}
