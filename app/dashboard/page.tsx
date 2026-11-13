@@ -156,6 +156,17 @@ export default async function Dashboard({
             <p>বোর্ড ও স্কুলের PDF থেকে প্রশ্ন বেছে সাজান।</p>
           </Link>
         </section>
+        <Link
+          href="/dashboard/sell"
+          className="block rounded-xl border border-indigo-200 bg-indigo-50 p-4 font-bold text-indigo-900 mb-4"
+        >
+          নিজের তৈরি প্রশ্নপত্র বিক্রির জন্য জমা দিন · প্রস্তুতি পর্যায় →
+        </Link>
+        {user.role === "ADMIN" && (
+          <Link href="/admin/marketplace" className="block mb-4 underline">
+            বিক্রির আবেদন যাচাই করুন →
+          </Link>
+        )}
         <WorkspaceCards />
         <section className="tw-panel">
           <h2>আপনার অ্যাকাউন্ট, এক নজরে</h2>
