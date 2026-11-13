@@ -122,7 +122,7 @@ export const settingsSchema = z.object({
         .catch("justify")
         .default("justify"),
       font: z
-        .enum(["adorsho", "hind", "anek", "serif"])
+        .enum(["adorsho", "hind", "anek", "serif", "kalpurush"])
         .catch("hind")
         .default("hind"),
       fontSize: number(14, 7, 28),

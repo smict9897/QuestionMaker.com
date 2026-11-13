@@ -241,6 +241,10 @@ export default function PaperSettingsPanel({
                 <option value="serif">Tinos / Serif</option>
                 <option value="hind">Hind Siliguri</option>
                 <option value="anek">Anek Bangla</option>
+                <option value="kalpurush">Kalpurush (কালপুরুষ)</option>
+                <option value="nikoshban" disabled>
+                  NikoshBAN — ব্যবহারের অনুমতি প্রয়োজন
+                </option>
                 <option value="adorsho">আদর্শলিপি</option>
               </select>
             </label>
@@ -442,8 +446,8 @@ export default function PaperSettingsPanel({
                 onChange={(v) => cfg("imagePosition", v)}
               />
               <p className="mb-4 rounded-lg bg-slate-100 p-3 text-xs leading-relaxed text-slate-500">
-                এডিটিং মোডে প্রতিটি প্রশ্নে HTTPS ছবির URL যোগ করুন। প্রিভিউতে
-                ছবির + / − / রিসেট দিয়ে আলাদা আকার বদলানো যাবে।
+                এডিটিং মোডে প্রতিটি প্রশ্নে HTTPS ছবির URL যোগ করুন। প্রিভিউতে ছবির +
+                / − / রিসেট দিয়ে আলাদা আকার বদলানো যাবে।
               </p>
               {quantity("shortAnswer", "সংক্ষিপ্ত প্রশ্ন", counts.SHORT)}
               {quantity("mcqAnswer", "বহুনির্বাচনি প্রশ্ন", counts.MCQ)}
@@ -505,6 +509,10 @@ export default function PaperSettingsPanel({
                   <option value="adorsho">আদর্শলিপি</option>
                   <option value="hind">Hind Siliguri</option>
                   <option value="anek">Anek Bangla</option>
+                  <option value="kalpurush">Kalpurush (কালপুরুষ)</option>
+                  <option value="nikoshban" disabled>
+                    NikoshBAN — ব্যবহারের অনুমতি প্রয়োজন
+                  </option>
                   <option value="serif">Tinos + আদর্শলিপি</option>
                 </select>
               </label>
@@ -640,8 +648,7 @@ export default function PaperSettingsPanel({
                     }
                   />
                   <span className="mt-2 block text-xs leading-relaxed text-slate-500">
-                    এখানে নাম লিখলে প্রিভিউ ও প্রিন্টের জলছাপে সঙ্গে সঙ্গে দেখা
-                    যাবে।
+                    এখানে নাম লিখলে প্রিভিউ ও প্রিন্টের জলছাপে সঙ্গে সঙ্গে দেখা যাবে।
                   </span>
                 </label>
               )}

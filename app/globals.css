@@ -1,3 +1,12 @@
+/* Explicit paper choice; available in both screen preview and printed PDF.
+   Reuses the licensed asset, not the screen-only UI typography override. */
+@font-face {
+  font-family: 'QmPaperKalpurush';
+  src: url('/fonts/Kalpurush.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 /* 🎯 শুধুমাত্র বাংলা ইউনিকোড অক্ষরের জন্য আদর্শলিপি ফন্ট */
 @font-face {
   font-family: 'AdorshoLipi';

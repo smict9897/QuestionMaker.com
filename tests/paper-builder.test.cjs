@@ -210,3 +210,23 @@ test("paper header renders only on first page while remaining measurable", () =>
   assert.match(source, /\{page === 0 && header\}/);
   assert.match(source, /data-measure-header>\{header\}/);
 });
+
+test("Kalpurush selection survives settings serialization without changing legacy defaults", () => {
+  assert.equal(defaults().cfg.font, "hind");
+  for (const font of ["adorsho", "hind", "anek", "serif", "kalpurush"]) {
+    const saved = JSON.parse(JSON.stringify({ ...defaults(), cfg: { ...defaults().cfg, font } }));
+    assert.equal(restoreSettings(saved).cfg.font, font);
+  }
+  assert.equal(restoreSettings({ cfg: { font: "nikoshban" } }).cfg.font, "hind");
+});
+test("both database paper selectors expose Kalpurush and keep unlicensed NikoshBAN disabled", () => {
+  const settings = fs.readFileSync("components/paper-builder/settings.tsx", "utf8");
+  assert.equal((settings.match(/value="kalpurush"/g) || []).length, 2);
+  assert.equal((settings.match(/value="nikoshban" disabled/g) || []).length, 2);
+  assert.match(fs.readFileSync("components/paper-builder/preview.tsx", "utf8"), /kalpurush:.*QmPaperKalpurush/);
+  const css = fs.readFileSync("app/globals.css", "utf8");
+  assert.match(css, /@font-face\s*\{\s*font-family: 'QmPaperKalpurush'/);
+  assert.match(css, /src: url\('\/fonts\/Kalpurush.woff2'\)/);
+  assert.ok(fs.existsSync("public/fonts/Kalpurush.woff2"));
+  assert.equal(fs.existsSync("public/fonts/NikoshBAN.ttf"), false);
+});

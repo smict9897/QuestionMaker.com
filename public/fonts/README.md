@@ -13,3 +13,9 @@ Do not remove licenses when redistributing these fonts. Application font definit
 - Losslessly packaged as WOFF2 with fontTools/Brotli (no glyph subsetting or outline changes). UI definitions use next/font/local, swap and no font preload.
 - SolaimanLipi is only an optional locally installed fallback; no unverified SolaimanLipi asset is redistributed.
 - Existing Anek/Hind/Tinos/AdorshoLipi paper definitions are unchanged. Screen UI styles explicitly preserve document preview fonts and do not apply in print.
+
+## Database paper font selection
+
+Kalpurush is also an explicit optional paper font (`QmPaperKalpurush`); defaults and existing font keys are unchanged. This face is available in screen and print media, independently of the UI-only font variables.
+
+NikoshBAN is not redistributed or enabled. The inspected `Shemulbd/NikoshBAN` TTF name table states CC BY-NC-ND 3.0 (`http://creativecommons.org/licenses/by-nc-nd/3.0/`), despite its repository README saying free website use. Commercial embedding permission must be established before enabling it on this paid service. No inspected Nikosh binary is stored in the repository.
