@@ -1,0 +1,238 @@
+/* Compact workspace: retain desktop information density without shrinking the
+   viewport or scaling text. A4 canvases and print geometry are deliberately excluded. */
+@media screen and (max-width: 800px) {
+  .qm-app :is(.rp-root, .tw-main, .hm-content, .saved-paper-workspace) {
+    min-width: 0;
+  }
+  .qm-app :is(.rp-fields, .hm-starter-fields, .saved-paper-filters) > * {
+    min-width: 0;
+  }
+  .qm-app .rp-root {
+    padding: 18px 12px 88px;
+  }
+  .qm-app .rp-hero {
+    padding: 22px 18px;
+    border-radius: 20px;
+  }
+  .qm-app .rp-hero p {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+  .qm-app .rp-tabs {
+    gap: 8px;
+  }
+  .qm-app .rp-tabs a {
+    min-width: 0;
+    max-width: 100%;
+    padding: 11px 12px;
+    font-size: 14px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .qm-app .rp-tabs .rp-upload-cta {
+    flex: 1 1 100%;
+    width: auto;
+  }
+  .qm-app .rp-upload-cta span {
+    min-width: 0;
+  }
+  .qm-app .rp-panel {
+    padding: 16px;
+  }
+  .qm-app .rp-library-search .rp-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .qm-app .rp-library-search :is(input, select) {
+    min-width: 0;
+    max-width: 100%;
+    font-size: 16px;
+    min-height: 44px;
+  }
+  .qm-app .rp-library-search .rp-search-submit {
+    min-height: 44px;
+  }
+  .qm-app .rp-library-search-heading {
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .qm-app .rp-library-search-heading h2 {
+    font-size: 18px;
+  }
+  .qm-app .rp-library-results-bar {
+    flex-wrap: wrap;
+  }
+  .qm-app .rp-toolbar {
+    min-width: 0;
+  }
+  .qm-app .rp-toolbar > :is(a, button) {
+    max-width: 100%;
+    min-height: 44px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .qm-app .rp-professional-library {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .qm-app .rp-paper-top {
+    padding: 12px;
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+  .qm-app .rp-paper-icon {
+    width: 34px;
+    height: 39px;
+    border-radius: 9px;
+  }
+  .qm-app .rp-paper-icon svg {
+    width: 23px;
+  }
+  .qm-app .rp-paper-badge {
+    flex: 1;
+    min-width: 54px;
+  }
+  .qm-app .rp-paper-year {
+    margin-left: 0;
+  }
+  .qm-app .rp-paper-content {
+    padding: 14px 12px;
+  }
+  .qm-app .rp-paper-card h2 {
+    font-size: 17px;
+    line-height: 1.6;
+  }
+  .qm-app .rp-paper-bottom {
+    padding: 0 12px 14px;
+  }
+  .qm-app .rp-paper-open {
+    padding: 10px;
+    gap: 6px;
+    min-height: 44px;
+    font-size: 14px;
+  }
+  .qm-app .rp-paper-open svg {
+    flex-shrink: 0;
+  }
+  .qm-app .rp-paper-parts {
+    padding: 9px 0;
+    margin-top: 3px;
+    min-height: 40px;
+  }
+  .qm-app .tw-header {
+    gap: 12px;
+    padding: 14px 12px;
+  }
+  .qm-app .tw-header nav {
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+  .qm-app .tw-main {
+    padding: 20px 12px 88px;
+  }
+  .qm-app .tw-feature {
+    padding: 16px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .qm-app .tw-feature h3 {
+    font-size: 18px;
+  }
+  .qm-app .tw-feature p {
+    font-size: 14px;
+  }
+  .qm-app .tw-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .qm-app .tw-hero {
+    padding: 22px 18px;
+  }
+  .qm-app .tw-panel {
+    padding: 18px 14px;
+  }
+  .qm-app :is(.tw-appmenu, .tw-profile) {
+    max-width: calc(100vw - 28px);
+    max-height: calc(100dvh - 160px);
+    overflow: auto;
+  }
+  .qm-app .saved-paper-banner {
+    flex-wrap: wrap;
+  }
+  .qm-app .saved-paper-banner > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .qm-app .saved-paper-banner a {
+    white-space: normal;
+    min-height: 44px;
+  }
+  .qm-app .hm-hero-stack {
+    padding: 18px 12px;
+    gap: 20px;
+  }
+  .qm-app .hm-creation-heading h1 {
+    font-size: 29px;
+  }
+  .qm-app .hm-topbar {
+    padding-inline: 12px;
+    gap: 8px;
+  }
+  .qm-app .hm-account {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .qm-app .hm-account > span {
+    max-width: 100px;
+  }
+  .qm-app .hm-starter .hm-start-form {
+    padding: 18px 14px;
+  }
+  .qm-app .hm-starter :is(select, .hm-dropdown-trigger) {
+    font-size: 16px;
+  }
+  .qm-app .qm-site-header nav {
+    min-width: 0;
+  }
+  .qm-app .prep-popup {
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+    overflow: auto;
+  }
+}
+@media screen and (min-width: 480px) and (max-width: 800px) {
+  .qm-app .hm-creation-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .qm-app .hm-path-card {
+    padding: 20px 16px;
+  }
+  .qm-app .hm-path-card h2 {
+    font-size: 24px;
+  }
+  .qm-app .hm-path-card > p {
+    font-size: 14px;
+  }
+  .qm-app .hm-path-kind {
+    font-size: 9px;
+    letter-spacing: 0.02em;
+  }
+  .qm-app .hm-path-top {
+    gap: 8px;
+  }
+  .qm-app .hm-path-icon {
+    width: 44px;
+    height: 46px;
+  }
+}
+@media screen and (max-width: 359px) {
+  /* Two columns would leave less than 150px per card: prefer readable text. */
+  .qm-app .rp-professional-library,
+  .qm-app .tw-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .qm-app .rp-library-search .rp-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

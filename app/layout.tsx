@@ -1,6 +1,7 @@
 import "./globals.css";
 import "@/components/design-system.css";
-import type { Metadata } from "next";
+import "@/components/compact-workspace.css";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/next";
 import { MessageCircle } from "lucide-react";
@@ -16,6 +17,13 @@ import InstallPrompt from "@/components/InstallPrompt";
 import { SessionProvider } from "next-auth/react";
 
 // প্রশ্নোদয়: সাইটের মূল ঠিকানা (Vercel-এ SITE_URL সেট থাকলে সেটি, না হলে এই ডিফল্ট)
+// Keep native pinch zoom available; never force a desktop-width viewport.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  userScalable: true,
+};
+
 const SITE_URL = process.env.SITE_URL ?? "https://question-maker-com-g6ec.vercel.app";
 
 // 🎯 ১. আদর্শলিপিতে শুধুমাত্র বাংলা ইউনিকোড রেঞ্জ (প্রশ্নপত্র ছাপার জন্য)
