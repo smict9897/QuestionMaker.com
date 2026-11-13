@@ -44,26 +44,28 @@ const fs = require("fs"),
       const m = new Module(file, module);
       m.paths = module.paths;
       m.require = (id) =>
-        id === "@/lib/db"
-          ? { db }
-          : id === "@/auth"
-            ? { auth: async () => ({ user: { id: session } }) }
-            : id === "next/cache"
-              ? { revalidatePath: () => {} }
-              : id === "@/lib/paper-generation"
-                ? {
-                    visibleQuestions: (id) => ({
-                      OR: [
-                        { approved: true },
-                        { approved: false, source: `AI_PENDING:${id}` },
-                      ],
-                    }),
-                  }
-                : id === "@/lib/payment-info"
-                  ? { PAYMENT_METHODS: [{ id: "bKash" }, { id: "Nagad" }] }
-                  : id === "@/lib/wallet"
-                    ? load("lib/wallet.ts")
-                    : require(id);
+        id === "@/lib/wallet-funds"
+          ? load("lib/wallet-funds.ts")
+          : id === "@/lib/db"
+            ? { db }
+            : id === "@/auth"
+              ? { auth: async () => ({ user: { id: session } }) }
+              : id === "next/cache"
+                ? { revalidatePath: () => {} }
+                : id === "@/lib/paper-generation"
+                  ? {
+                      visibleQuestions: (id) => ({
+                        OR: [
+                          { approved: true },
+                          { approved: false, source: `AI_PENDING:${id}` },
+                        ],
+                      }),
+                    }
+                  : id === "@/lib/payment-info"
+                    ? { PAYMENT_METHODS: [{ id: "bKash" }, { id: "Nagad" }] }
+                    : id === "@/lib/wallet"
+                      ? load("lib/wallet.ts")
+                      : require(id);
       m._compile(
         ts.transpileModule(fs.readFileSync(file, "utf8"), {
           compilerOptions: {

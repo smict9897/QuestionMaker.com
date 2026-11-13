@@ -170,6 +170,11 @@ export default async function Dashboard({
         <Link href="/marketplace" className="block mb-4 underline">
           শিক্ষকদের প্রশ্নপত্র ক্যাটালগ দেখুন →
         </Link>
+        {!w?.admin && (
+          <Link href="/wallet/send" className="block mb-4 underline">
+            TID দিয়ে শিক্ষককে Send Money করুন →
+          </Link>
+        )}
         <WorkspaceCards />
         <section className="tw-panel">
           <h2>আপনার অ্যাকাউন্ট, এক নজরে</h2>

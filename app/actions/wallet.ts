@@ -1,8 +1,10 @@
 "use server";
+import { createHash } from "node:crypto";
 import { auth } from "@/auth";
 import { z } from "zod";
 import {
   WalletError,
+  changeWalletFunds,
   teacherTid,
   rechargeApprovalAmount,
   account,
@@ -48,15 +50,13 @@ export async function purchaseQuestions(raw: unknown, expectedTotal: number) {
       if (!q.canAfford)
         throw new WalletError("Balance পর্যাপ্ত নয়। কমপক্ষে ৳২০ recharge করুন।");
       if (q.total > 0) {
-        const current = await account(tx, id);
-        await tx.setting.update({
-          where: { key: `wallet:account:${id}` },
-          data: {
-            value: JSON.stringify({
-              balance: current.balance - q.total,
-              bonus: current.bonus,
-            }),
-          },
+        await changeWalletFunds(tx, id, {
+          operationId: `questions:${createHash("sha256")
+            .update(JSON.stringify(q.unpaid.map((item) => item.id).sort()))
+            .digest("hex")}`,
+          direction: "DEBIT",
+          amount: q.total,
+          description: "ডাটাবেজ প্রশ্ন checkout",
         });
         for (const item of q.unpaid)
           await tx.setting.create({
@@ -195,14 +195,12 @@ export async function reviewRecharge(
     if (approve && !Number.isSafeInteger(a.balance + approvedAmount))
       throw new WalletError("Balance সীমা অতিক্রম করেছে।");
     if (approve) {
-      await tx.setting.update({
-        where: { key: `wallet:account:${r.userId}` },
-        data: {
-          value: JSON.stringify({
-            balance: a.balance + approvedAmount,
-            bonus: a.bonus,
-          }),
-        },
+      await changeWalletFunds(tx, r.userId, {
+        operationId: `recharge:${key}`,
+        direction: "CREDIT",
+        source: "recharge",
+        amount: approvedAmount,
+        description: `অ্যাডমিন যাচাইকৃত রিচার্জ · ${r.trx}`,
       });
     }
     await tx.setting.update({

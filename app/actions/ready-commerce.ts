@@ -4,7 +4,12 @@ import { createHash, randomUUID } from "crypto";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
-import { account, walletTransaction, WalletError } from "@/lib/wallet";
+import {
+  account,
+  walletTransaction,
+  WalletError,
+  changeWalletFunds,
+} from "@/lib/wallet";
 import { READY_PREFIX, parseReady } from "@/lib/ready-papers";
 import { ANSWER_PREFIX, answerEntrySchema } from "@/lib/ready-answers";
 import {
@@ -187,14 +192,11 @@ export async function checkoutReadyPaper(
         },
       });
       if (q.total > 0)
-        await tx.setting.update({
-          where: { key: `wallet:account:${id}` },
-          data: {
-            value: JSON.stringify({
-              balance: wallet.balance - q.total,
-              bonus: wallet.bonus,
-            }),
-          },
+        await changeWalletFunds(tx, id, {
+          operationId: `ready-paper:${q.receiptId}`,
+          direction: "DEBIT",
+          amount: q.total,
+          description: "PDF প্রশ্নপত্র checkout",
         });
       if (q.packageUnits && p)
         await tx.setting.update({
@@ -254,14 +256,11 @@ export async function buyReadyPlan() {
         remaining: READY_MONTH_UNITS,
         expiresAt: new Date(now.getTime() + 30 * 86400000).toISOString(),
       };
-      await tx.setting.update({
-        where: { key: `wallet:account:${id}` },
-        data: {
-          value: JSON.stringify({
-            balance: w.balance - READY_MONTH_PAISA,
-            bonus: w.bonus,
-          }),
-        },
+      await changeWalletFunds(tx, id, {
+        operationId: `ready-plan:${purchaseId}`,
+        direction: "DEBIT",
+        amount: READY_MONTH_PAISA,
+        description: "Ready Paper মাসিক প্যাকেজ",
       });
       await tx.setting.upsert({
         where: { key: `readyplan:v1:${id}` },

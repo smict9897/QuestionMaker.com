@@ -42,7 +42,7 @@ async function build() {
                         : a.path === "@/lib/wallet"
                           ? `export const formatMoney=n=>'৳'+(n/100).toFixed(2)`
                           : a.path === "@/lib/workspace-summary"
-                            ? `export const workspaceSummary=async()=>({wallet:{balance:2000,admin:false},saved:4,english:2,purchased:12,packagePurchase:null});export const safeWalletRecord=JSON.parse;export const displayDate=s=>s;`
+                            ? `export const workspaceSummary=async()=>({wallet:{balance:2000,admin:false,funds:{bonus:2000,recharge:0,earnings:0,received:0}},saved:4,english:2,purchased:12,packagePurchase:null});export const safeWalletRecord=JSON.parse;export const displayDate=s=>s;`
                             : `import React from'react';export default function Fixture(){return React.createElement('p',null,'Form fixture — actual server action not called')}`,
           }));
         },
