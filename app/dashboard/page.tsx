@@ -93,7 +93,7 @@ export default async function Dashboard({
           </p>
           <p>{profile?.institution || "শিক্ষাদান ও প্রস্তুতি—সবকিছু এক জায়গায়।"}</p>
           <div className="tw-actions">
-            <Link href="/#start" className="tw-primary">
+            <Link href="/question-builder" className="tw-primary">
               <Plus size={20} />
               প্রশ্ন তৈরি করুন
             </Link>

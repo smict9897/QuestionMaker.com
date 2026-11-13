@@ -6,7 +6,7 @@ export const MARKET_PREFIX = "market:submission:v1:";
 export const marketMetadataSchema = z.object({
   examType: z.enum(MARKET_EXAM_TYPES),
   title: z.string().trim().min(3).max(120),
-  grade: z.enum(["6", "7", "8", "9", "10", "11"]),
+  grade: z.enum(["6", "7", "8", "9", "10", "11", "12"]),
   subject: z.string().trim().min(2).max(100),
   chapters: z.array(z.string().trim().min(1).max(150)).min(1).max(30),
   description: z.string().trim().min(10).max(2000),

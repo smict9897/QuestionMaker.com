@@ -99,3 +99,30 @@ PDF assembled-copy provenance; rendered A4 admin review; protected sample and bu
 - mixed sections, Bengali CQ, saved edits/exclusions/fonts, immutable inputs, seeded sets, invalid/empty approval rejection এবং private-route guards-এর regression tests।
 - বাস্তব preview component-এর Chromium fixture-এ 320/390/768/1280px প্রস্থে ৪টি rendered sheet, page overflow নেই, sheet-এ editing buttons নেই এবং JavaScript error নেই। Fixture synthetic snapshot ব্যবহার করে; authenticated production browser, বাস্তব ফোন বা physical print test নয়।
 - Browser fixture ও dependencies `/home/user/market-preview-browser`-এ scratch হিসেবে রাখা; repository-তে generated bundle বা Chromium যোগ করা হয়নি।
+
+## পঞ্চম ধাপ: নতুন বিষয়ভিত্তিক হোমপেজ ও দ্বাদশ শ্রেণি
+
+এই ধাপটি ব্যবহারকারীর নতুন হোমপেজ নির্দেশ অনুযায়ী পূর্বের হোমপেজ পরিকল্পনাকে প্রতিস্থাপন করে।
+
+- হোমপেজের পুরোনো creation cards, live demo, statistics, packages, starter ও guide আর mount করা হয় না। Shared site header/footer অপরিবর্তিত; শিক্ষক প্রোফাইলের দুই creation path বজায় আছে।
+- একদম ওপরে ষষ্ঠ–দ্বাদশ শ্রেণির scrollable মেনু। Default ষষ্ঠ শ্রেণি। শ্রেণি বদল URL-এ থাকে এবং reload/share করা যায়।
+- নির্বাচিত শ্রেণির প্রতিটি বিদ্যমান curriculum subject আলাদা বিভাগ; প্রতি বিষয়ে সর্বোচ্চ ৬টি প্রকৃত অনুমোদিত পরিচিতি। প্রশ্ন না থাকলে সৎ empty state, database failure হলে আলাদা unavailable message।
+- A4 অনুপাতের পরিচিতি কার্ড: subject, title, exam type, class, chapters, price ও seller-profile link। এটি মূল প্রশ্নপত্রের preview নয়—কার্ড ও পাতায় স্পষ্ট বলা আছে; কোনো fake প্রশ্ন/thumbnail নেই।
+- প্রতি বিষয়ের “আরও প্রশ্ন দেখুন” grade/subject বহন করে marketplace-এ যায়। সেখানে subject/grade বদলালে chapter নির্বাচন reset হয় এবং নতুন তালিকা client-side বদলায়।
+- একই curriculum helper ব্যবহার করে class 10-এ existing class 9 বই এবং class 11/12-এ existing combined 11–12 বই দেখানো হয়। নতুন/সংশোধিত official syllabus যোগ করা হয়েছে বলে দাবি করা হয়নি।
+- Teacher sale form-এ দ্বাদশ শ্রেণি, canonical subject dropdown ও chapter checkboxes; server metadata schema-তেও class 12 গ্রহণ। পুরোনো free-text metadata পরিবর্তন করা হয়নি; এমন বিষয় class-এর “সব প্রশ্নপত্র” ক্যাটালগে খুঁজতে হবে।
+- Catalog-এর নতুন query grade/subject/exam predicates দিয়ে source narrow করে, then exact approved public projection এবং chapter filter দিয়ে matching records paginate করে। প্রতি response সর্বোচ্চ ২৪ card; সর্বোচ্চ ১,০০০ candidate scan-এর পরে continuation link। Full normalized/indexed database listing এখনও বাকি; string predicates বর্তমান server-generated compact JSON storage অনুযায়ী।
+- Homepage-এ প্রতি subject সর্বোচ্চ ৬ card query; একই সময়ে সর্বোচ্চ ৪ query চালিয়ে connection pressure সীমিত। Heavy traffic-এর জন্য normalized listing/index/cache এখনও প্রয়োজন।
+- পুরোনো `/#start` dashboard/workspace link সরাসরি `/question-builder`-এ বদলানো হয়েছে। অন্য পুরোনো feature routes মুছে দেওয়া হয়নি।
+
+### পঞ্চম ধাপের যাচাই
+
+- Typecheck ও ৩৭৭টি automated test সফল। পুরোনো homepage placement-এর test নতুন নির্দেশ অনুযায়ী আপডেট; পুরোনো component unit tests বজায়।
+- Chromium actual-home/component fixture: 320/390/768/1440px-এ page overflow নেই; ৭ class link, প্রতি বিষয় ৬ card, A4 ratio, class 12 navigation এবং more-link state যাচাই।
+- Interactive filter fixture-এ subject অনুযায়ী chapter options এবং grade/subject পরিবর্তনে stale selection reset যাচাই; JavaScript error নেই।
+- Fixture-এ synthetic approved metadata ব্যবহার করা হয়েছে। Authenticated production, real mobile/print বা payment E2E নয়।
+- Main app-এর login backdrop-ও homepage reuse করে; optional searchParams দিয়ে compatibility রাখা হয়েছে।
+
+### এখনও বাকি
+
+PDF assembled-paper provenance; source-separated wallet ledger and migration of all debit paths; atomic marketplace purchase and 60/40 sharing; protected sample/buyer institution-only print; Send Money; withdrawal/refund/reporting; full site branding and domain login/payment verification; production/authenticated E2E। এই ধাপে কোনো টাকা কাটা, transfer বা withdrawal চালু করা হয়নি।

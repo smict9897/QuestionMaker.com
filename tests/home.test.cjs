@@ -69,19 +69,14 @@ test("failed statistics show unavailable message rather than a fake zero total",
   assert.match(html, /লোড করা যায়নি/);
   assert.doesNotMatch(html, /মোট প্রশ্ন/);
 });
-test("homepage retains existing entry points and reads active packages, never copied reference prices", () => {
+test("homepage is class/book marketplace, not legacy creation/package sections", () => {
   const page = fs.readFileSync("app/page.tsx", "utf8");
-  for (const route of [
-    "/question-builder",
-    "/quiz",
-    "/model-test",
-    "/blog",
-    "/packages",
-  ])
-    assert.ok(page.includes(route));
-  assert.match(page, /active: true/);
-  assert.match(page, /pkg.price.toLocaleString/);
-  assert.match(page, /approved: true/);
+  assert.match(page, /marketSubjects\(grade\)/);
+  assert.match(page, /marketCatalogPage/);
+  assert.doesNotMatch(
+    page,
+    /HomeStarter|HomeStats|PaperAnimation|pkg.price|CreationPaths/,
+  );
 });
 
 test("curriculum chapter uses stored spelling/value so real bank question is counted and submitted", () => {
@@ -124,10 +119,8 @@ test("subject whitespace uses exact existing DB value, not zero-count curriculum
     [" তথ্য  ও যোগাযোগ প্রযুক্তি "],
   );
 });
-test("home selector includes only current users private pending plus approved; public stats stay approved-only", () => {
+test("new homepage uses only approved public catalog and does not query private pending bank", () => {
   const page = fs.readFileSync("app/page.tsx", "utf8");
-  assert.match(page, /where: visibleQuestions\(session.user.id\)/);
-  assert.match(page, /rows=\{\(starterBank \|\| \[\]\)/);
-  assert.match(page, /unavailable=\{starterBank === null\}/);
-  assert.match(page, /where: \{ approved: true \}/);
+  assert.match(page, /marketCatalogPage/);
+  assert.doesNotMatch(page, /visibleQuestions|starterBank|db.question/);
 });

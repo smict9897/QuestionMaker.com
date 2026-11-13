@@ -1,6 +1,12 @@
 "use client";
 import { MARKET_EXAM_TYPES } from "@/lib/marketplace-exam-types";
-import { useActionState } from "react";
+import {
+  MARKET_GRADES,
+  MARKET_GRADE_NAMES,
+  marketSubjects,
+  marketChapters,
+} from "@/lib/marketplace-school-catalog";
+import { useActionState, useState } from "react";
 import {
   submitMarketPaper,
   reviewMarketPaper,
@@ -12,6 +18,9 @@ export function MarketplaceSubmission({
 }: {
   papers: { key: string; name: string }[];
 }) {
+  const [grade, setGrade] = useState("6"),
+    [subject, setSubject] = useState("");
+  const chapters = marketChapters(grade, subject);
   const [state, action, pending] = useActionState(submitMarketPaper, {
     ok: false,
     message: "",
@@ -54,28 +63,52 @@ export function MarketplaceSubmission({
       </label>
       <label>
         শ্রেণি
-        <select name="grade" className={field} required>
-          {[6, 7, 8, 9, 10, 11].map((n) => (
+        <select
+          name="grade"
+          className={field}
+          required
+          value={grade}
+          onChange={(e) => {
+            setGrade(e.target.value);
+            setSubject("");
+          }}
+        >
+          {MARKET_GRADES.map((n) => (
             <option key={n} value={n}>
-              {n.toLocaleString("bn-BD")} শ্রেণি
+              {MARKET_GRADE_NAMES[n]} শ্রেণি
             </option>
           ))}
         </select>
       </label>
       <label>
         বিষয়
-        <input
+        <select
           name="subject"
           className={field}
-          minLength={2}
-          maxLength={100}
           required
-        />
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+        >
+          <option value="">বিষয় নির্বাচন করুন</option>
+          {marketSubjects(grade).map((book) => (
+            <option key={book.name}>{book.name}</option>
+          ))}
+        </select>
       </label>
-      <label>
-        অধ্যায় (কমা দিয়ে আলাদা করুন; অথবা সম্পূর্ণ সিলেবাস)
-        <textarea name="chapters" className={field} maxLength={4500} required />
-      </label>
+      <fieldset key={`${grade}:${subject}`} className="rounded border p-3">
+        <legend>অধ্যায় নির্বাচন করুন</legend>
+        <div className="max-h-48 overflow-auto space-y-2">
+          {["সম্পূর্ণ সিলেবাস", ...chapters].map((chapter) => (
+            <label className="block text-sm" key={chapter}>
+              <input name="chapters" type="checkbox" value={chapter} />{" "}
+              {chapter}
+            </label>
+          ))}
+        </div>
+        <p className="text-xs mt-2">
+          অন্তত একটি অধ্যায় বা সম্পূর্ণ সিলেবাস নির্বাচন করুন।
+        </p>
+      </fieldset>
       <label>
         বিবরণ
         <textarea

@@ -1,10 +1,17 @@
+import MarketplaceFilters from "@/components/marketplace-filters";
 import Link from "next/link";
-import { marketCatalog } from "@/lib/marketplace-catalog-data";
-import { filterMarketPapers } from "@/lib/marketplace-catalog";
+import { marketCatalogPage } from "@/lib/marketplace-catalog-data";
 import { MARKET_EXAM_TYPES } from "@/lib/marketplace-exam-types";
-import MarketplaceCards from "@/components/marketplace-cards";
+import {
+  MARKET_GRADES,
+  MARKET_GRADE_NAMES,
+  marketSubjects,
+  marketChapters,
+} from "@/lib/marketplace-school-catalog";
+import MarketplacePaperCards from "@/components/marketplace-paper-cards";
+import "@/components/marketplace-home.css";
 export const dynamic = "force-dynamic";
-export const metadata = { title: "শিক্ষকদের প্রশ্নপত্র মার্কেটপ্লেস" };
+export const metadata = { title: "প্রশ্নবুক — আরও প্রশ্নপত্র" };
 export default async function Marketplace({
   searchParams,
 }: {
@@ -13,142 +20,80 @@ export default async function Marketplace({
   const raw = await searchParams;
   const text = (key: string) =>
     typeof raw[key] === "string" ? (raw[key] as string).slice(0, 200) : "";
+  const grade = MARKET_GRADES.includes(
+    text("grade") as (typeof MARKET_GRADES)[number],
+  )
+    ? text("grade")
+    : "";
   const filters = {
-    grade: text("grade"),
+    grade,
     subject: text("subject"),
     chapter: text("chapter"),
-    examType: text("examType"),
+    examType: MARKET_EXAM_TYPES.includes(
+      text("examType") as (typeof MARKET_EXAM_TYPES)[number],
+    )
+      ? text("examType")
+      : "",
   };
-  const { papers, next } = await marketCatalog(text("after"));
-  const byGrade = filterMarketPapers(papers, { grade: filters.grade });
-  const subjects = [...new Set(byGrade.map((p) => p.metadata.subject))].sort();
-  const chapters = [
-    ...new Set(
-      filterMarketPapers(byGrade, { subject: filters.subject }).flatMap(
-        (p) => p.metadata.chapters,
-      ),
-    ),
-  ].sort();
-  const filtered = filterMarketPapers(papers, filters);
-  const nextQuery = new URLSearchParams({ ...filters, after: next || "" });
+  const result = await marketCatalogPage(filters, text("after"));
   return (
-    <main className="mx-auto max-w-6xl p-5 space-y-6">
-      <Link href="/">← হোম</Link>
-      <h1 className="text-3xl font-bold">শিক্ষকদের প্রশ্নপত্র মার্কেটপ্লেস</h1>
-      <p className="rounded-xl bg-amber-50 p-4">
-        এখন অনুমোদিত প্রশ্নপত্রের পরিচিতি দেখা যাবে। সম্পূর্ণ প্রশ্নপত্রের নমুনা, কেনাকাটা
-        ও আয় বণ্টন এখনও চালু হয়নি। কোনো টাকা কাটা হবে না।
-      </p>
-      <nav aria-label="শ্রেণি নির্বাচন" className="flex flex-wrap gap-2">
-        <Link className="rounded border px-4 py-2" href="/marketplace">
+    <div className="pb-home">
+      <nav className="pb-class-nav" aria-label="শ্রেণি নির্বাচন">
+        <Link href="/marketplace" aria-current={!grade ? "page" : undefined}>
           সব শ্রেণি
         </Link>
-        {[6, 7, 8, 9, 10, 11].map((n) => (
+        {MARKET_GRADES.map((n) => (
           <Link
             key={n}
-            aria-current={filters.grade === String(n) ? "page" : undefined}
-            className={`rounded border px-4 py-2 ${filters.grade === String(n) ? "bg-indigo-700 text-white" : "bg-white"}`}
             href={`/marketplace?grade=${n}`}
+            aria-current={grade === n ? "page" : undefined}
           >
-            {n.toLocaleString("bn-BD")} শ্রেণি
+            {MARKET_GRADE_NAMES[n]} শ্রেণি
           </Link>
         ))}
       </nav>
-      <form className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2 lg:grid-cols-5">
-        <input type="hidden" name="grade" value={filters.grade} />
-        <label>
-          বিষয়
-          <select
-            name="subject"
-            defaultValue={filters.subject}
-            className="block w-full rounded border p-2"
-          >
-            <option value="">সব বিষয়</option>
-            {[
-              ...new Set([
-                ...subjects,
-                ...(filters.subject ? [filters.subject] : []),
-              ]),
-            ].map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          অধ্যায়
-          <select
-            name="chapter"
-            defaultValue={filters.chapter}
-            className="block w-full rounded border p-2"
-          >
-            <option value="">সব অধ্যায়</option>
-            {[
-              ...new Set([
-                ...chapters,
-                ...(filters.chapter ? [filters.chapter] : []),
-              ]),
-            ].map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          পরীক্ষার ধরন
-          <select
-            name="examType"
-            defaultValue={filters.examType}
-            className="block w-full rounded border p-2"
-          >
-            <option value="">সব পরীক্ষা</option>
-            {MARKET_EXAM_TYPES.map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
-        </label>
-        <button className="rounded bg-indigo-700 p-2 text-white">খুঁজুন</button>
-        <Link
-          className="p-2 underline"
-          href={
-            filters.grade
-              ? `/marketplace?grade=${filters.grade}`
-              : "/marketplace"
-          }
-        >
-          ফিল্টার মুছুন
+      <header className="pb-home-intro">
+        <div>
+          <span className="pb-eyebrow">প্রশ্নবুক · প্রশ্নপত্র ক্যাটালগ</span>
+          <h1>
+            {filters.subject ||
+              (grade
+                ? `${MARKET_GRADE_NAMES[grade]} শ্রেণির প্রশ্নপত্র`
+                : "সকল প্রশ্নপত্র")}
+          </h1>
+          <p>বিষয়, অধ্যায় ও পরীক্ষার ধরন বেছে প্রশ্নপত্র খুঁজুন।</p>
+        </div>
+        <Link className="pb-profile-link" href={`/?grade=${grade || "6"}`}>
+          বিষয়ভিত্তিক হোম ↗
         </Link>
-      </form>
-      {filters.grade && (
-        <section>
-          <h2 className="mb-3 text-xl font-bold">বিষয় বেছে নিন</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {subjects.map((subject) => (
-              <Link
-                className="rounded-xl border bg-indigo-50 p-4 font-bold"
-                key={subject}
-                href={`/marketplace?${new URLSearchParams({ grade: filters.grade, subject })}`}
-              >
-                {subject}
-              </Link>
-            ))}
-          </div>
-          {!subjects.length && <p>এই পাতায় এই শ্রেণির অনুমোদিত প্রশ্নপত্র নেই।</p>}
-        </section>
-      )}
-      <MarketplaceCards papers={filtered} />
-      {!filtered.length && (
-        <p>এই পাতায় নির্বাচিত ফিল্টারে অনুমোদিত প্রশ্নপত্র পাওয়া যায়নি।</p>
-      )}
-      <p className="text-sm text-slate-600">
-        ফিল্টার ও বিষয় তালিকা বর্তমান পাতার সর্বোচ্চ ২০০টি অনুমোদিত রেকর্ডে প্রযোজ্য।
+      </header>
+      <MarketplaceFilters key={JSON.stringify(filters)} initial={filters} />
+      <p className="pb-notice">
+        শুধু অনুমোদিত প্রশ্নপত্রের পরিচিতি দেখানো হচ্ছে। মূল প্রশ্নপত্রের প্রিভিউ ও কেনাকাটা
+        এখনও চালু হয়নি।
       </p>
-      {next && (
-        <Link
-          className="inline-block rounded border p-3"
-          href={`/marketplace?${nextQuery}`}
-        >
-          পরবর্তী পাতা →
-        </Link>
+      <MarketplacePaperCards papers={result.papers} />
+      {!result.papers.length && (
+        <p className="pb-empty">
+          নির্বাচিত ফিল্টারে এই অনুসন্ধানের অংশে কোনো অনুমোদিত প্রশ্নপত্র পাওয়া যায়নি।
+        </p>
       )}
-    </main>
+      <div className="pb-more-row">
+        {result.next && (
+          <Link
+            className="pb-more"
+            href={`/marketplace?${new URLSearchParams({ ...filters, after: result.next })}`}
+          >
+            পরবর্তী প্রশ্নপত্র দেখুন →
+          </Link>
+        )}
+      </div>
+      {result.scanned >= 1000 && (
+        <p className="pb-notice">
+          একবারে সর্বোচ্চ ১,০০০টি সম্ভাব্য রেকর্ড যাচাই করা হয়। পরবর্তী অংশ দেখতে
+          পরবর্তী পাতা খুলুন।
+        </p>
+      )}
+    </div>
   );
 }
