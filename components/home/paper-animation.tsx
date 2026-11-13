@@ -100,7 +100,18 @@ export default function PaperAnimation() {
       </div>
       <div className={`paper-demo-sheet ${fading ? "paper-demo-fade" : ""}`}>
         <div className="paper-demo-header">
-          <h2>S.N.P High School And College</h2>
+          <div className="paper-demo-school">
+            <div className="paper-demo-emblem" role="img" aria-label="নমুনা বিদ্যালয় লোগো · প্রতিষ্ঠিত ১৯৬৩">
+              <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+                <circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" strokeWidth="2" />
+                <circle cx="32" cy="32" r="24" fill="none" stroke="currentColor" strokeWidth=".7" />
+                <path d="M17 22q8-4 15 1q7-5 15-1v20q-8-4-15 1q-7-5-15-1Z M32 23v20 M21 27l7 1 M21 32l7 1 M36 28l7-1 M36 33l7-1" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                <path d="m32 10 1.4 3 3.3.4-2.4 2.3.6 3.3-2.9-1.6-2.9 1.6.6-3.3-2.4-2.3 3.3-.4Z" fill="currentColor" />
+              </svg>
+              <span>প্রতিষ্ঠিত ১৯৬৩</span>
+            </div>
+            <h2>শরৎচন্দ্র নন্দলাল পাবলিক উচ্চ বিদ্যালয় ও কলেজ</h2>
+          </div>
           <p>প্রথম সাময়িক মূল্যায়ন — ২০২৬</p>
           <p>শ্রেণি: নবম · বিষয়: বাংলা</p>
         </div>
