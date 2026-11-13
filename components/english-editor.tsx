@@ -68,13 +68,15 @@ export default function EnglishEditor({
     font: draft.font === "sans-serif" ? "hind" : draft.font,
   });
   const family =
-    draft.font === "serif"
-      ? "var(--font-en), Georgia, serif"
-      : draft.font === "anek"
-        ? "var(--qk-head), sans-serif"
-        : draft.font === "adorsho"
-          ? "AdorshoLipi, serif"
-          : "var(--qk-body), sans-serif";
+    draft.font === "kalpurush"
+      ? '"QmPaperKalpurush", var(--font-en), serif'
+      : draft.font === "serif"
+        ? "var(--font-en), Georgia, serif"
+        : draft.font === "anek"
+          ? "var(--qk-head), sans-serif"
+          : draft.font === "adorsho"
+            ? "AdorshoLipi, serif"
+            : "var(--qk-body), sans-serif";
   const result = (() => {
     try {
       return validateEnglishOutput(draft.selection, draft.output);
@@ -133,9 +135,7 @@ export default function EnglishEditor({
   return (
     <main className="english-workspace mx-auto max-w-6xl p-4">
       <div className="english-controls space-y-4">
-        <h1 className="text-2xl font-bold">
-          প্রশ্নপত্রের Page Setup — English
-        </h1>
+        <h1 className="text-2xl font-bold">প্রশ্নপত্রের Page Setup — English</h1>
         <button onClick={() => setSettingsOpen(true)}>
           ⚙ Page Setup / সেটিংস
         </button>
@@ -170,9 +170,9 @@ export default function EnglishEditor({
         </div>
         <p role="status">{message}</p>
         <p>
-          AI-generated draft: প্রশ্ন, passage, grammar ও answer ব্যবহারের আগে
-          নিজে যাচাই করুন। English draft আলাদা editor-এ রাখা হয়েছে; বাংলা
-          builder-এর layout/settings বদলাবে না।
+          AI-generated draft: প্রশ্ন, passage, grammar ও answer ব্যবহারের আগে নিজে
+          যাচাই করুন। English draft আলাদা editor-এ রাখা হয়েছে; বাংলা builder-এর
+          layout/settings বদলাবে না।
         </p>
         <label className="block">
           Draft name
@@ -248,8 +248,8 @@ export default function EnglishEditor({
         <details open={edit} onToggle={(e) => setEdit(e.currentTarget.open)}>
           <summary>প্রশ্ন ও উত্তর সম্পাদনা</summary>
           <p>
-            Topic/word limit/source ও প্রশ্নের সংখ্যা অক্ষুণ্ণ রাখুন। Table ও
-            subitems প্রয়োজনে JSON editor-এ সম্পাদনা করা যাবে।
+            Topic/word limit/source ও প্রশ্নের সংখ্যা অক্ষুণ্ণ রাখুন। Table ও subitems
+            প্রয়োজনে JSON editor-এ সম্পাদনা করা যাবে।
           </p>
           {draft.output.tasks.map((task, index) => (
             <section className="space-y-3 border-b p-3" key={task.id}>

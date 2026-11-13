@@ -10,7 +10,14 @@ export const englishDraftSchema = z
     output: englishOutputSchema,
     header: paperHeaderSchema,
     fontSize: z.number().int().min(7).max(28),
-    font: z.enum(["serif", "sans-serif", "hind", "anek", "adorsho"]),
+    font: z.enum([
+      "serif",
+      "sans-serif",
+      "hind",
+      "anek",
+      "adorsho",
+      "kalpurush",
+    ]),
     layout: z
       .object({
         paper: z.enum(["A4", "Letter", "Legal", "A5"]).default("A4"),

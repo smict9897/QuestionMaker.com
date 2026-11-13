@@ -32,6 +32,7 @@ export type PreviewSection = {
   questions: PreviewQuestion[];
 };
 const families = {
+  kalpurush: '"QmPaperKalpurush", var(--font-en), serif',
   adorsho: "var(--font-bn), var(--font-en), serif",
   hind: "var(--qk-body), sans-serif",
   anek: "var(--qk-head), sans-serif",
@@ -615,8 +616,8 @@ export default function PaperPreview({
       </div>
       {s.cfg.autoFit && mode === "questions" && (
         <p data-noprint role="status" className="mb-2 text-xs text-emerald-700">
-          Auto-fit: {fittedFont}pt — প্রয়োজনে সর্বনিম্ন ৭pt; না ধরলে পরের
-          পাতায় যাবে।
+          Auto-fit: {fittedFont}pt — প্রয়োজনে সর্বনিম্ন ৭pt; না ধরলে পরের পাতায়
+          যাবে।
         </p>
       )}
       {oversized && (
@@ -625,8 +626,8 @@ export default function PaperPreview({
           role="status"
           className="mb-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-800"
         >
-          কিছু প্রশ্ন এক পাতার চেয়ে বড়। ফন্ট বা ছবির আকার ছোট করুন; প্রিন্টে
-          বড় প্রশ্ন একাধিক পাতায় ভাগ হতে পারে।
+          কিছু প্রশ্ন এক পাতার চেয়ে বড়। ফন্ট বা ছবির আকার ছোট করুন; প্রিন্টে বড় প্রশ্ন
+          একাধিক পাতায় ভাগ হতে পারে।
         </p>
       )}
       {sections &&
