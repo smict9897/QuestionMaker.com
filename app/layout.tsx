@@ -1,4 +1,5 @@
 import "./globals.css";
+import "@/components/design-system.css";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/next";
@@ -104,7 +105,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
 
       <body
-        className="pb-16 md:pb-0"
+        className="qm-app pb-16 md:pb-0"
         style={{
           fontFamily: 'var(--font-en), "Times New Roman", var(--font-bn), serif',
         }}
