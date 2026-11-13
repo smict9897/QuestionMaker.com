@@ -64,3 +64,12 @@ test("demo appears immediately after entry cards and before bank statistics", ()
   assert.ok(page.indexOf("<HomeStats") < page.indexOf("<HomeStarter"));
   assert.ok(page.indexOf("<PaperAnimation") < page.indexOf("<HomeStats"));
 });
+
+test("demo sheet and headings use Kalpurush without altering actual paper font choices", () => {
+  const css = fs.readFileSync("components/home/paper-animation.css", "utf8");
+  const ui = fs.readFileSync("components/ui-typography.css", "utf8");
+  assert.match(css, /font-family: "QmPaperKalpurush"/);
+  assert.match(ui, /\.paper-demo-sheet :is\(h1, h2, h3\)\s*\{\s*font-family: "QmPaperKalpurush"/);
+  assert.match(fs.readFileSync("app/globals.css", "utf8"), /font-family: 'QmPaperKalpurush'/);
+  assert.ok(fs.existsSync("public/fonts/Kalpurush.woff2"));
+});

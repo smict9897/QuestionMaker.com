@@ -60,11 +60,11 @@
   .qm-app .rp-print-sheet {
     font-family: var(--qk-body), sans-serif;
   }
-  .qm-app .rp-print-sheet h1,
-  .qm-app .paper-demo-sheet :is(h1, h2, h3) {
+  .qm-app .rp-print-sheet h1 {
     font-family: var(--qk-head), sans-serif;
   }
-  .qm-app .paper-demo-sheet {
-    font-family: var(--qk-body), var(--font-bn), serif;
+  .qm-app .paper-demo-sheet,
+  .qm-app .paper-demo-sheet :is(h1, h2, h3) {
+    font-family: "QmPaperKalpurush", var(--font-bn), serif;
   }
 }

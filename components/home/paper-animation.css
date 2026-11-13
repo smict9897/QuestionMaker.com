@@ -54,7 +54,7 @@
   transition:
     opacity 0.5s ease,
     transform 0.5s ease;
-  font-family: var(--qk-body), var(--font-bn), serif;
+  font-family: "QmPaperKalpurush", var(--font-bn), serif;
   font-size: 14px;
   line-height: 1.65;
 }
