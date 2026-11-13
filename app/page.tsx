@@ -12,6 +12,7 @@ import {
   HomeStarter,
   HomeGuide,
 } from "@/components/home/home-workspace";
+import CreationPaths from "@/components/home/creation-paths";
 import PaperAnimation from "@/components/home/paper-animation";
 import HomeStats from "@/components/home/home-stats";
 import "@/components/home/workspace.css";
@@ -195,6 +196,7 @@ export default async function Home() {
       >
         <main>
           <div className="hm-hero-stack">
+            <CreationPaths />
             <HomeStarter
               rows={(starterBank || []).map((r) => ({
                 category: r.category,

@@ -18,6 +18,7 @@ type NavItem = {
 
 const navTree: NavItem[] = [
   { label: "প্রশ্নপত্র তৈরি", href: "/question-builder" },
+  { label: "রেডি প্রশ্নপত্র", href: "/ready-papers" },
   {
     label: "লাইভ মডেল টেস্ট",
     href: "/model-test",
@@ -38,7 +39,7 @@ function Announcement({ text }: { text: string }) {
   if (hidden || !text) return null;
   const close = () => { setHidden(true); try { sessionStorage.setItem(key, "1"); } catch {} };
   return (
-    <div className="flex items-center gap-2 bg-gradient-to-r from-violet-700 via-fuchsia-700 to-pink-600 px-3 py-2 text-sm text-white">
+    <div className="qm-announcement flex items-center gap-2 bg-gradient-to-r from-violet-700 via-fuchsia-700 to-pink-600 px-3 py-2 text-sm text-white">
       <span aria-hidden="true">🔔</span>
       <p className="min-w-0 flex-1 truncate">{text}</p>
       <Link href="/blog" className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-900 transition-transform hover:scale-105">
@@ -68,8 +69,8 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
   }, [open]);
 
   const btnBase = "inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold transition-all duration-200 active:scale-95";
-  const btnOutline = `${btnBase} border border-violet-200 bg-white/50 text-[#16112e] hover:bg-violet-50 hover:border-violet-300 backdrop-blur-sm dark:bg-white/5 dark:border-white/10 dark:text-white dark:hover:bg-white/10`;
-  const btnSolid = `${btnBase} bg-gradient-to-r from-[#7c3aed] to-[#f43f8e] text-white shadow-lg shadow-fuchsia-500/30 hover:shadow-fuchsia-500/50`;
+  const btnOutline = `qm-header-outline ${btnBase} border border-violet-200 bg-white/50 text-[#16112e] hover:bg-violet-50 hover:border-violet-300 backdrop-blur-sm dark:bg-white/5 dark:border-white/10 dark:text-white dark:hover:bg-white/10`;
+  const btnSolid = `qm-header-primary ${btnBase} bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] text-white shadow-lg shadow-violet-500/30 hover:shadow-violet-500/50`;
 
   const actions = (
     <>
@@ -93,7 +94,7 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
     <>
       <Announcement text={notice} />
       {/* Glassmorphism Sticky Header */}
-      <header className="sticky top-0 z-40 border-b border-white/20 bg-white/80 backdrop-blur-xl dark:bg-[#0d0926]/80 dark:border-white/10 shadow-sm">
+      <header className="qm-site-header sticky top-0 z-40 border-b border-white/20 bg-white/80 backdrop-blur-xl dark:bg-[#0d0926]/80 dark:border-white/10 shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-3 sm:px-6">
           
           {/* Brand Logo Area */}
@@ -108,7 +109,7 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
 
             <Link href="/" aria-label="QuestionMakerBd.com হোম" className="flex items-center gap-2.5 group shrink-0">
               {/* হোমপেজের মতো গ্লাসমরফিক লোগো আইকন */}
-              <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#f43f8e] shadow-md shadow-fuchsia-500/20 group-hover:scale-105 transition-transform">
+              <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] shadow-md shadow-violet-500/20 group-hover:scale-105 transition-transform">
                 <img src="/questionmaker-icon.png" width={40} height={40} alt="" className="rounded-xl" />
               </div>
               <div className="flex flex-col justify-center">
@@ -193,7 +194,7 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
           <div className="p-3">
             {user && (
               <div className="mb-4 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-violet-50 to-fuchsia-50 p-3 border border-violet-100 dark:from-violet-900/20 dark:to-fuchsia-900/20 dark:border-white/5">
-                <div className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-[#7c3aed] to-[#f43f8e] text-white font-bold shadow-md">
+                <div className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] text-white font-bold shadow-md">
                   <User size={18} />
                 </div>
                 <div className="min-w-0">

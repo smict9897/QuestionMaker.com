@@ -54,13 +54,13 @@ export default async function SiteFooter() {
   const links = site.social ? site.social.filter((s) => s.url) : [];
 
   return (
-    <footer className="mt-20 bg-[#0d0926] pb-24 text-sm text-slate-300 md:pb-0 border-t border-white/10">
+    <footer className="qm-site-footer mt-20 bg-[#0d0926] pb-24 text-sm text-slate-300 md:pb-0 border-t border-white/10">
       <div className="mx-auto max-w-7xl px-4 py-14">
         {/* Top Info Section */}
         <div className="mb-12 pb-10 border-b border-white/10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
           <div className="max-w-md">
             <Link href="/" aria-label="QuestionMakerBd.com হোম" className="flex items-center gap-3 group">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#f43f8e] shadow-lg shadow-fuchsia-500/20 group-hover:scale-105 transition-transform">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] shadow-lg shadow-violet-500/20 group-hover:scale-105 transition-transform">
                 <PenTool size={20} className="text-white" />
               </div>
               <div>
@@ -91,7 +91,7 @@ export default async function SiteFooter() {
             <div key={g.title} className={`min-w-0 ${g.title === "নীতিমালা ও সহায়তা" ? "col-span-2 sm:col-span-1" : ""}`}>
               <div className="mb-5">
                 <h2 className="text-base font-bold text-white tracking-wide">{g.title}</h2>
-                <span className="mt-2 block h-1 w-8 rounded-full bg-gradient-to-r from-violet-500 to-pink-500" />
+                <span className="mt-2 block h-1 w-8 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500" />
               </div>
 
               <ul className={g.title === "নীতিমালা ও সহায়তা" ? "grid grid-cols-2 items-start gap-x-4 gap-y-3 sm:grid-cols-1" : "space-y-3"}>

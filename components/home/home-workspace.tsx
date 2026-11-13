@@ -218,7 +218,7 @@ export function HomeStarter({
   return (
     <section id="start" className="hm-panel hm-starter">
       <div className="hm-panel-title">
-        <h1>১ মিনিটে প্রশ্ন তৈরি করুন</h1>
+        <h2>১ মিনিটে প্রশ্ন তৈরি করুন</h2>
         <p>
           শ্রেণি, বিষয় ও অধ্যায় নির্বাচন করে আপনার প্রয়োজন অনুযায়ী প্রশ্ন তৈরি শুরু করুন।
           এক বা একাধিক অধ্যায় একসাথে নির্বাচন করা যাবে।
