@@ -23,7 +23,7 @@ function render() {
 }
 test("homepage demo uses requested institution and labels itself as an animation", () => {
   const html = render();
-  assert.match(html, /শরৎচন্দ্র নন্দলাল পাবলিক উচ্চ বিদ্যালয় ও কলেজ/);
+  assert.match(html.replace(/<[^>]+>/g, ""), /শরৎচন্দ্র নন্দলাল পাবলিক উচ্চ বিদ্যালয় ও কলেজ/);
   assert.match(html, /ডেমো অ্যানিমেশন/);
   assert.match(html, /মাতৃভাষা/);
 });
@@ -80,4 +80,13 @@ test("demo school emblem has founding year and an accessible sample label", () =
   assert.match(html, /নমুনা বিদ্যালয় লোগো/);
   assert.match(html, /paper-demo-school/);
   assert.doesNotMatch(html, /S.N.P High School/);
+});
+
+test("compact demo header omits student fields and keeps school ending together",()=>{
+ const html=render();
+ assert.doesNotMatch(html,/শিক্ষার্থীর নাম|রোল:/);
+ assert.match(html,/<span class="paper-demo-school-ending">উচ্চ বিদ্যালয় ও কলেজ<\/span>/);
+ const css=fs.readFileSync("components/home/paper-animation.css","utf8");
+ assert.match(css,/paper-demo-school-ending[^}]*white-space:nowrap/);
+ assert.match(css,/paper-demo-meta[^}]*border-bottom:1px solid/);
 });

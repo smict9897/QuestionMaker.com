@@ -64,7 +64,7 @@
 }
 .paper-demo-header {
   text-align: center;
-  margin-bottom: 18px;
+  margin-bottom: 8px;
 }
 .qk-home .paper-demo-header h2 {
   font-size: 24px;
@@ -253,4 +253,18 @@
   .paper-demo-emblem svg { width:48px; height:48px; }
   .paper-demo-emblem span { font-size:9px; }
   .qk-home .paper-demo-school h2 { font-size:18px; }
+}
+
+/* Compact demo-only letterhead; keep the institution ending together. */
+.qk-home .paper-demo-school h2 { text-wrap:balance; line-height:1.3; }
+.paper-demo-school-ending { display:inline-block; white-space:nowrap; }
+.paper-demo-school { grid-template-columns:64px minmax(0,1fr); gap:10px; margin-bottom:4px; }
+.paper-demo-emblem svg { width:52px; height:52px; }
+.paper-demo-meta { padding:5px 0 8px; border-bottom:1px solid #a8ac9e; margin-bottom:8px; }
+@media(max-width:640px) {
+  .paper-demo-school { grid-template-columns:48px minmax(0,1fr); gap:7px; }
+  .paper-demo-emblem svg { width:40px; height:40px; }
+  .paper-demo-emblem span { font-size:8px; }
+  .qk-home .paper-demo-school h2 { font-size:clamp(15px,4.4vw,19px); }
+  .paper-demo-header p { margin-top:2px; }
 }
