@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { UploadCloud, FileText, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { deleteReadyPaper, updateReadyPaper } from "@/app/actions/ready-papers";
 import type { ReadyPaper } from "@/lib/ready-papers";
@@ -20,6 +21,10 @@ export default function ReadyUpload({
   > | null>(null);
   useEffect(() => () => importJob.current?.cancel(), []);
   const [formKey, setFormKey] = useState(0);
+  const [selectedFile, setSelectedFile] = useState<{
+    name: string;
+    size: number;
+  } | null>(null);
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
   const router = useRouter();
@@ -68,6 +73,7 @@ export default function ReadyUpload({
             const count = await importJob.current.run(setMessage);
             importJob.current = null;
             form.reset();
+            setSelectedFile(null);
             setFormKey((k) => k + 1);
             setMessage(
               userMode
@@ -135,10 +141,53 @@ export default function ReadyUpload({
               <input name="source" required minLength={2} maxLength={160} />
             </label>
           </div>
-          <label>
-            মূল PDF · সর্বোচ্চ ৫০ MB / ৫০০ পৃষ্ঠা · Automatic split
-            <input name="file" type="file" accept="application/pdf" required />
-          </label>
+          <div className="rp-file-field">
+            <p className="rp-file-label">
+              মূল PDF · সর্বোচ্চ ৫০ MB / ৫০০ পৃষ্ঠা · Automatic split
+            </p>
+            <label
+              className={`rp-file-picker${selectedFile ? " rp-file-picked" : ""}`}
+            >
+              <input
+                name="file"
+                type="file"
+                accept="application/pdf"
+                required
+                aria-label="PDF ফাইল বেছে নিন"
+                onChange={(e) => {
+                  const f = e.currentTarget.files?.[0];
+                  setSelectedFile(f ? { name: f.name, size: f.size } : null);
+                }}
+              />
+              <span className="rp-file-icon" aria-hidden="true">
+                {selectedFile ? (
+                  <FileText size={26} />
+                ) : (
+                  <UploadCloud size={26} />
+                )}
+              </span>
+              <span className="rp-file-copy">
+                <strong>
+                  {selectedFile
+                    ? "PDF নির্বাচিত হয়েছে"
+                    : "আপনার প্রশ্নপত্রের PDF দিন"}
+                </strong>
+                <span role="status">
+                  {selectedFile
+                    ? `${selectedFile.name} · ${(selectedFile.size / 1_000_000).toFixed(2)} MB`
+                    : "একটি PDF বেছে নিন · মূল ফাইল অপরিবর্তিত থাকবে"}
+                </span>
+              </span>
+              <span className="rp-file-pick-button">
+                {selectedFile ? (
+                  <CheckCircle2 size={17} aria-hidden="true" />
+                ) : (
+                  <UploadCloud size={17} aria-hidden="true" />
+                )}
+                {selectedFile ? "ফাইল পরিবর্তন" : "PDF ফাইল বেছে নিন"}
+              </span>
+            </label>
+          </div>
           <label className="rp-check">
             <input type="checkbox" name="rights" required />
             এই প্রশ্নপত্র ব্যবহারের প্রয়োজনীয় অনুমতি আছে
