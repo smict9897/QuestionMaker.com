@@ -110,7 +110,7 @@ export default function PaperAnimation() {
               </svg>
               <span>প্রতিষ্ঠিত ১৯৬৩</span>
             </div>
-            <h2>শরৎচন্দ্র নন্দলাল পাবলিক <span className="paper-demo-school-ending">উচ্চ বিদ্যালয় ও কলেজ</span></h2>
+            <h2>এস.এন.পি উচ্চ বিদ্যালয় ও কলেজ</h2>
           </div>
           <p>প্রথম সাময়িক মূল্যায়ন — ২০২৬</p>
           <p>শ্রেণি: নবম · বিষয়: বাংলা</p>
