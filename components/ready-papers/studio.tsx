@@ -950,53 +950,58 @@ export default function ReadyStudio({
                 onChange={(e) => update({ deskew: +e.target.value })}
               />
             </label>
-            <div className="rp-toolbar">
-              <button
-                onClick={() =>
-                  update({
-                    rotation: ((edit.rotation + 90) %
-                      360) as PageEdit["rotation"],
-                    masks: [],
-                    texts: [],
-                  })
-                }
-              >
-                <RotateCw size={15} />
-                ঘোরান
-              </button>
-              <button
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  try {
-                    const suggestion = await suggestMargins(pages[active - 1]);
-                    update(suggestion);
-                    setMessage(
-                      "শুধু বাইরের সাদা margin-এর প্রস্তাব। লেখা/marks অক্ষত আছে কি না দেখে নিন।",
-                    );
-                  } finally {
-                    setBusy(false);
+            <div className="rp-margin-tools">
+              <h3>মার্জিন ও Crop</h3>
+              <div className="rp-toolbar">
+                <button
+                  onClick={() =>
+                    update({
+                      rotation: ((edit.rotation + 90) %
+                        360) as PageEdit["rotation"],
+                      masks: [],
+                      texts: [],
+                    })
                   }
-                }}
-              >
-                <Crop size={15} />
-                Auto margin
-              </button>
+                >
+                  <RotateCw size={15} />
+                  ঘোরান
+                </button>
+                <button
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    try {
+                      const suggestion = await suggestMargins(
+                        pages[active - 1],
+                      );
+                      update(suggestion);
+                      setMessage(
+                        "শুধু বাইরের সাদা margin-এর প্রস্তাব। লেখা/marks অক্ষত আছে কি না দেখে নিন।",
+                      );
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  <Crop size={15} />
+                  Auto margin
+                </button>
+              </div>
+              {(["top", "bottom", "left", "right"] as const).map((side, i) => (
+                <label key={side}>
+                  {["ওপর", "নিচ", "বাম", "ডান"][i]} crop ·{" "}
+                  {Math.round(edit[side] * 100)}%
+                  <input
+                    type="range"
+                    min="0"
+                    max={i < 2 ? ".35" : ".2"}
+                    step=".005"
+                    value={edit[side]}
+                    onChange={(e) => update({ [side]: +e.target.value })}
+                  />
+                </label>
+              ))}
             </div>
-            {(["top", "bottom", "left", "right"] as const).map((side, i) => (
-              <label key={side}>
-                {["ওপর", "নিচ", "বাম", "ডান"][i]} crop ·{" "}
-                {Math.round(edit[side] * 100)}%
-                <input
-                  type="range"
-                  min="0"
-                  max={i < 2 ? ".35" : ".2"}
-                  step=".005"
-                  value={edit[side]}
-                  onChange={(e) => update({ [side]: +e.target.value })}
-                />
-              </label>
-            ))}
             <label>
               নতুন লেখা
               <input
@@ -1313,7 +1318,42 @@ export default function ReadyStudio({
               </p>
             </section>
           )}
-          <PrintFrame>
+          <PrintFrame
+            mobileActions={
+              <>
+                <button
+                  className="rp-action-setup"
+                  onClick={() => setStep("edit")}
+                >
+                  Edit-এ ফিরুন
+                </button>
+                <button
+                  className="rp-action-print"
+                  disabled={
+                    busy ||
+                    !paid ||
+                    !selected.length ||
+                    (printKind === "questions" &&
+                      printPages.length !== selected.length)
+                  }
+                  onClick={() => window.print()}
+                >
+                  <Printer size={16} />
+                  Print / Save PDF
+                </button>
+                {printKind === "questions" && (
+                  <button
+                    aria-pressed={placementMode}
+                    onClick={() => setPlacementMode((v) => !v)}
+                  >
+                    {placementMode
+                      ? "অবস্থান সম্পাদনা বন্ধ"
+                      : "প্রশ্নের অবস্থান ঠিক করুন"}
+                  </button>
+                )}
+              </>
+            }
+          >
             <section id="ready-print">
               {printKind === "ai" ? (
                 <AIAnswerSheets job={aiJob} selected={selected} />
