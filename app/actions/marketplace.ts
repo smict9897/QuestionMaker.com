@@ -44,10 +44,15 @@ export async function submitMarketPaper(
       title: form.get("title"),
       grade: form.get("grade"),
       subject: form.get("subject"),
-      chapters: String(form.get("chapters") || "")
-        .split(/[,\n]/)
-        .map((s) => s.trim())
-        .filter(Boolean),
+      chapters: [
+        ...new Set(
+          form
+            .getAll("chapters")
+            .flatMap((value) => String(value).split(/[,\n]/))
+            .map((s) => s.trim())
+            .filter(Boolean),
+        ),
+      ],
       description: form.get("description"),
       pricePaisa: marketPricePaisa(form.get("price")),
       rights: form.get("rights") === "on",

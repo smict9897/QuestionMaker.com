@@ -21,7 +21,7 @@ export const workspaceLinks = [
   {
     label: "প্রশ্ন তৈরি",
     description: "শ্রেণি, বিষয় ও অধ্যায় বেছে শুরু করুন",
-    href: "/#start",
+    href: "/question-builder",
     icon: Plus,
     tone: "green",
   },

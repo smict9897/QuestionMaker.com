@@ -58,19 +58,27 @@ test("animation respects reduced motion, pauses outside viewport and cleans up t
   assert.match(source, /observer.disconnect/);
   assert.doesNotMatch(source, /\bfetch\s*\(|localStorage|savePaper/);
 });
-test("demo appears immediately after entry cards and before bank statistics", () => {
+test("marketplace homepage no longer mounts the legacy demo", () => {
   const page = fs.readFileSync("app/page.tsx", "utf8");
-  assert.ok(page.indexOf("<CreationPaths") < page.indexOf("<PaperAnimation"));
-  assert.ok(page.indexOf("<HomeStats") < page.indexOf("<HomeStarter"));
-  assert.ok(page.indexOf("<PaperAnimation") < page.indexOf("<HomeStats"));
+  assert.doesNotMatch(
+    page,
+    /PaperAnimation|CreationPaths|HomeStats|HomeStarter/,
+  );
+  assert.match(page, /MarketplacePaperCards/);
 });
 
 test("demo sheet and headings use Kalpurush without altering actual paper font choices", () => {
   const css = fs.readFileSync("components/home/paper-animation.css", "utf8");
   const ui = fs.readFileSync("components/ui-typography.css", "utf8");
   assert.match(css, /font-family: "QmPaperKalpurush"/);
-  assert.match(ui, /\.paper-demo-sheet :is\(h1, h2, h3\)\s*\{\s*font-family: "QmPaperKalpurush"/);
-  assert.match(fs.readFileSync("app/globals.css", "utf8"), /font-family: 'QmPaperKalpurush'/);
+  assert.match(
+    ui,
+    /\.paper-demo-sheet :is\(h1, h2, h3\)\s*\{\s*font-family: "QmPaperKalpurush"/,
+  );
+  assert.match(
+    fs.readFileSync("app/globals.css", "utf8"),
+    /font-family: 'QmPaperKalpurush'/,
+  );
   assert.ok(fs.existsSync("public/fonts/Kalpurush.woff2"));
 });
 
@@ -82,12 +90,12 @@ test("demo school emblem has founding year and an accessible sample label", () =
   assert.doesNotMatch(html, /S.N.P High School/);
 });
 
-test("compact demo header omits student fields and keeps the full school name on one line",()=>{
- const html=render();
- assert.doesNotMatch(html,/শিক্ষার্থীর নাম|রোল:/);
- assert.match(html,/<h2>এস\.এন\.পি উচ্চ বিদ্যালয় ও কলেজ<\/h2>/);
- const css=fs.readFileSync("components/home/paper-animation.css","utf8");
- assert.match(css,/paper-demo-school h2[^}]*white-space:nowrap/);
- assert.match(css,/font-size:min\(19px,5\.5cqw\)/);
- assert.match(css,/paper-demo-meta[^}]*border-bottom:1px solid/);
+test("compact demo header omits student fields and keeps the full school name on one line", () => {
+  const html = render();
+  assert.doesNotMatch(html, /শিক্ষার্থীর নাম|রোল:/);
+  assert.match(html, /<h2>এস\.এন\.পি উচ্চ বিদ্যালয় ও কলেজ<\/h2>/);
+  const css = fs.readFileSync("components/home/paper-animation.css", "utf8");
+  assert.match(css, /paper-demo-school h2[^}]*white-space:nowrap/);
+  assert.match(css, /font-size:min\(19px,5\.5cqw\)/);
+  assert.match(css, /paper-demo-meta[^}]*border-bottom:1px solid/);
 });

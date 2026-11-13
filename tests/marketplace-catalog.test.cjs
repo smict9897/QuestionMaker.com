@@ -137,3 +137,47 @@ test("catalog pages use bounded cursor pagination and project data before return
   assert.equal(result.next, rows[199].key.slice(market.MARKET_PREFIX.length));
   assert.ok(!JSON.stringify(result).includes("SECRET_QUESTION"));
 });
+
+test("catalog filters before paginating and continues across nonmatching chapters", async () => {
+  let calls = 0;
+  const seen = [];
+  const rows = Array.from({ length: 110 }, (_, i) => {
+    const id = (i + 1).toString(16).padStart(64, "0");
+    return {
+      key: market.MARKET_PREFIX + id,
+      value: JSON.stringify({
+        ...record,
+        id,
+        metadata: { ...record.metadata, chapters: [i < 105 ? "পদ্য" : "গদ্য"] },
+      }),
+    };
+  });
+  const data = load("lib/marketplace-catalog-data.ts", {
+    "server-only": {},
+    "@/lib/db": {
+      db: {
+        setting: {
+          findMany: async (q) => {
+            calls++;
+            seen.push(q);
+            return rows
+              .filter((r) => !q.where.key.gt || r.key > q.where.key.gt)
+              .slice(0, q.take);
+          },
+        },
+      },
+    },
+    "@/lib/marketplace": market,
+    "@/lib/marketplace-catalog": lib,
+  });
+  const result = await data.marketCatalogPage(
+    { grade: "9", chapter: "গদ্য" },
+    undefined,
+    3,
+  );
+  assert.equal(calls, 2);
+  assert.equal(result.papers.length, 3);
+  assert.equal(result.scanned, 108);
+  assert.equal(result.next, rows[107].key.slice(market.MARKET_PREFIX.length));
+  assert.ok(seen[0].where.AND.some((p) => p.value.contains === '"grade":"9"'));
+});

@@ -44,7 +44,7 @@ const meta = {
 test("market metadata restricts grade, price, chapters and rights", () => {
   assert.ok(lib.marketMetadataSchema.safeParse(meta).success);
   for (const patch of [
-    { grade: "12" },
+    { grade: "13" },
     { pricePaisa: 0 },
     { pricePaisa: 100.5 },
     { pricePaisa: 5000001 },
