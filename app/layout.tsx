@@ -1,4 +1,5 @@
 import "./globals.css";
+import "@/components/ui-typography.css";
 import "@/components/design-system.css";
 import "@/components/compact-workspace.css";
 import "@/components/home/mobile-home.css";
@@ -10,6 +11,7 @@ import { MessageCircle } from "lucide-react";
 import { auth, signOut } from "@/auth";
 import { db } from "@/lib/db";
 import { getSite } from "@/lib/site";
+import { uiBangla, uiLatin } from "@/lib/ui-fonts";
 import { qkHead, qkBody } from "@/lib/qk-fonts";
 import PathGate from "@/components/proshnoday/shell/path-gate";
 import SiteHeader from "@/components/site-header";
@@ -82,7 +84,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html
       lang="bn"
-      className={`${bn.variable} ${en.variable} ${qkHead.variable} ${qkBody.variable}`}
+      className={`${bn.variable} ${en.variable} ${qkHead.variable} ${qkBody.variable} ${uiBangla.variable} ${uiLatin.variable}`}
       suppressHydrationWarning
     >
       <head>

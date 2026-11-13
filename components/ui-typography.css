@@ -1,0 +1,70 @@
+/* Screen chrome only. Kalpurush has one genuine weight; browsers synthesize
+   Bengali bold. Montserrat supplies genuine variable English weights. */
+@media screen {
+  .qm-app {
+    --qm-ui-font: var(--qm-bangla), var(--qm-latin), "SolaimanLipi", sans-serif;
+    font-family: var(--qm-ui-font) !important;
+  }
+  .qm-app
+    :is(
+      .qk-home,
+      .tw-root,
+      .rp-root,
+      .saved-papers-page,
+      .paper-preparation,
+      .prep-popup,
+      .qm-site-header,
+      .qm-site-footer,
+      .qm-bottom-nav
+    ) {
+    font-family: var(--qm-ui-font);
+  }
+  .qm-app .qk-home {
+    --hf: var(--qm-ui-font);
+    --bf: var(--qm-ui-font);
+  }
+  .qm-app .rp-root h1 {
+    font-family: var(--qm-ui-font);
+  }
+  .qm-app
+    :is(
+      .qm-site-header,
+      .qm-site-footer,
+      .qm-bottom-nav,
+      .hm-topbar,
+      .hm-sidebar
+    ) {
+    line-height: 1.65;
+  }
+  .qm-app .hm-creation-heading h1 {
+    font-weight: 700;
+    line-height: 1.4;
+  }
+  .qm-app .hm-path-card h2 {
+    font-weight: 700;
+    line-height: 1.5;
+  }
+  .qm-app .hm-path-card > p {
+    font-size: 16px;
+    line-height: 1.75;
+  }
+  .qm-app .hm-creation-heading p {
+    font-size: 16px;
+    line-height: 1.75;
+  }
+  /* These are documents, not interface text. Retain their previous screen
+     metrics too, so screen preview stays consistent with printed output. */
+  .qm-app :is(#paper, #print-area) {
+    font-family: var(--font-en), "Times New Roman", var(--font-bn), serif;
+  }
+  .qm-app .rp-print-sheet {
+    font-family: var(--qk-body), sans-serif;
+  }
+  .qm-app .rp-print-sheet h1,
+  .qm-app .paper-demo-sheet :is(h1, h2, h3) {
+    font-family: var(--qk-head), sans-serif;
+  }
+  .qm-app .paper-demo-sheet {
+    font-family: var(--qk-body), var(--font-bn), serif;
+  }
+}
