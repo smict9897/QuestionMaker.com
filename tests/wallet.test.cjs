@@ -17,7 +17,8 @@ function setup() {
     ];
   let session = "u",
     pkg = false,
-    queue = Promise.resolve();
+    queue = Promise.resolve(),
+    failKey = "";
   const tx = {
     user: { findUnique: async ({ where }) => users[where.id] },
     question: {
@@ -39,11 +40,15 @@ function setup() {
           )
           .map(([key, value]) => ({ key, value })),
       create: async ({ data }) => {
+        if (failKey && data.key.startsWith(failKey))
+          throw Error("forced failure");
         if (store.has(data.key)) throw Error("duplicate");
         store.set(data.key, data.value);
         return data;
       },
       update: async ({ where, data }) => {
+        if (failKey && where.key.startsWith(failKey))
+          throw Error("forced failure");
         if (!store.has(where.key)) throw Error("missing");
         store.set(where.key, data.value);
         return data;
@@ -74,19 +79,21 @@ function setup() {
     const m = new Module(file, module);
     m.paths = module.paths;
     m.require = (id) =>
-      id === "@/lib/db"
-        ? { db }
-        : id === "@/auth"
-          ? { auth: async () => (session ? { user: users[session] } : null) }
-          : id === "next/cache"
-            ? { revalidatePath: () => {} }
-            : id === "@/lib/paper-generation"
-              ? { visibleQuestions: () => ({ approved: true }) }
-              : id === "@/lib/payment-info"
-                ? { PAYMENT_METHODS: [{ id: "bKash" }, { id: "Nagad" }] }
-                : id === "@/lib/wallet"
-                  ? load("lib/wallet.ts")
-                  : require(id);
+      id === "@/lib/wallet-funds"
+        ? load("lib/wallet-funds.ts")
+        : id === "@/lib/db"
+          ? { db }
+          : id === "@/auth"
+            ? { auth: async () => (session ? { user: users[session] } : null) }
+            : id === "next/cache"
+              ? { revalidatePath: () => {} }
+              : id === "@/lib/paper-generation"
+                ? { visibleQuestions: () => ({ approved: true }) }
+                : id === "@/lib/payment-info"
+                  ? { PAYMENT_METHODS: [{ id: "bKash" }, { id: "Nagad" }] }
+                  : id === "@/lib/wallet"
+                    ? load("lib/wallet.ts")
+                    : require(id);
     m._compile(
       ts.transpileModule(fs.readFileSync(file, "utf8"), {
         compilerOptions: {
@@ -101,7 +108,9 @@ function setup() {
   return {
     wallet: load("lib/wallet.ts"),
     actions: load("app/actions/wallet.ts"),
+    transfers: load("app/actions/wallet-transfer.ts"),
     store,
+    setFail: (key) => (failKey = key),
     setSession: (id) => (session = id),
     setPackage: (v) => (pkg = v),
   };
@@ -308,4 +317,221 @@ test("legacy funded wallet gets TID without bonus reset; mismatched request fail
   x.setSession("a");
   await assert.rejects(x.actions.reviewRecharge(key, true));
   assert.ok(!x.store.has("wallet:account:v"));
+});
+
+test("source ledger integrates debit/recharge, preserves funds and prevents duplicate operation", async () => {
+  const x = setup();
+  await x.actions.purchaseQuestions(["m"], 20);
+  let wallet = JSON.parse(x.store.get("wallet:account:u"));
+  assert.equal(wallet.version, 2);
+  assert.equal(wallet.funds.bonus, 1980);
+  await x.actions.submitRecharge(form());
+  x.setSession("a");
+  await x.actions.reviewRecharge("wallet:recharge:u:ABC12345", true);
+  wallet = JSON.parse(x.store.get("wallet:account:u"));
+  assert.equal(wallet.funds.recharge, 2000);
+  assert.equal(wallet.funds.earnings, 0);
+  const input = {
+    operationId: "test:credit",
+    amount: 100,
+    direction: "CREDIT",
+    source: "earnings",
+    description: "Test seller credit",
+  };
+  await x.wallet.walletTransaction((tx) =>
+    x.wallet.changeWalletFunds(tx, "u", input),
+  );
+  await x.wallet.walletTransaction((tx) =>
+    x.wallet.changeWalletFunds(tx, "u", input),
+  );
+  wallet = JSON.parse(x.store.get("wallet:account:u"));
+  assert.equal(wallet.funds.earnings, 100);
+  await assert.rejects(
+    x.wallet.walletTransaction((tx) =>
+      x.wallet.changeWalletFunds(tx, "u", { ...input, amount: 200 }),
+    ),
+  );
+  assert.equal(
+    [...x.store.keys()].filter((k) => k.startsWith("wallet:history:v1:u:"))
+      .length,
+    3,
+  );
+});
+function transferForm(tid, amount = "10") {
+  const f = new FormData();
+  f.set("tid", tid);
+  f.set("amount", amount);
+  return f;
+}
+async function transferSetup() {
+  const x = setup();
+  await x.wallet.ensureWallet("u");
+  await x.wallet.ensureWallet("v");
+  await x.actions.submitRecharge(form("100"));
+  x.setSession("a");
+  await x.actions.reviewRecharge("wallet:recharge:u:ABC12345", true);
+  x.setSession("u");
+  return x;
+}
+test("TID Send Money requires preview/confirmation and credits nonwithdrawable received funds once", async () => {
+  const x = await transferSetup();
+  const quote = await x.transfers.prepareWalletTransfer(
+    {},
+    transferForm(x.wallet.teacherTid("v")),
+  );
+  assert.equal(quote.ok, true);
+  assert.equal(JSON.parse(x.store.get("wallet:account:u")).balance, 12000);
+  const f = new FormData();
+  f.set("quoteId", quote.quoteId);
+  assert.equal((await x.transfers.confirmWalletTransfer({}, f)).ok, false);
+  f.set("confirmed", "on");
+  const results = await Promise.all([
+    x.transfers.confirmWalletTransfer({}, f),
+    x.transfers.confirmWalletTransfer({}, f),
+  ]);
+  assert.ok(results.every((r) => r.ok));
+  const from = JSON.parse(x.store.get("wallet:account:u")),
+    to = JSON.parse(x.store.get("wallet:account:v"));
+  assert.equal(from.balance, 11000);
+  assert.equal(from.funds.bonus, 2000);
+  assert.equal(to.balance, 3000);
+  assert.equal(to.funds.received, 1000);
+  assert.equal(to.funds.earnings, 0);
+});
+test("bonus-only, self, invalid, expired, cross-user and unauthenticated transfers cannot debit", async () => {
+  const x = setup();
+  await x.wallet.ensureWallet("u");
+  await x.wallet.ensureWallet("v");
+  assert.equal(
+    (
+      await x.transfers.prepareWalletTransfer(
+        {},
+        transferForm(x.wallet.teacherTid("v")),
+      )
+    ).ok,
+    false,
+  );
+  assert.equal(
+    (
+      await x.transfers.prepareWalletTransfer(
+        {},
+        transferForm(x.wallet.teacherTid("u")),
+      )
+    ).ok,
+    false,
+  );
+  assert.equal(
+    (
+      await x.transfers.prepareWalletTransfer(
+        {},
+        transferForm("QB-" + "F".repeat(20)),
+      )
+    ).ok,
+    false,
+  );
+  const y = await transferSetup();
+  const q = await y.transfers.prepareWalletTransfer(
+    {},
+    transferForm(y.wallet.teacherTid("v")),
+  );
+  const f = new FormData();
+  f.set("quoteId", q.quoteId);
+  f.set("confirmed", "on");
+  y.setSession("v");
+  assert.equal((await y.transfers.confirmWalletTransfer({}, f)).ok, false);
+  y.setSession("u");
+  const key = `wallet:transfer-quote:v1:u:${q.quoteId}`,
+    r = JSON.parse(y.store.get(key));
+  r.expiresAt = 0;
+  y.store.set(key, JSON.stringify(r));
+  assert.equal((await y.transfers.confirmWalletTransfer({}, f)).ok, false);
+  y.setSession(null);
+  assert.equal(
+    (
+      await y.transfers.prepareWalletTransfer(
+        {},
+        transferForm(y.wallet.teacherTid("v")),
+      )
+    ).ok,
+    false,
+  );
+  assert.equal(JSON.parse(y.store.get("wallet:account:u")).balance, 12000);
+});
+test("transfer failure rolls back both wallets, source ledger and confirmation; retry succeeds", async () => {
+  const x = await transferSetup();
+  const quote = await x.transfers.prepareWalletTransfer(
+    {},
+    transferForm(x.wallet.teacherTid("v")),
+  );
+  const f = new FormData();
+  f.set("quoteId", quote.quoteId);
+  f.set("confirmed", "on");
+  const before = new Map(x.store);
+  x.setFail("wallet:account:v");
+  assert.equal((await x.transfers.confirmWalletTransfer({}, f)).ok, false);
+  assert.deepEqual(x.store, before);
+  x.setFail("");
+  assert.equal((await x.transfers.confirmWalletTransfer({}, f)).ok, true);
+});
+test("daily Send Money cap and lookup quota are enforced on server", async () => {
+  const x = setup();
+  await x.wallet.ensureWallet("u");
+  await x.wallet.ensureWallet("v");
+  await x.actions.submitRecharge(form("10000"));
+  x.setSession("a");
+  await x.actions.reviewRecharge("wallet:recharge:u:ABC12345", true);
+  x.setSession("u");
+  const q = await x.transfers.prepareWalletTransfer(
+    {},
+    transferForm(x.wallet.teacherTid("v"), "5000"),
+  );
+  assert.equal(q.ok, true);
+  const f = new FormData();
+  f.set("quoteId", q.quoteId);
+  f.set("confirmed", "on");
+  assert.equal((await x.transfers.confirmWalletTransfer({}, f)).ok, true);
+  const q2 = await x.transfers.prepareWalletTransfer(
+    {},
+    transferForm(x.wallet.teacherTid("v"), "1"),
+  );
+  f.set("quoteId", q2.quoteId);
+  assert.equal((await x.transfers.confirmWalletTransfer({}, f)).ok, false);
+  assert.equal(JSON.parse(x.store.get("wallet:account:u")).balance, 502000);
+  const day = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Dhaka",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  x.store.set(`wallet:transfer-lookups:v1:u:${day}`, "30");
+  assert.equal(
+    (
+      await x.transfers.prepareWalletTransfer(
+        {},
+        transferForm(x.wallet.teacherTid("v"), "1"),
+      )
+    ).ok,
+    false,
+  );
+});
+test("received transfer can be sent again but never becomes earnings", async () => {
+  const x = await transferSetup();
+  const q = await x.transfers.prepareWalletTransfer(
+    {},
+    transferForm(x.wallet.teacherTid("v")),
+  );
+  const f = new FormData();
+  f.set("quoteId", q.quoteId);
+  f.set("confirmed", "on");
+  await x.transfers.confirmWalletTransfer({}, f);
+  x.setSession("v");
+  const back = await x.transfers.prepareWalletTransfer(
+    {},
+    transferForm(x.wallet.teacherTid("u")),
+  );
+  f.set("quoteId", back.quoteId);
+  assert.equal((await x.transfers.confirmWalletTransfer({}, f)).ok, true);
+  const wallet = JSON.parse(x.store.get("wallet:account:u"));
+  assert.equal(wallet.funds.received, 1000);
+  assert.equal(wallet.funds.earnings, 0);
 });

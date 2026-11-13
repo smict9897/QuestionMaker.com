@@ -126,3 +126,36 @@ PDF assembled-copy provenance; rendered A4 admin review; protected sample and bu
 ### এখনও বাকি
 
 PDF assembled-paper provenance; source-separated wallet ledger and migration of all debit paths; atomic marketplace purchase and 60/40 sharing; protected sample/buyer institution-only print; Send Money; withdrawal/refund/reporting; full site branding and domain login/payment verification; production/authenticated E2E। এই ধাপে কোনো টাকা কাটা, transfer বা withdrawal চালু করা হয়নি।
+
+## ষষ্ঠ ধাপ: উৎসভিত্তিক ব্যালেন্স ও durable ledger
+
+- Wallet version 2-এ bonus, recharge, earnings এবং received আলাদা integer-paisa balance। সমষ্টি total balance-এর সঙ্গে না মিললে fail closed।
+- পুরোনো total অপরিবর্তিত থাকে। পুরোনো bonus field historical grant হওয়ায় অবশিষ্ট bonus নিখুঁতভাবে জানা যায় না; সর্বোচ্চ সেই grant পর্যন্ত bonus হিসেবে conservatively reserve, বাকিটা recharge হিসেবে ধরা হয়। পুরোনো balance থেকে কোনো earnings/withdrawable income বানানো হয় না। UI-তে সীমাটি বলা আছে।
+- নতুন wallet-এ ৳২০ একবারের bonus source শুরু হয়। পুরোনো wallet শুধু পড়লে persisted bulk migration হয় না; প্রথম পরিবর্তনে version 2 লেখা হয়।
+- প্রতিটি নতুন mutation-এ opening balance/source checkpoint, unique operation receipt, source breakdown, before/after balance এবং chronological history রাখা হয়। ভুল বা পুনর্ব্যবহৃত operation ID থেকে দ্বিগুণ debit/credit বন্ধ।
+- ডাটাবেজ question checkout, PDF checkout, Ready monthly plan এবং admin recharge একই audited source-aware helper ব্যবহার করে। সরাসরি total-only overwrite সরানো হয়েছে।
+- তৈরির/কেনার খরচে আগে bonus, তারপর recharge, received, শেষে earnings কাটে। Send Money-তে bonus ব্যবহার হয় না।
+- ওয়ালেটে উৎসভিত্তিক হিসাব ও সর্বশেষ ৫০টি নতুন ledger transaction দেখায়; পুরোনো receipt/history অক্ষুণ্ণ।
+- Production-এ bulk rewrite, database provider change বা schema migration করা হয়নি।
+
+## সপ্তম ধাপ: TID Send Money
+
+- `/wallet/send`: authenticated non-admin ব্যবহারকারীর জন্য প্রাপক TID ও পরিমাণ দিয়ে name confirmation; dashboard/wallet থেকে link। Google-এ নিবন্ধিত STUDENT-role অ্যাকাউন্টও আগের সিদ্ধান্ত অনুযায়ী সুবিধা পায়।
+- আগে server-generated private quote; নাম, TID, amount ও fee স্পষ্ট দেখে checkbox দিয়ে নিশ্চিত করার পরই transfer। Quote ১০ মিনিট কার্যকর, sender-এর সঙ্গে bound। Client পাঠানো recipient/amount বিশ্বাস করে debit করা হয় না।
+- global advisory transaction lock-এর মধ্যে sender debit, recipient received-credit, দুই ledger/history, daily counter এবং completion commit হয়। কোনো ধাপ ব্যর্থ হলে সব rollback। Concurrent retry-এ একবারই টাকা যায়।
+- bonus-only/self/unknown/admin/expired/cross-user/unauthenticated request প্রত্যাখ্যান। Recipient identity ও fresh account role যাচাই।
+- প্রাপ্ত টাকা re-transfer করলেও earnings হয় না; উত্তোলনযোগ্য হয় না।
+- প্রাথমিক প্রকাশ্য limits: ৳১ minimum, দৈনিক ৳৫,০০০ maximum, fee ৳০, দিনে সর্বোচ্চ ৩০ recipient lookup। এগুলো conservative code constants; admin-configurable settings এখনও নয়।
+- এটি বাস্তব balance transfer; marketplace purchase ও earnings generation এখনও চালু নয়। Withdraw endpoint/button তৈরি করা হয়নি।
+
+### ষষ্ঠ/সপ্তম ধাপের যাচাই
+
+- Typecheck ও ৩৮৭টি automated test সফল। Source allocation, invalid balances, bonus restrictions, operation replay, unauthorized/expired quotes, parallel retries, recipient failure rollback, daily cap/lookup quota এবং received re-transfer tests আছে।
+- অতিরিক্ত বাস্তব disposable PostgreSQL 18 + Prisma adapter integration সফল: concurrent bonus once; source-aware admin recharge; recipient history write-এ forced failure হলে দুই wallet/ledger rollback; আট concurrent confirmation-এ একবার credit; পুনরায় পাঠিয়েও received থেকে earnings না হওয়া।
+- Opt-in script: `scripts/wallet-transfer-postgres-check.cjs`। কেবল স্পষ্টভাবে দেওয়া localhost:5439 disposable URL গ্রহণ করে; production `DATABASE_URL` পড়ে না। Generated engineType-client Prisma path ও adapter path আলাদাভাবে দিতে হয়।
+- Integration fixture-এর cluster/data/dependencies `/home/user/funds-db`-এ, repository-তে binary/data যোগ হয়নি। Production user balance বা real bKash transfer দিয়ে পরীক্ষা হয়নি। Authenticated production browser test-ও বাকি।
+- পুরোনো app version-এ rollback করলে version-2 fields উপেক্ষা করে balance overwrite হতে পারে। Financial rollback প্রয়োজন হলে নতুন transfer entry বন্ধ করে source checkpoint/ledger reconcile করে compatible code deploy করতে হবে; অন্ধভাবে পুরোনো total-only writer ফিরিয়ে দেওয়া নিরাপদ নয়।
+
+### অবশিষ্ট মূল কাজ
+
+PDF assembled-paper provenance; protected samples ও buyer institution-name-only print; atomic marketplace purchase ও 60/40 earnings; minimum ৳১০০ earnings withdrawal ও manual bKash reconciliation; refunds/complaints/admin reports; configurable limits; site-wide rebrand/domain auth/payment verification; authenticated/mobile/payment end-to-end tests।

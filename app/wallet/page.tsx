@@ -22,7 +22,7 @@ export const metadata = { title: "আমার ওয়ালেট", robots: { in
 export default async function WalletPage() {
   const s = await auth();
   if (!s?.user?.id) redirect("/login?next=/wallet");
-  const [data, rows, receipts] = await Promise.all([
+  const [data, rows, receipts, ledgerRows] = await Promise.all([
     workspaceSummary(s.user.id),
     db.setting
       .findMany({
@@ -33,6 +33,13 @@ export default async function WalletPage() {
     db.setting
       .findMany({
         where: { key: { startsWith: `wallet:question:${s.user.id}:` } },
+        take: 50,
+      })
+      .catch(() => null),
+    db.setting
+      .findMany({
+        where: { key: { startsWith: `wallet:history:v1:${s.user.id}:` } },
+        orderBy: { key: "desc" },
         take: 50,
       })
       .catch(() => null),
@@ -47,7 +54,8 @@ export default async function WalletPage() {
       })
       .sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")));
   const recharges = history(rows),
-    purchases = history(receipts);
+    purchases = history(receipts),
+    ledger = history(ledgerRows);
   return (
     <TeacherWorkspace
       name={s.user.name || "আপনি"}
@@ -69,6 +77,27 @@ export default async function WalletPage() {
         <p className="mb-4">
           আপনার TID: <strong>{teacherTid(s.user.id)}</strong>
         </p>
+        {w && !w.admin && (
+          <section className="tw-panel">
+            <h2>টাকার উৎস অনুযায়ী হিসাব</h2>
+            <p>
+              অব্যবহৃত বোনাস: {formatMoney(w.funds.bonus)} · রিচার্জ:{" "}
+              {formatMoney(w.funds.recharge)}
+            </p>
+            <p>
+              নিজের বিক্রির আয়: {formatMoney(w.funds.earnings)} · Send Money-তে
+              পাওয়া: {formatMoney(w.funds.received)}
+            </p>
+            <p className="tw-muted">
+              বিক্রির আয় ছাড়া অন্য টাকা উত্তোলনযোগ্য নয়। পুরোনো ব্যালেন্সে অব্যবহৃত বোনাস
+              আলাদাভাবে জানা না থাকায় সর্বোচ্চ মূল বোনাসের সমপরিমাণ সংরক্ষিত ধরে
+              হিসাব করা হয়েছে; মোট টাকা কমেনি।
+            </p>
+            <Link className="tw-link" href="/wallet/send">
+              TID দিয়ে শিক্ষককে Send Money করুন →
+            </Link>
+          </section>
+        )}
         <section className="tw-wallet-stats">
           <div className="tw-stats">
             <div className="tw-stat">
@@ -206,6 +235,49 @@ export default async function WalletPage() {
                                 ? (r.approvedAmount ?? r.amount)
                                 : r.amount,
                             )
+                          : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+        <section className="tw-panel">
+          <h2>নতুন উৎসভিত্তিক লেনদেনের ইতিহাস</h2>
+          <p className="tw-muted">
+            সর্বশেষ ৫০টি লেনদেন। পুরোনো রসিদ উপরের তালিকায় অপরিবর্তিত আছে।
+          </p>
+          {ledger === undefined ? (
+            <p role="alert">লেনদেন লোড হয়নি।</p>
+          ) : !ledger.length ? (
+            <p>নতুন হিসাব ব্যবস্থায় এখনও লেনদেন নেই।</p>
+          ) : (
+            <div className="tw-table-wrap">
+              <table className="tw-table">
+                <thead>
+                  <tr>
+                    <th>সময়</th>
+                    <th>বিবরণ</th>
+                    <th>জমা/খরচ</th>
+                    <th>পরবর্তী ব্যালেন্স</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ledger.map((r) => (
+                    <tr key={r.key}>
+                      <td>{displayDate(r.at)}</td>
+                      <td>{String(r.description || "—")}</td>
+                      <td>
+                        {r.direction === "CREDIT" ? "+" : "−"}
+                        {Number.isSafeInteger(r.amount)
+                          ? formatMoney(r.amount)
+                          : "—"}
+                      </td>
+                      <td>
+                        {Number.isSafeInteger(r.balanceAfter)
+                          ? formatMoney(r.balanceAfter)
                           : "—"}
                       </td>
                     </tr>

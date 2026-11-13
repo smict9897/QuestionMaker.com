@@ -1,3 +1,10 @@
+import {
+  normalizeWallet,
+  creditFunds,
+  debitFunds,
+  type FundSource,
+  type FundWallet,
+} from "@/lib/wallet-funds";
 import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
@@ -27,7 +34,7 @@ export function rechargeApprovalAmount(raw: unknown) {
   return amount;
 }
 type Tx = Prisma.TransactionClient;
-type Wallet = { balance: number; bonus: number };
+type Wallet = FundWallet;
 export function questionPriceType(q: {
   correct: string;
   options: unknown;
@@ -67,11 +74,15 @@ export async function account(tx: Tx, userId: string) {
     throw new WalletError("TID যাচাই ব্যর্থ হয়েছে।");
   if (!identity)
     await tx.setting.create({ data: { key: identityKey, value: userId } });
-  if (user.role === "ADMIN") return { admin: true, balance: 0, bonus: 0 };
+  if (user.role === "ADMIN")
+    return { admin: true, ...normalizeWallet({ balance: 0, bonus: 0 }) };
   const key = `wallet:account:${userId}`;
   const row = await tx.setting.findUnique({ where: { key } });
   if (!row) {
-    const initial: Wallet = { balance: BONUS_PAISA, bonus: BONUS_PAISA };
+    const initial: Wallet = normalizeWallet({
+      balance: BONUS_PAISA,
+      bonus: BONUS_PAISA,
+    });
     await tx.setting.create({ data: { key, value: JSON.stringify(initial) } });
     await tx.setting.create({
       data: {
@@ -85,10 +96,11 @@ export async function account(tx: Tx, userId: string) {
     });
     return { admin: false, ...initial };
   }
-  const value = JSON.parse(row.value) as Wallet;
-  if (!Number.isSafeInteger(value.balance) || value.balance < 0)
-    throw new WalletError("Balance যাচাই করা যায়নি।");
-  return { admin: false, ...value };
+  try {
+    return { admin: false, ...normalizeWallet(JSON.parse(row.value)) };
+  } catch {
+    throw new WalletError("Balance-এর উৎস যাচাই করা যায়নি।");
+  }
 }
 export async function ensureWallet(userId: string) {
   return walletTransaction((tx) => account(tx, userId));
@@ -148,4 +160,100 @@ export async function requirePaidQuestions(userId: string, ids: string[]) {
     if (quote.total > 0)
       throw new WalletError("আগে মূল্য দেখে প্রশ্নগুলোর checkout সম্পন্ন করুন।");
   });
+}
+
+/** Call only inside walletTransaction so balance, ledger and business receipts commit together. */
+export async function changeWalletFunds(
+  tx: Tx,
+  userId: string,
+  input: {
+    operationId: string;
+    amount: number;
+    direction: "DEBIT" | "CREDIT";
+    source?: FundSource;
+    transfer?: boolean;
+    description: string;
+  },
+) {
+  if (
+    !input.operationId ||
+    input.operationId.length > 300 ||
+    !input.description ||
+    !Number.isSafeInteger(input.amount) ||
+    input.amount <= 0
+  )
+    throw new WalletError("অবৈধ লেনদেন।");
+  const current = await account(tx, userId);
+  if (current.admin) throw new WalletError("ADMIN-এর ওয়ালেট লেনদেন প্রযোজ্য নয়।");
+  const key = `wallet:ledger:v1:${userId}:${createHash("sha256").update(input.operationId).digest("hex")}`;
+  const existing = await tx.setting.findUnique({ where: { key } });
+  if (existing) {
+    const receipt = JSON.parse(existing.value);
+    if (
+      receipt.amount !== input.amount ||
+      receipt.direction !== input.direction ||
+      receipt.source !== (input.source ?? null) ||
+      receipt.transfer !== !!input.transfer
+    )
+      throw new WalletError("লেনদেনের তথ্য মেলেনি।");
+    return { balance: current.balance, replay: true, receipt };
+  }
+  const openingKey = `wallet:opening:v1:${userId}`;
+  if (!(await tx.setting.findUnique({ where: { key: openingKey } }))) {
+    await tx.setting.create({
+      data: {
+        key: openingKey,
+        value: JSON.stringify({
+          userId,
+          balance: current.balance,
+          funds: current.funds,
+          at: new Date().toISOString(),
+          note: "Source ledger opening; legacy bonus allocation is conservative, not reconstructed history.",
+        }),
+      },
+    });
+  }
+  let next: FundWallet;
+  let used = null;
+  try {
+    if (input.direction === "CREDIT") {
+      if (!input.source || input.transfer)
+        throw new Error("Credit source required");
+      next = creditFunds(current, input.source, input.amount);
+    } else if (input.direction === "DEBIT") {
+      const result = debitFunds(current, input.amount, input.transfer);
+      next = result.wallet;
+      used = result.used;
+    } else throw new Error("Invalid direction");
+  } catch {
+    throw new WalletError(
+      "যোগ্য ব্যালেন্স পর্যাপ্ত নয় অথবা লেনদেনের পরিমাণ সঠিক নয়।",
+    );
+  }
+  const receipt = {
+    userId,
+    operationId: input.operationId,
+    direction: input.direction,
+    amount: input.amount,
+    source: input.source ?? null,
+    transfer: !!input.transfer,
+    used,
+    balanceBefore: current.balance,
+    balanceAfter: next.balance,
+    fundsAfter: next.funds,
+    description: input.description,
+    at: new Date().toISOString(),
+  };
+  await tx.setting.update({
+    where: { key: `wallet:account:${userId}` },
+    data: { value: JSON.stringify(next) },
+  });
+  await tx.setting.create({ data: { key, value: JSON.stringify(receipt) } });
+  await tx.setting.create({
+    data: {
+      key: `wallet:history:v1:${userId}:${receipt.at}:${key.split(":").pop()}`,
+      value: JSON.stringify(receipt),
+    },
+  });
+  return { balance: next.balance, replay: false, receipt };
 }
