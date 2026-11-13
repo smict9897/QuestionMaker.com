@@ -110,7 +110,7 @@ export default function PaperAnimation() {
               </svg>
               <span>প্রতিষ্ঠিত ১৯৬৩</span>
             </div>
-            <h2>শরৎচন্দ্র নন্দলাল পাবলিক উচ্চ বিদ্যালয় ও কলেজ</h2>
+            <h2>শরৎচন্দ্র নন্দলাল পাবলিক <span className="paper-demo-school-ending">উচ্চ বিদ্যালয় ও কলেজ</span></h2>
           </div>
           <p>প্রথম সাময়িক মূল্যায়ন — ২০২৬</p>
           <p>শ্রেণি: নবম · বিষয়: বাংলা</p>
@@ -118,12 +118,6 @@ export default function PaperAnimation() {
         <div className="paper-demo-meta">
           <span>সময় — {creative ? "২ ঘণ্টা" : "৩০ মিনিট"}</span>
           <span>পূর্ণমান — ৩০</span>
-        </div>
-        <div className="paper-demo-student">
-          <span>
-            শিক্ষার্থীর নাম: ..........................................
-          </span>
-          <span>রোল: ............</span>
         </div>
         <div
           className="paper-demo-body"
