@@ -1,7 +1,7 @@
 import { admin } from "@/lib/guard";
 import { db } from "@/lib/db";
-import { reviewRecharge } from "@/app/actions/wallet";
-import { formatMoney } from "@/lib/wallet";
+import AdminRechargeReview from "@/components/admin-recharge-review";
+import { formatMoney, teacherTid } from "@/lib/wallet";
 export const dynamic = "force-dynamic";
 export default async function WalletAdmin() {
   await admin();
@@ -13,6 +13,23 @@ export default async function WalletAdmin() {
     take: 200,
     orderBy: { key: "asc" },
   });
+  const userIds = [
+    ...new Set(
+      rows.flatMap((row) => {
+        try {
+          const r = JSON.parse(row.value);
+          return typeof r.userId === "string" ? [r.userId as string] : [];
+        } catch {
+          return [];
+        }
+      }),
+    ),
+  ];
+  const users = await db.user.findMany({
+    where: { id: { in: userIds } },
+    select: { id: true, name: true, email: true },
+  });
+  const byId = new Map(users.map((user) => [user.id, user]));
   return (
     <main className="p-6">
       <h1 className="text-2xl font-bold">Recharge যাচাই</h1>
@@ -21,36 +38,29 @@ export default async function WalletAdmin() {
         অনুমোদন করুন। Screenshot একা payment proof নয়।
       </p>
       {rows.map((row) => {
-        const r = JSON.parse(row.value);
+        let r;
+        try {
+          r = JSON.parse(row.value);
+        } catch {
+          return null;
+        }
+        const user = byId.get(r.userId);
+        if (!user || !Number.isSafeInteger(r.amount)) return null;
         return (
           <section className="my-4 rounded border p-4" key={row.key}>
             <p>
-              {r.userId} · {formatMoney(r.amount)} · {r.method} · {r.phone} ·{" "}
-              {r.trx} · {r.status}
+              {user.name || user.email} · TID:{" "}
+              <strong>{teacherTid(user.id)}</strong> · আবেদন: {row.key} ·{" "}
+              {formatMoney(r.amount)} · {r.method} · {r.phone} · {r.trx} ·{" "}
+              {r.status}
             </p>
             {r.status === "PENDING" && (
-              <div className="flex gap-4">
-                <form
-                  action={async () => {
-                    "use server";
-                    await reviewRecharge(row.key, true);
-                  }}
-                >
-                  <button className="rounded bg-green-700 p-2 text-white">
-                    যাচাই হয়েছে — অনুমোদন
-                  </button>
-                </form>
-                <form
-                  action={async () => {
-                    "use server";
-                    await reviewRecharge(row.key, false);
-                  }}
-                >
-                  <button className="rounded bg-red-700 p-2 text-white">
-                    প্রত্যাখ্যান
-                  </button>
-                </form>
-              </div>
+              <AdminRechargeReview
+                requestKey={row.key}
+                amount={r.amount}
+                name={user.name || user.email}
+                tid={teacherTid(user.id)}
+              />
             )}
           </section>
         );

@@ -219,3 +219,93 @@ test("save/export authorization fails before checkout and passes after purchase"
   await x.actions.purchaseQuestions(["m"], 20);
   await x.wallet.requirePaidQuestions("u", ["m"]);
 });
+
+test("TID is stable, unique per account, registered without another bonus", async () => {
+  const x = setup();
+  const tid = x.wallet.teacherTid("u");
+  assert.match(tid, /^QB-[A-F0-9]{20}$/);
+  assert.notEqual(tid, x.wallet.teacherTid("v"));
+  await x.wallet.ensureWallet("u");
+  await x.wallet.ensureWallet("u");
+  assert.equal(x.store.get(`teacher:tid:${tid}`), "u");
+  assert.equal(JSON.parse(x.store.get("wallet:account:u")).balance, 2000);
+});
+test("admin can credit verified override amount, with reason and requested amount preserved", async () => {
+  const x = setup();
+  await x.actions.submitRecharge(form());
+  x.setSession("a");
+  const key = "wallet:recharge:u:ABC12345";
+  await assert.rejects(x.actions.reviewRecharge(key, true, "30"));
+  assert.equal(JSON.parse(x.store.get("wallet:account:u")).balance, 2000);
+  await x.actions.reviewRecharge(key, true, "30.50", "Statement verified");
+  assert.equal(JSON.parse(x.store.get("wallet:account:u")).balance, 5050);
+  const receipt = JSON.parse(x.store.get(key));
+  assert.equal(receipt.requestedAmount, 2000);
+  assert.equal(receipt.approvedAmount, 3050);
+  assert.equal(receipt.reviewer, "a");
+  assert.equal(receipt.tid, x.wallet.teacherTid("u"));
+  await assert.rejects(
+    x.actions.reviewRecharge(key, true, "30.50", "Statement verified"),
+  );
+});
+test("recharge amount validation uses integer paisa and rejects invalid limits", () => {
+  const { wallet: w } = setup();
+  assert.equal(w.rechargeApprovalAmount("20.01"), 2001);
+  assert.equal(w.rechargeApprovalAmount("50000"), 5000000);
+  for (const value of [
+    "",
+    "0",
+    "-20",
+    "19.99",
+    "50000.01",
+    "1e3",
+    "20.001",
+    "Infinity",
+    null,
+  ]) {
+    assert.throws(() => w.rechargeApprovalAmount(value));
+  }
+});
+test("recharge form rejects non-admin and malformed decisions without credit", async () => {
+  const x = setup();
+  await x.actions.submitRecharge(form());
+  const f = new FormData();
+  f.set("requestKey", "wallet:recharge:u:ABC12345");
+  f.set("decision", "approve");
+  f.set("amount", "200");
+  f.set("reason", "Verified statement");
+  assert.equal((await x.actions.reviewRechargeForm({}, f)).ok, false);
+  x.setSession("a");
+  f.set("decision", "unknown");
+  assert.equal((await x.actions.reviewRechargeForm({}, f)).ok, false);
+  assert.equal(JSON.parse(x.store.get("wallet:account:u")).balance, 2000);
+});
+test("concurrent override approvals credit exactly once and preserve bonus", async () => {
+  const x = setup();
+  await x.actions.submitRecharge(form());
+  x.setSession("a");
+  const key = "wallet:recharge:u:ABC12345";
+  const results = await Promise.allSettled([
+    x.actions.reviewRecharge(key, true, "200", "Payment verified"),
+    x.actions.reviewRecharge(key, true, "200", "Payment verified"),
+  ]);
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+  const wallet = JSON.parse(x.store.get("wallet:account:u"));
+  assert.equal(wallet.balance, 22000);
+  assert.equal(wallet.bonus, 2000);
+});
+test("legacy funded wallet gets TID without bonus reset; mismatched request fails closed", async () => {
+  const x = setup();
+  x.store.set("wallet:account:u", JSON.stringify({ balance: 12345, bonus: 0 }));
+  await x.wallet.ensureWallet("u");
+  assert.equal(JSON.parse(x.store.get("wallet:account:u")).balance, 12345);
+  assert.ok(!x.store.has("wallet:bonus:u"));
+  await x.actions.submitRecharge(form());
+  const key = "wallet:recharge:u:ABC12345";
+  const r = JSON.parse(x.store.get(key));
+  r.userId = "v";
+  x.store.set(key, JSON.stringify(r));
+  x.setSession("a");
+  await assert.rejects(x.actions.reviewRecharge(key, true));
+  assert.ok(!x.store.has("wallet:account:v"));
+});

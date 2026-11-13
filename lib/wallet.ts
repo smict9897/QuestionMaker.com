@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { visibleQuestions } from "@/lib/paper-generation";
@@ -7,6 +8,24 @@ export const WALLET_RATES = { MCQ: 20, SHORT: 30, CQ: 50 } as const;
 export const BONUS_PAISA = 2000;
 export const MIN_RECHARGE_PAISA = 2000;
 export class WalletError extends Error {}
+/** Stable public account identifier; never an authentication credential. */
+export function teacherTid(userId: string) {
+  if (!userId) throw new WalletError("অ্যাকাউন্ট পাওয়া যায়নি।");
+  return `QB-${createHash("sha256").update(`teacher:${userId}`).digest("hex").slice(0, 20).toUpperCase()}`;
+}
+export function rechargeApprovalAmount(raw: unknown) {
+  if (typeof raw !== "string" || !/^\d{1,5}(\.\d{1,2})?$/.test(raw.trim()))
+    throw new WalletError("সঠিক টাকার পরিমাণ লিখুন।");
+  const [whole, fraction = ""] = raw.trim().split(".");
+  const amount = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+  if (
+    !Number.isSafeInteger(amount) ||
+    amount < MIN_RECHARGE_PAISA ||
+    amount > 5000000
+  )
+    throw new WalletError("রিচার্জের পরিমাণ ৳২০ থেকে ৳৫০,০০০ হতে হবে।");
+  return amount;
+}
 type Tx = Prisma.TransactionClient;
 type Wallet = { balance: number; bonus: number };
 export function questionPriceType(q: {
@@ -41,6 +60,13 @@ export async function account(tx: Tx, userId: string) {
     select: { id: true, role: true },
   });
   if (!user) throw new WalletError("লগইন করুন।");
+  const tid = teacherTid(userId);
+  const identityKey = `teacher:tid:${tid}`;
+  const identity = await tx.setting.findUnique({ where: { key: identityKey } });
+  if (identity && identity.value !== userId)
+    throw new WalletError("TID যাচাই ব্যর্থ হয়েছে।");
+  if (!identity)
+    await tx.setting.create({ data: { key: identityKey, value: userId } });
   if (user.role === "ADMIN") return { admin: true, balance: 0, bonus: 0 };
   const key = `wallet:account:${userId}`;
   const row = await tx.setting.findUnique({ where: { key } });
@@ -120,8 +146,6 @@ export async function requirePaidQuestions(userId: string, ids: string[]) {
   return walletTransaction(async (tx) => {
     const quote = await quoteInTransaction(tx, userId, ids);
     if (quote.total > 0)
-      throw new WalletError(
-        "আগে মূল্য দেখে প্রশ্নগুলোর checkout সম্পন্ন করুন।",
-      );
+      throw new WalletError("আগে মূল্য দেখে প্রশ্নগুলোর checkout সম্পন্ন করুন।");
   });
 }
