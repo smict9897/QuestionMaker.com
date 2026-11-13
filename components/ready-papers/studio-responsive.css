@@ -317,6 +317,11 @@
     overflow-y: auto;
     overscroll-behavior-y: contain;
   }
+  /* Final phone preview is paper-first; keep the answer workers mounted.
+     Wider Desktop site viewports retain all metadata and answer tools. */
+  .qm-app .rp-stage-preview > :is(.rp-studio-head, .rp-hero, .rp-status, .rp-answer-tools) {
+    display: none;
+  }
   .qm-app .rp-stage-preview > .rp-toolbar,
   .qm-app .rp-stage-preview > .rp-panel,
   .qm-app .rp-stage-preview .rp-preview-desktop-zoom {
