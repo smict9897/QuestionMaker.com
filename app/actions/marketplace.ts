@@ -39,6 +39,7 @@ export async function submitMarketPaper(
         message: "নিজের সংরক্ষিত ডাটাবেজ প্রশ্নপত্র নির্বাচন করুন।",
       };
     const metadata = marketMetadataSchema.safeParse({
+      examType: form.get("examType"),
       title: form.get("title"),
       grade: form.get("grade"),
       subject: form.get("subject"),
@@ -54,7 +55,7 @@ export async function submitMarketPaper(
       return {
         ok: false,
         message:
-          "শিরোনাম, শ্রেণি, বিষয়, অধ্যায়, বিবরণ, ৳১–৫০,০০০ মূল্য এবং বিক্রির অধিকার নিশ্চিত করুন।",
+          "পরীক্ষার ধরন, শিরোনাম, শ্রেণি, বিষয়, অধ্যায়, বিবরণ, ৳১–৫০,০০০ মূল্য এবং বিক্রির অধিকার নিশ্চিত করুন।",
       };
     const row = await db.setting.findUnique({ where: { key: sourceKey } });
     if (!row) return { ok: false, message: "সংরক্ষিত প্রশ্নপত্র পাওয়া যায়নি।" };
