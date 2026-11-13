@@ -23,7 +23,7 @@ function render() {
 }
 test("homepage demo uses requested institution and labels itself as an animation", () => {
   const html = render();
-  assert.match(html, /S.N.P High School And College/);
+  assert.match(html, /শরৎচন্দ্র নন্দলাল পাবলিক উচ্চ বিদ্যালয় ও কলেজ/);
   assert.match(html, /ডেমো অ্যানিমেশন/);
   assert.match(html, /মাতৃভাষা/);
 });
@@ -72,4 +72,12 @@ test("demo sheet and headings use Kalpurush without altering actual paper font c
   assert.match(ui, /\.paper-demo-sheet :is\(h1, h2, h3\)\s*\{\s*font-family: "QmPaperKalpurush"/);
   assert.match(fs.readFileSync("app/globals.css", "utf8"), /font-family: 'QmPaperKalpurush'/);
   assert.ok(fs.existsSync("public/fonts/Kalpurush.woff2"));
+});
+
+test("demo school emblem has founding year and an accessible sample label", () => {
+  const html = render();
+  assert.match(html, /প্রতিষ্ঠিত ১৯৬৩/);
+  assert.match(html, /নমুনা বিদ্যালয় লোগো/);
+  assert.match(html, /paper-demo-school/);
+  assert.doesNotMatch(html, /S.N.P High School/);
 });
