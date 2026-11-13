@@ -84,7 +84,11 @@ async function quote(tx: Tx, id: string, raw: unknown) {
   const owned = await tx.setting.findUnique({
     where: { key: receiptKey(id, receiptId) },
   });
-  if (!paper.published && !wallet.admin && !owned)
+  const available =
+    !paper.deletedAt &&
+    ((paper.published && (!paper.ownerId || paper.moderation === "approved")) ||
+      paper.ownerId === id);
+  if (!available && !wallet.admin && !owned)
     throw new WalletError("প্রশ্নপত্র পাওয়া যায়নি।");
   const p = await plan(tx, id),
     units = readyUnits(input.selected.length);

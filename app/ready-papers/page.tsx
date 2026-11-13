@@ -70,6 +70,9 @@ export default async function ReadyLibrary({
         <div className="rp-tabs">
           <Link href="/ready-papers?kind=BOARD">বোর্ড প্রশ্ন</Link>
           <Link href="/ready-papers?kind=SCHOOL">সুনামধন্য স্কুলের মডেল টেস্ট</Link>
+          <Link href="/ready-papers/upload" className="rp-upload-cta">
+            ＋ নিজের PDF থেকে প্রশ্নপত্র বানান
+          </Link>
         </div>
       </section>
       {cards === undefined ? (

@@ -8,10 +8,12 @@ export default function ReadyUpload({
   papers,
   catalog,
   storageReady,
+  userMode = false,
 }: {
   papers: ReadyPaper[];
   catalog: ReadyCatalog;
   storageReady: boolean;
+  userMode?: boolean;
 }) {
   const importJob = useRef<ReturnType<
     typeof import("@/lib/ready-auto-import").createReadyImport
@@ -67,7 +69,11 @@ export default function ReadyUpload({
             importJob.current = null;
             form.reset();
             setFormKey((k) => k + 1);
-            setMessage(`${count}টি পার্ট সংরক্ষিত। Preview যাচাই করুন।`);
+            setMessage(
+              userMode
+                ? `${count}টি পার্ট সংরক্ষিত। নিচে আমার আপলোড থেকে পৃষ্ঠা বাছুন; অনুমোদনের আবেদন জমা হয়েছে।`
+                : `${count}টি পার্ট সংরক্ষিত। Preview যাচাই করুন।`,
+            );
             router.refresh();
           } catch (e) {
             setMessage(
@@ -80,7 +86,14 @@ export default function ReadyUpload({
           }
         }}
       >
-        <h2>নতুন প্রশ্নপত্র PDF</h2>
+        {userMode && <input type="hidden" name="submission" value="user" />}
+        <h2>{userMode ? "নিজের PDF আপলোড করুন" : "নতুন প্রশ্নপত্র PDF"}</h2>
+        {userMode && (
+          <p className="rp-upload-notice">
+            নিজের ব্যবহারে অনুমোদনের অপেক্ষা নেই। সবার জন্য প্রকাশ করতে অ্যাডমিনের
+            অনুমোদন লাগবে। দৈনিক সর্বোচ্চ ১০০ পার্ট তৈরি করা যাবে।
+          </p>
+        )}
         <p className="rp-muted">
           একটি বড় PDF দিন—সিস্টেম স্বয়ংক্রিয়ভাবে Part 1, Part 2… বানাবে। প্রতি পার্ট
           সর্বোচ্চ ১০ MB / ১০০ পৃষ্ঠা। পুরোনো ফাইল বদলাবে না; লেখা rasterize বা ঝাপসা
@@ -130,10 +143,12 @@ export default function ReadyUpload({
             <input type="checkbox" name="rights" required />
             এই প্রশ্নপত্র ব্যবহারের প্রয়োজনীয় অনুমতি আছে
           </label>
-          <label className="rp-check">
-            <input type="checkbox" name="published" />
-            Library-তে প্রকাশ করুন (আগে preview যাচাই করা ভালো)
-          </label>
+          {!userMode && (
+            <label className="rp-check">
+              <input type="checkbox" name="published" />
+              Library-তে প্রকাশ করুন (আগে preview যাচাই করা ভালো)
+            </label>
+          )}
         </fieldset>
         <button disabled={busy || !storageReady}>
           {busy
@@ -160,76 +175,80 @@ export default function ReadyUpload({
         )}
         <p role="status">{message}</p>
       </form>
-      <section className="rp-panel">
-        <h2>প্রশ্নপত্র পরিচালনা</h2>
-        {!papers.length && <p>এখনও PDF নেই।</p>}
-        {papers.map((p) => (
-          <div className="rp-admin-row" key={p.id}>
-            <div>
-              <strong>{p.title}</strong>
-              <p>
-                {p.grade} · {p.subject} · {p.year} · {p.source}
-                {p.groupTitle && (
-                  <>
-                    {" "}
-                    · মূল ফাইল: {p.groupTitle} · পৃষ্ঠা {p.pageStart}–{p.pageEnd}
-                  </>
-                )}
-              </p>
-            </div>
-            {p.groupId && (
-              <a href={`/ready-papers?group=${p.groupId}`}>এই ফাইলের সব পার্ট</a>
-            )}
-            <a href={`/ready-papers/${p.id}?preset=1`}>Preview ও preset</a>
-            <button
-              disabled={busy}
-              onClick={async () => {
-                setBusy(true);
-                try {
-                  const r = await updateReadyPaper(p.id, {
-                    ...p,
-                    published: !p.published,
-                  });
-                  setMessage(r.ok ? "প্রকাশের অবস্থা বদলেছে" : r.error);
-                  router.refresh();
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              {p.published ? "প্রকাশ বন্ধ" : "প্রকাশ করুন"}
-            </button>
-            <button
-              className="rp-delete-button"
-              disabled={busy}
-              onClick={async () => {
-                if (
-                  !window.confirm(
-                    `“${p.title}” তালিকা থেকে Delete করবেন? শুধু এই পার্ট সরবে। আগে কেনা কপি ও মূল PDF রাখা হবে।`,
+      {!userMode && (
+        <section className="rp-panel">
+          <h2>প্রশ্নপত্র পরিচালনা</h2>
+          {!papers.length && <p>এখনও PDF নেই।</p>}
+          {papers.map((p) => (
+            <div className="rp-admin-row" key={p.id}>
+              <div>
+                <strong>{p.title}</strong>
+                <p>
+                  {p.grade} · {p.subject} · {p.year} · {p.source}
+                  {p.groupTitle && (
+                    <>
+                      {" "}
+                      · মূল ফাইল: {p.groupTitle} · পৃষ্ঠা {p.pageStart}–{p.pageEnd}
+                    </>
+                  )}
+                </p>
+              </div>
+              {p.groupId && (
+                <a href={`/ready-papers?group=${p.groupId}`}>
+                  এই ফাইলের সব পার্ট
+                </a>
+              )}
+              <a href={`/ready-papers/${p.id}?preset=1`}>Preview ও preset</a>
+              <button
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  try {
+                    const r = await updateReadyPaper(p.id, {
+                      ...p,
+                      published: !p.published,
+                    });
+                    setMessage(r.ok ? "প্রকাশের অবস্থা বদলেছে" : r.error);
+                    router.refresh();
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                {p.published ? "প্রকাশ বন্ধ" : "প্রকাশ করুন"}
+              </button>
+              <button
+                className="rp-delete-button"
+                disabled={busy}
+                onClick={async () => {
+                  if (
+                    !window.confirm(
+                      `“${p.title}” তালিকা থেকে Delete করবেন? শুধু এই পার্ট সরবে। আগে কেনা কপি ও মূল PDF রাখা হবে।`,
+                    )
                   )
-                )
-                  return;
-                setBusy(true);
-                try {
-                  const r = await deleteReadyPaper(p.id);
-                  setMessage(
-                    r.ok
-                      ? "প্রশ্নপত্র তালিকা থেকে সরানো হয়েছে; কেনা কপি অক্ষত আছে।"
-                      : r.error,
-                  );
-                  if (r.ok) router.refresh();
-                } catch {
-                  setMessage("Delete হয়নি। আবার চেষ্টা করুন।");
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              Delete
-            </button>
-          </div>
-        ))}
-      </section>
+                    return;
+                  setBusy(true);
+                  try {
+                    const r = await deleteReadyPaper(p.id);
+                    setMessage(
+                      r.ok
+                        ? "প্রশ্নপত্র তালিকা থেকে সরানো হয়েছে; কেনা কপি অক্ষত আছে।"
+                        : r.error,
+                    );
+                    if (r.ok) router.refresh();
+                  } catch {
+                    setMessage("Delete হয়নি। আবার চেষ্টা করুন।");
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          ))}
+        </section>
+      )}
     </>
   );
 }

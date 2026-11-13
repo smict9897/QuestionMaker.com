@@ -6,7 +6,13 @@ const { test } = require("node:test"),
 function load(file, mocks = {}) {
   const m = new Module(file, module);
   m.paths = module.paths;
-  m.require = (n) => mocks[n] || require(n);
+  m.require = (n) => {
+    const value = mocks[n];
+    if (n === "@/lib/db" && value && !value.db.$transaction)
+      value.db.$transaction = async (fn) =>
+        fn({ ...value.db, $queryRaw: async () => {} });
+    return value || require(n);
+  };
   m._compile(
     ts.transpileModule(fs.readFileSync(file, "utf8"), {
       compilerOptions: {

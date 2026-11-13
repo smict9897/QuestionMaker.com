@@ -26,6 +26,7 @@ export default async function SavedReady() {
         <p>
           কেনা প্রশ্নপত্র আবার খুলুন, edit করুন ও print করুন—একই নির্বাচনে নতুন খরচ নেই।
         </p>
+        <Link href="/ready-papers/upload">আমার আপলোড / নিজের PDF →</Link> ·{" "}
         <Link href="/ready-papers">নতুন প্রশ্নপত্র বাছুন →</Link> ·{" "}
         <Link href="/wallet">ব্যালেন্স / Recharge →</Link>
       </section>

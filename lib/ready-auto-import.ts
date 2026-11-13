@@ -77,6 +77,7 @@ export function createReadyImport(fd: FormData) {
                     start: m.start,
                     end: m.end,
                     rights: true,
+                    submission: fd.get("submission") === "user",
                   });
                   pending.set(key, part);
                 }

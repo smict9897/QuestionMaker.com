@@ -425,3 +425,37 @@ test("UI entry requires checkout and server save is scoped to receipt; dedicated
   assert.match(a, /walletTransaction/);
   assert.match(a, /owned\.ownerId !== id/);
 });
+
+test("own pending submission uses unchanged paid checkout; others blocked until approval", async () => {
+  const s = setup(),
+    key = "readypaper:v1:" + paperId,
+    record = JSON.parse(s.store.get(key));
+  s.store.set(
+    key,
+    JSON.stringify({
+      ...record,
+      ownerId: "u",
+      moderation: "pending",
+      published: false,
+    }),
+  );
+  s.credit(1000);
+  const quote = await s.actions.quoteReadyPaper(s.input(3));
+  assert.equal(quote.ok, true);
+  assert.equal(quote.total, 500);
+  const paid = await s.checkout(3);
+  assert.equal(paid.ok, true);
+  assert.equal(JSON.parse(s.store.get("wallet:account:u")).balance, 500);
+  s.setSession("v");
+  assert.equal((await s.actions.quoteReadyPaper(s.input(3))).ok, false);
+  s.store.set(
+    key,
+    JSON.stringify({
+      ...record,
+      ownerId: "u",
+      moderation: "approved",
+      published: true,
+    }),
+  );
+  assert.equal((await s.actions.quoteReadyPaper(s.input(3))).ok, true);
+});
