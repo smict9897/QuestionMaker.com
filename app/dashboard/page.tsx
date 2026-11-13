@@ -167,6 +167,9 @@ export default async function Dashboard({
             বিক্রির আবেদন যাচাই করুন →
           </Link>
         )}
+        <Link href="/marketplace" className="block mb-4 underline">
+          শিক্ষকদের প্রশ্নপত্র ক্যাটালগ দেখুন →
+        </Link>
         <WorkspaceCards />
         <section className="tw-panel">
           <h2>আপনার অ্যাকাউন্ট, এক নজরে</h2>

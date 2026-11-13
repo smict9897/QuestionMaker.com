@@ -66,3 +66,19 @@
 - Client-safe shared তালিকা `lib/marketplace-exam-types.ts`-এ রাখা হয়েছে; ভবিষ্যৎ marketplace card/filter-এও একই তালিকা ব্যবহার করতে হবে। প্রকাশ্য marketplace এখনও চালু হয়নি।
 - নতুন আবেদনে পরীক্ষার ধরন সার্ভারেও যাচাই ও metadata-তে সংরক্ষণ করা হয়। পুরোনো আবেদনে কোনো ধরন অনুমান করে বসানো হয় না; “পরীক্ষার ধরন উল্লেখ করা হয়নি” দেখাবে।
 - অনুমোদিত প্রশ্নপত্রের মূল snapshot বা পুরোনো ব্যক্তিগত প্রশ্নপত্রের পরীক্ষার শিরোনাম এই পরিবর্তনে বদলানো হয় না।
+
+## তৃতীয় ধাপ: পাবলিক ক্যাটালগ ও শিক্ষকের প্রকাশ্য প্রোফাইল
+
+- `/marketplace`: অনুমোদিত, বৈধ পরীক্ষার ধরনসহ প্রশ্নপত্রের পরিচিতি। শ্রেণি ৬–১১, বিষয় কার্ড, অধ্যায় ও তিন পরীক্ষার ধরন দিয়ে GET filter।
+- হোমপেজে live paper animation-এর পরে শ্রেণিভিত্তিক ক্যাটালগের প্রবেশপথ; পুরোনো দুটি creation card ও animation-এর ক্রম অক্ষুণ্ণ।
+- `/marketplace/[id]`: শুধু অনুমোদিত প্রশ্নপত্রের পরিচিতি ও মূল্য। Pending/rejected/invalid রেকর্ডে 404।
+- `/teachers/[tid]`: নিবন্ধিত TID যাচাই করে শুধু প্রকাশ্য নাম, TID ও ক্যাটালগের অনুমোদিত পরিচিতি। ইমেইল, ফোন, প্রতিষ্ঠান/ঠিকানা, ব্যক্তিগত ব্যালেন্স প্রকাশ করা হয়নি। এটি verified-teacher badge নয়।
+- public projection-এ শুধু id, sellerTid, validated metadata ও updatedAt আছে; snapshot, question text, answers, saved settings, source key, internal owner ID বা review notes ফেরত দেওয়া হয় না।
+- ক্যাটালগে key cursor-ভিত্তিক পরবর্তী পাতা; প্রতি পাতায় সর্বোচ্চ ২০০ অনুমোদিত রেকর্ড। বিষয়/অধ্যায় filter এবং seller filter বর্তমান পাতায় প্রযোজ্য—UI-তে তা স্পষ্ট আছে। Database-normalized listing/index ছাড়া global filtered pagination দাবি করা হয়নি।
+- শিক্ষক ও অ্যাডমিনকে এখন জানানো হয়: অনুমোদনে পরিচিতি প্রকাশিত হবে, পূর্ণ প্রশ্নপত্র নয়।
+- কোনো fake sample, buy button, টাকা কাটা বা আয় বণ্টন চালু করা হয়নি। Public UI-তে স্পষ্টভাবে কেনাকাটা ও পূর্ণ প্রিভিউ এখনও বন্ধ বলা আছে।
+- Typecheck এবং ৩৬৭টি automated test সফল। নতুন পরীক্ষায় public data allowlist, unapproved/invalid record exclusion, combined filters ও bounded pagination অন্তর্ভুক্ত। Authenticated live browser বা real-money end-to-end test হয়নি।
+
+### এখনও গুরুত্বপূর্ণ বাকি
+
+PDF assembled-copy provenance; rendered A4 admin review; protected sample and buyer print; catalog-validated subject/chapter selection; normalized global listing/filter indices; source-separated financial ledger and all existing debit paths; atomic purchase/৬০–৪০ distribution; Send Money; withdrawals/refunds; rebranding/domain authentication; full browser/mobile/real-payment verification।

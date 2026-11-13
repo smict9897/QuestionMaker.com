@@ -198,6 +198,38 @@ export default async function Home() {
           <div className="hm-hero-stack">
             <CreationPaths />
             <PaperAnimation />
+            <section
+              className="rounded-2xl border border-indigo-100 bg-white p-5 my-5"
+              aria-labelledby="marketplace-heading"
+            >
+              <h2 id="marketplace-heading" className="text-2xl font-bold">
+                শিক্ষকদের প্রশ্নপত্র মার্কেটপ্লেস
+              </h2>
+              <p className="my-2">
+                শ্রেণি, বিষয়, অধ্যায় ও পরীক্ষার ধরন অনুযায়ী অনুমোদিত প্রশ্নপত্রের
+                পরিচিতি দেখুন। কেনাকাটা এখনও চালু হয়নি।
+              </p>
+              <nav
+                aria-label="মার্কেটপ্লেসের শ্রেণি"
+                className="flex flex-wrap gap-2 my-3"
+              >
+                {[6, 7, 8, 9, 10, 11].map((n) => (
+                  <Link
+                    key={n}
+                    className="rounded-lg border px-4 py-2"
+                    href={`/marketplace?grade=${n}`}
+                  >
+                    {n.toLocaleString("bn-BD")} শ্রেণি
+                  </Link>
+                ))}
+              </nav>
+              <Link
+                className="font-bold text-indigo-700 underline"
+                href="/marketplace"
+              >
+                সব প্রশ্নপত্রের পরিচিতি দেখুন →
+              </Link>
+            </section>
             <HomeStats
               rows={
                 bank === null

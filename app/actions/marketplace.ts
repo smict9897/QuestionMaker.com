@@ -126,6 +126,7 @@ export async function submitMarketPaper(
     });
     revalidatePath("/dashboard/sell");
     revalidatePath("/admin/marketplace");
+    revalidatePath("/marketplace");
     return {
       ok: result,
       message: result
@@ -188,9 +189,11 @@ export async function reviewMarketPaper(
     });
     revalidatePath("/dashboard/sell");
     revalidatePath("/admin/marketplace");
+    revalidatePath("/marketplace");
     return {
       ok: true,
-      message: "সিদ্ধান্ত সংরক্ষিত। মার্কেটপ্লেস চালুর আগে এটি জনসমক্ষে বিক্রি হবে না।",
+      message:
+        "সিদ্ধান্ত সংরক্ষিত। অনুমোদিত পরিচিতি ক্যাটালগে দেখা যাবে; কেনাকাটা এখনও বন্ধ।",
     };
   } catch {
     return {
