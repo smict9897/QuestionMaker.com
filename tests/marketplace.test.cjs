@@ -22,6 +22,15 @@ const examTypes = load("lib/marketplace-exam-types.ts");
 const lib = load("lib/marketplace.ts", {
   "@/lib/marketplace-exam-types": examTypes,
 });
+const header = load("lib/paper-header.ts");
+const builder = load("lib/paper-builder.ts", {
+  "@/lib/paper-header": header,
+  "@/lib/paper-math": require("./helpers/paper-math.cjs"),
+});
+const preview = load("lib/marketplace-preview.ts", {
+  "@/lib/paper-builder": builder,
+  "@/lib/paper-sections": load("lib/paper-sections.ts"),
+});
 const meta = {
   examType: "বার্ষিক পরীক্ষা",
   title: "বাংলা পরীক্ষা",
@@ -131,6 +140,7 @@ function setup() {
     "@/auth": { auth: async () => (session ? { user: users[session] } : null) },
     "@/lib/db": { db: tx },
     "@/lib/marketplace": lib,
+    "@/lib/marketplace-preview": preview,
     "@/lib/paper-generation": { visibleQuestions: () => ({}) },
     "next/cache": { revalidatePath() {} },
     "@/lib/wallet": {
@@ -299,4 +309,29 @@ test("three shared exam types are required for new submissions, legacy labels re
       fs.readFileSync(path, "utf8"),
       /marketExamLabel\(r.metadata.examType\)/,
     );
+});
+
+test("admin cannot approve an empty visible paper but can request corrections", async () => {
+  const x = setup();
+  await x.actions.submitMarketPaper({}, x.form());
+  const id = lib.marketSubmissionId("u", "qbpaper:u:a"),
+    key = lib.MARKET_PREFIX + id;
+  const r = JSON.parse(x.store.get(key));
+  r.snapshot.settings.excludedIds = ["q"];
+  r.snapshotHash = lib.snapshotHash(r.snapshot);
+  x.store.set(key, JSON.stringify(r));
+  x.session("a");
+  const f = new FormData();
+  for (const [k, v] of Object.entries({
+    id,
+    revision: "1",
+    decision: "APPROVED",
+    note: "",
+    reviewed: "on",
+  }))
+    f.set(k, v);
+  assert.equal((await x.actions.reviewMarketPaper({}, f)).ok, false);
+  f.set("decision", "CHANGES");
+  f.set("note", "সব প্রশ্ন বাদ গেছে; সংশোধন করুন");
+  assert.equal((await x.actions.reviewMarketPaper({}, f)).ok, true);
 });

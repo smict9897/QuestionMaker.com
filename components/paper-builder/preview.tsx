@@ -51,6 +51,7 @@ export default function PaperPreview({
   mode = "questions",
   sections,
   auxiliaryOnly = false,
+  readOnly = false,
 }: {
   onQuestionAction?: (
     id: string,
@@ -58,6 +59,7 @@ export default function PaperPreview({
   ) => void;
   sections?: PreviewSection[];
   auxiliaryOnly?: boolean;
+  readOnly?: boolean;
   s: PaperSettings;
   questions: PreviewQuestion[];
   type: string;
@@ -242,7 +244,7 @@ export default function PaperPreview({
         className={`paper-question ${s.show.duplicates && duplicate.has(q.id) ? "paper-duplicate" : ""}`}
         style={{ paddingBottom: "0.7em", breakInside: "avoid" }}
       >
-        {onQuestionAction && (
+        {!readOnly && onQuestionAction && (
           <div
             data-noprint
             className="mb-2 flex gap-2 rounded bg-slate-100 p-1 text-xs text-slate-700"
@@ -296,37 +298,42 @@ export default function PaperPreview({
                     margin: "6px 0",
                   }}
                 />
-                <div data-noprint className="flex justify-center gap-2 text-xs">
-                  <button
-                    onClick={() =>
-                      onImageSize(
-                        q.id,
-                        Math.max(
-                          80,
-                          (attachment?.size || s.cfg.imageSize) - 20,
-                        ),
-                      )
-                    }
+                {!readOnly && (
+                  <div
+                    data-noprint
+                    className="flex justify-center gap-2 text-xs"
                   >
-                    −
-                  </button>
-                  <button onClick={() => onImageSize(q.id, undefined)}>
-                    রিসেট
-                  </button>
-                  <button
-                    onClick={() =>
-                      onImageSize(
-                        q.id,
-                        Math.min(
-                          600,
-                          (attachment?.size || s.cfg.imageSize) + 20,
-                        ),
-                      )
-                    }
-                  >
-                    +
-                  </button>
-                </div>
+                    <button
+                      onClick={() =>
+                        onImageSize(
+                          q.id,
+                          Math.max(
+                            80,
+                            (attachment?.size || s.cfg.imageSize) - 20,
+                          ),
+                        )
+                      }
+                    >
+                      −
+                    </button>
+                    <button onClick={() => onImageSize(q.id, undefined)}>
+                      রিসেট
+                    </button>
+                    <button
+                      onClick={() =>
+                        onImageSize(
+                          q.id,
+                          Math.min(
+                            600,
+                            (attachment?.size || s.cfg.imageSize) + 20,
+                          ),
+                        )
+                      }
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             {type === "MCQ" && (

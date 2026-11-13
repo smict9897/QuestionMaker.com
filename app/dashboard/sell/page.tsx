@@ -69,6 +69,12 @@ export default async function SellPage() {
             {labels[r.status]} · {formatMoney(r.metadata.pricePaisa)} · সংস্করণ{" "}
             {r.revision}
           </p>
+          <Link
+            className="block my-2 underline"
+            href={`/dashboard/sell/${r.id}`}
+          >
+            জমা দেওয়া স্থির প্রশ্নপত্র দেখুন →
+          </Link>
           {r.review && <p>অ্যাডমিনের নোট: {r.review.note || "—"}</p>}
         </section>
       ))}

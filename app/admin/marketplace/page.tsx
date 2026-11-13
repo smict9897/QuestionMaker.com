@@ -55,6 +55,14 @@ export default async function MarketplaceAdmin() {
           </p>
           <p>{r.metadata.chapters.join(" · ")}</p>
           <p>{r.metadata.description}</p>
+          <Link
+            href={`/dashboard/sell/${r.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="my-3 inline-block rounded bg-indigo-700 px-4 py-2 text-white"
+          >
+            সম্পূর্ণ প্রশ্নপত্রের পৃষ্ঠা প্রিভিউ খুলুন ↗
+          </Link>
           <details>
             <summary className="cursor-pointer font-bold p-3">
               সম্পূর্ণ স্থির প্রশ্নপত্র ও সেটিংস দেখুন
