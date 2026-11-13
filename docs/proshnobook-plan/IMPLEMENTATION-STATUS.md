@@ -82,3 +82,20 @@
 ### এখনও গুরুত্বপূর্ণ বাকি
 
 PDF assembled-copy provenance; rendered A4 admin review; protected sample and buyer print; catalog-validated subject/chapter selection; normalized global listing/filter indices; source-separated financial ledger and all existing debit paths; atomic purchase/৬০–৪০ distribution; Send Money; withdrawals/refunds; rebranding/domain authentication; full browser/mobile/real-payment verification।
+
+## চতুর্থ ধাপ: ব্যক্তিগত পৃষ্ঠা প্রিভিউ / অ্যাডমিনের A4 যাচাই
+
+- `/dashboard/sell/[id]`: fresh database user/role যাচাই করে কেবল মালিক শিক্ষক বা ADMIN জমা দেওয়া স্থির কপি দেখতে পারবেন। অন্যদের 404; লগইন ছাড়া login-এ পাঠানো হয়।
+- অনুমোদনের তালিকা ও শিক্ষকের নিজের আবেদন তালিকা থেকে প্রিভিউ লিংক। পূর্ণ snapshot পাবলিক ক্যাটালগে যোগ করা হয়নি।
+- বর্তমান mature `PaperPreview` renderer ব্যবহার করে saved paper size/orientation/font, header, mixed MCQ/CQ/SHORT sections, saved edits, exclusions, division groups এবং deterministic set shuffle দেখানো হয়। A4 নির্বাচিত থাকলে A4; পুরোনো ভিন্ন মাপ জোর করে A4-এ রূপান্তর করা হয়নি।
+- Snapshot প্রশ্ন থেকেই display model হয়; প্রশ্নব্যাংক পুনরায় query করে কপি বদলানো হয় না। CQ-তে Bengali এবং nested sub-question keys সমর্থিত।
+- Renderer-এ opt-in readOnly mode; ব্যক্তিগত reviewer-তে question actions ও image resize controls নেই। মূল builder-এর editable mode আগের মতোই আছে।
+- Preview route checksum/settings/question shape যাচাই করে ব্যর্থ হলে সতর্কতা দেখায়। APPROVED সিদ্ধান্তে server-side renderability check; invalid/empty বা সব প্রশ্ন বাদ দেওয়া কপি অনুমোদন হবে না, তবে সংশোধনের অনুরোধ করা যাবে।
+- এটি reviewer preview; buyer institution-name-only print, public sample, PDF assembly snapshot ও payment এখনও বাস্তবায়িত নয়।
+
+### চতুর্থ ধাপের যাচাই
+
+- Typecheck এবং ৩৭৩টি automated test সফল।
+- mixed sections, Bengali CQ, saved edits/exclusions/fonts, immutable inputs, seeded sets, invalid/empty approval rejection এবং private-route guards-এর regression tests।
+- বাস্তব preview component-এর Chromium fixture-এ 320/390/768/1280px প্রস্থে ৪টি rendered sheet, page overflow নেই, sheet-এ editing buttons নেই এবং JavaScript error নেই। Fixture synthetic snapshot ব্যবহার করে; authenticated production browser, বাস্তব ফোন বা physical print test নয়।
+- Browser fixture ও dependencies `/home/user/market-preview-browser`-এ scratch হিসেবে রাখা; repository-তে generated bundle বা Chromium যোগ করা হয়নি।

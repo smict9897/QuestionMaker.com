@@ -1,4 +1,5 @@
 "use server";
+import { assertRenderableMarketSnapshot } from "@/lib/marketplace-preview";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { requirePaidQuestions, walletTransaction } from "@/lib/wallet";
@@ -173,6 +174,8 @@ export async function reviewMarketPaper(
       if (!row) throw new Error("missing");
       const record: MarketSubmission = JSON.parse(row.value);
       assertReviewable(record, revision);
+      if (decision === "APPROVED")
+        assertRenderableMarketSnapshot(record.snapshot);
       if (record.ownerId === user.id) throw new Error("self review");
       const now = new Date().toISOString();
       await tx.setting.update({
