@@ -1,3 +1,4 @@
+import { marketExamLabel } from "@/lib/marketplace-exam-types";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -46,6 +47,7 @@ export default async function MarketplaceAdmin() {
       {submissions.map((r) => (
         <section key={r.id} className="rounded-xl border p-5">
           <h2 className="text-xl font-bold">{r.metadata.title}</h2>
+          <p>পরীক্ষার ধরন: {marketExamLabel(r.metadata.examType)}</p>
           <p>
             TID: {teacherTid(r.ownerId)} · শ্রেণি {r.metadata.grade} ·{" "}
             {r.metadata.subject} · {formatMoney(r.metadata.pricePaisa)}

@@ -1,8 +1,10 @@
+import { MARKET_EXAM_TYPES } from "@/lib/marketplace-exam-types";
 import { z } from "zod";
 import { createHash } from "node:crypto";
 
 export const MARKET_PREFIX = "market:submission:v1:";
 export const marketMetadataSchema = z.object({
+  examType: z.enum(MARKET_EXAM_TYPES),
   title: z.string().trim().min(3).max(120),
   grade: z.enum(["6", "7", "8", "9", "10", "11"]),
   subject: z.string().trim().min(2).max(100),

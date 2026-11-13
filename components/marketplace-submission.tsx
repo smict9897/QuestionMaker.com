@@ -1,4 +1,5 @@
 "use client";
+import { MARKET_EXAM_TYPES } from "@/lib/marketplace-exam-types";
 import { useActionState } from "react";
 import {
   submitMarketPaper,
@@ -24,6 +25,19 @@ export function MarketplaceSubmission({
           {papers.map((p) => (
             <option key={p.key} value={p.key}>
               {p.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        পরীক্ষার ধরন
+        <select name="examType" className={field} required defaultValue="">
+          <option value="" disabled>
+            পরীক্ষার ধরন নির্বাচন করুন
+          </option>
+          {MARKET_EXAM_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {type}
             </option>
           ))}
         </select>

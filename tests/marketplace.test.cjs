@@ -18,8 +18,12 @@ function load(path, mocks = {}) {
   );
   return m.exports;
 }
-const lib = load("lib/marketplace.ts");
+const examTypes = load("lib/marketplace-exam-types.ts");
+const lib = load("lib/marketplace.ts", {
+  "@/lib/marketplace-exam-types": examTypes,
+});
 const meta = {
+  examType: "বার্ষিক পরীক্ষা",
   title: "বাংলা পরীক্ষা",
   grade: "9",
   subject: "বাংলা",
@@ -153,6 +157,7 @@ function setup() {
     const f = new FormData();
     for (const [k, v] of Object.entries({
       sourceKey: "qbpaper:u:a",
+      examType: meta.examType,
       title: meta.title,
       grade: "9",
       subject: meta.subject,
@@ -253,4 +258,45 @@ test("approved application cannot be silently replaced and no money is moved", a
     [...x.store.keys()].filter((k) => k.startsWith("wallet:")).length,
     0,
   );
+});
+
+test("three shared exam types are required for new submissions, legacy labels remain honest", async () => {
+  assert.deepEqual(examTypes.MARKET_EXAM_TYPES, [
+    "অর্ধ বার্ষিক পরীক্ষা",
+    "বার্ষিক পরীক্ষা",
+    "নির্বাচনী পরীক্ষা",
+  ]);
+  for (const examType of examTypes.MARKET_EXAM_TYPES) {
+    assert.ok(
+      lib.marketMetadataSchema.safeParse({ ...meta, examType }).success,
+    );
+    assert.equal(examTypes.marketExamLabel(examType), examType);
+  }
+  for (const examType of [undefined, "", "Other"])
+    assert.equal(
+      lib.marketMetadataSchema.safeParse({ ...meta, examType }).success,
+      false,
+    );
+  assert.equal(
+    examTypes.marketExamLabel(undefined),
+    "পরীক্ষার ধরন উল্লেখ করা হয়নি",
+  );
+  const x = setup();
+  const f = x.form();
+  f.delete("examType");
+  assert.equal((await x.actions.submitMarketPaper({}, f)).ok, false);
+  f.set("examType", "নির্বাচনী পরীক্ষা");
+  assert.equal((await x.actions.submitMarketPaper({}, f)).ok, true);
+  const record = JSON.parse(
+    x.store.get(lib.MARKET_PREFIX + lib.marketSubmissionId("u", "qbpaper:u:a")),
+  );
+  assert.equal(record.metadata.examType, "নির্বাচনী পরীক্ষা");
+  for (const path of [
+    "app/dashboard/sell/page.tsx",
+    "app/admin/marketplace/page.tsx",
+  ])
+    assert.match(
+      fs.readFileSync(path, "utf8"),
+      /marketExamLabel\(r.metadata.examType\)/,
+    );
 });
