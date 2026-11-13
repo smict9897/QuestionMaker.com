@@ -69,7 +69,13 @@ export function PageViewer({
     document.body,
   );
 }
-export function PrintFrame({ children }: { children: ReactNode }) {
+export function PrintFrame({
+  children,
+  mobileActions,
+}: {
+  children: ReactNode;
+  mobileActions?: ReactNode;
+}) {
   const frame = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState(1),
     [zoom, setZoom] = useState(1);
@@ -84,7 +90,15 @@ export function PrintFrame({ children }: { children: ReactNode }) {
   }, []);
   return (
     <>
-      <div className="rp-toolbar" data-noprint>
+      {mobileActions && (
+        <div className="rp-preview-phone-actions rp-toolbar" data-noprint>
+          {mobileActions}
+        </div>
+      )}
+      <div
+        className={`rp-toolbar${mobileActions ? " rp-preview-desktop-zoom" : ""}`}
+        data-noprint
+      >
         <span>Preview zoom</span>
         <button
           disabled={zoom <= 1}
