@@ -37,3 +37,24 @@
 - পূর্ণ end-to-end, mobile print এবং অনুমোদিত বাস্তব লেনদেন যাচাই।
 
 অসম্পূর্ণ আর্থিক সুবিধার জন্য কোনো live button বা placeholder transaction চালু করা হয়নি। মূল পরিকল্পনা `README.md`-এ রয়েছে।
+
+## দ্বিতীয় বাস্তবায়ন ধাপ: ডাটাবেজ প্রশ্নপত্রের বিক্রির আবেদন
+
+- `/dashboard/sell`: লগইন করা মালিকের নিজের সংরক্ষিত ডাটাবেজ প্রশ্নপত্র থেকে আবেদন; dashboard-এ প্রবেশপথ।
+- শ্রেণি ৬–১১, বিষয়, অধ্যায়, বিবরণ, মূল্য ও বিক্রির অধিকারসংক্রান্ত সম্মতি সংগ্রহ। এই পর্যায়ের মূল্য validation সীমা ৳১–৫০,০০০; এটি চূড়ান্ত marketplace pricing policy নয়।
+- সার্ভার saved-paper key ও owner যাচাই করে, বর্তমান checkout entitlement যাচাই করে এবং প্রশ্নব্যাংক থেকে প্রকৃত প্রশ্ন নেয়। Client থেকে প্রশ্নের কপি গ্রহণ করা হয় না।
+- প্রশ্নের ক্রম ও settings সহ private স্থির snapshot, SHA-256 checksum, উৎস, মালিক ও revision সংরক্ষণ। Snapshot সর্বোচ্চ ১ MB।
+- একই source-এর duplicate আবেদন আটকানো; সংশোধন চাওয়া হলে একই আবেদনে নতুন revision জমা দেওয়া যায়।
+- `/admin/marketplace`: fresh database ADMIN role যাচাই করে private review। বর্তমানে নিরাপদ text/JSON-এ পূর্ণ snapshot দেখা যায়; rendered A4 review এখনও বাকি।
+- অনুমোদন/সংশোধন/বাতিল, কারণ, reviewer ও সময় সংরক্ষণ। নিজের আবেদন নিজে অনুমোদন নিষিদ্ধ। Stale revision, repeated review এবং checksum mismatch প্রত্যাখ্যান।
+- অনুমোদিত আবেদন পরিবর্তন করে কপি বদলে দেওয়া যায় না। প্রশ্নব্যাংক বা মূল saved paper বদলালেও snapshot বদলায় না।
+- Owner ও admin ছাড়া snapshot দেখার কোনো public route নেই। এই ধাপে marketplace purchase, credit/debit বা আয় বণ্টন নেই।
+- **PDF/Ready Paper থেকে তৈরি কপির আবেদন এই ধাপে চালু করা হয়নি।** Paid source-page receipt এবং শিক্ষকের assembled final copy-কে আলাদা করতে হবে; অনুমতিহীন সরাসরি PDF পুনর্বিক্রি এড়াতে পরবর্তী ধাপে কাজ প্রয়োজন।
+- প্রশ্নপত্রের বিষয়/অধ্যায় এই পর্যায়ে admin যাচাই করেন; catalog-validated subject/chapter dropdown পরবর্তী ধাপে প্রয়োজন।
+
+### দ্বিতীয় ধাপের যাচাই
+
+- Typecheck এবং ৩৬২টি automated test সফল।
+- নতুন tests: metadata/মূল্য/সম্মতি, ownership, purchased-source প্রত্যাখ্যান, unpaid/unauthenticated access, immutable server snapshot, concurrent duplicate, admin role, stale review, revision/resubmission এবং approved copy অপরিবর্তনীয় রাখা।
+- এটি mocked transaction-ভিত্তিক automated test; authenticated live browser বা বাস্তব টাকা দিয়ে পরীক্ষা করা হয়নি।
+- প্রথম ধাপের পরে উপরের “এখনও বাকি” তালিকার application/moderation অংশ আংশিক সম্পন্ন হয়েছে; PDF snapshot, rendered A4 review, catalog, sales ledger, buyer print, Send Money, withdrawal ও end-to-end পরীক্ষা এখনও বাকি।
