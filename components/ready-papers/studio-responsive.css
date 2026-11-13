@@ -1,0 +1,177 @@
+/* Workspace chrome only. Never resize an A4 sheet or change print geometry. */
+@media screen {
+  .qm-app .rp-studio {
+    width: 100%;
+    max-width: 1560px;
+  }
+  .qm-app .rp-editor {
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 22px;
+  }
+  .qm-app .rp-editor > * {
+    min-width: 0;
+  }
+  .qm-app .rp-controls {
+    margin: 0;
+    padding: 20px;
+  }
+  .qm-app .rp-controls-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .qm-app .rp-controls-heading h2 {
+    margin: 0;
+  }
+  .qm-app .rp-controls-done {
+    display: none;
+  }
+  .qm-app .rp-canvas-panel {
+    top: 90px;
+    padding: 18px;
+  }
+  .qm-app .rp-editor .rp-toolbar {
+    gap: 8px;
+  }
+  .qm-app .rp-editor .rp-toolbar > * {
+    max-width: 100%;
+  }
+  .qm-app .rp-editor button {
+    min-height: 44px;
+    white-space: normal;
+  }
+  .qm-app .rp-controls :is(input:not([type="checkbox"]), select) {
+    min-width: 0;
+    max-width: 100%;
+    font-size: 16px;
+  }
+  .qm-app .rp-order {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+  }
+  .qm-app .rp-controls:not(.rp-controls-open) {
+    display: block;
+  }
+  .qm-app .rp-editor .rp-mobile-controls {
+    display: none;
+  }
+  .qm-app .rp-editor .rp-print-frame {
+    overscroll-behavior: contain;
+  }
+}
+@media screen and (min-width: 1280px) {
+  .qm-app .rp-editor {
+    grid-template-columns: 310px minmax(0, 1fr);
+    gap: 28px;
+  }
+  .qm-app .rp-controls {
+    padding: 24px;
+  }
+  .qm-app .rp-canvas-panel {
+    padding: 24px;
+  }
+}
+@media screen and (min-width: 640px) and (max-width: 1023px) {
+  /* Tablet: retain the desktop side-by-side workflow, with less chrome. */
+  .qm-app .rp-editor {
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 14px;
+  }
+  .qm-app .rp-controls {
+    padding: 16px 12px;
+    order: 0;
+  }
+  .qm-app .rp-canvas-panel {
+    padding: 12px;
+    order: 1;
+  }
+  .qm-app .rp-controls h2 {
+    font-size: 19px;
+  }
+  .qm-app .rp-controls .rp-toolbar {
+    gap: 6px;
+  }
+  .qm-app .rp-controls button {
+    padding: 9px 10px;
+    font-size: 14px;
+  }
+  .qm-app .rp-canvas-panel {
+    position: sticky;
+    top: 88px;
+  }
+}
+@media screen and (max-width: 639px) {
+  /* Phone: full-width paper; controls open above it rather than below a tall A4. */
+  .qm-app .rp-studio {
+    padding: 16px 10px calc(100px + env(safe-area-inset-bottom));
+  }
+  .qm-app .rp-studio .rp-hero {
+    padding: 22px 18px;
+  }
+  .qm-app .rp-studio .rp-hero h1 {
+    font-size: 25px;
+    overflow-wrap: anywhere;
+  }
+  .qm-app .rp-editor {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .qm-app .rp-canvas-panel {
+    order: 1;
+    position: static;
+    padding: 12px 8px;
+    border: 1px solid #dce6ed;
+  }
+  .qm-app .rp-controls {
+    order: 0;
+    padding: 18px 14px;
+    scroll-margin-top: 90px;
+    max-height: 65dvh;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  .qm-app .rp-controls:not(.rp-controls-open) {
+    display: none;
+  }
+  .qm-app .rp-controls-heading {
+    position: sticky;
+    top: -18px;
+    z-index: 3;
+    padding: 12px 0;
+    background: var(--qm-surface, #fff);
+    border-bottom: 1px solid #dce6ed;
+  }
+  .qm-app .rp-controls-done {
+    display: inline-flex;
+    font-size: 14px;
+  }
+  .qm-app .rp-editor .rp-mobile-controls {
+    display: inline-flex;
+    scroll-margin-top: 90px;
+  }
+  .qm-app .rp-editor .rp-toolbar {
+    gap: 8px;
+    margin: 10px 0;
+    font-size: 14px;
+  }
+  .qm-app .rp-editor .rp-toolbar button {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+  .qm-app .rp-live-review h3 {
+    font-size: 18px;
+  }
+  .qm-app .rp-editor .rp-muted {
+    font-size: 13px;
+    line-height: 1.8;
+  }
+  .qm-app .rp-controls :is(label, summary) {
+    font-size: 15px;
+  }
+  .qm-app .rp-controls input[type="range"] {
+    min-height: 32px;
+  }
+}

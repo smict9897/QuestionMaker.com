@@ -104,6 +104,8 @@ export default function ReadyStudio({
     selectable: boolean;
   } | null>(null);
   const [controlsOpen, setControlsOpen] = useState(false);
+  const controlsPanel = useRef<HTMLElement>(null);
+  const controlsToggle = useRef<HTMLButtonElement>(null);
   const [entries, setEntries] = useState(answerEntries);
   const [printKind, setPrintKind] = useState<
     "questions" | "blank" | "answers" | "ai"
@@ -173,6 +175,27 @@ export default function ReadyStudio({
       setActive(selection[0]);
       setStep("edit");
     } else setCheckout(true);
+  }
+  useEffect(() => {
+    if (
+      controlsOpen &&
+      step === "edit" &&
+      window.matchMedia("(max-width: 639px)").matches
+    ) {
+      controlsPanel.current?.focus({ preventScroll: true });
+      controlsPanel.current?.scrollIntoView({
+        block: "start",
+        behavior: "auto",
+      });
+    }
+  }, [controlsOpen, step]);
+  function closeControls() {
+    setControlsOpen(false);
+    controlsToggle.current?.focus({ preventScroll: true });
+    controlsToggle.current?.scrollIntoView({
+      block: "start",
+      behavior: "auto",
+    });
   }
   function startSetup() {
     openSetup(selected);
@@ -691,10 +714,22 @@ export default function ReadyStudio({
       {step === "edit" && (
         <div className="rp-editor" data-noprint>
           <aside
+            ref={controlsPanel}
+            tabIndex={-1}
+            aria-label="Page ও Header সম্পাদনা"
             id="rp-edit-controls"
             className={`rp-panel rp-controls${controlsOpen ? " rp-controls-open" : ""}`}
           >
-            <h2>Page ও Header</h2>
+            <div className="rp-controls-heading">
+              <h2>Page ও Header</h2>
+              <button
+                type="button"
+                className="rp-controls-done"
+                onClick={closeControls}
+              >
+                প্রিভিউতে ফিরুন ↓
+              </button>
+            </div>
             <div className="rp-order">
               {selected.map((n, i) => (
                 <div key={n}>
@@ -1030,10 +1065,14 @@ export default function ReadyStudio({
             <div className="rp-toolbar">
               <strong>Page {active}</strong>
               <button
+                ref={controlsToggle}
+                type="button"
                 className="rp-mobile-controls"
                 aria-expanded={controlsOpen}
                 aria-controls="rp-edit-controls"
-                onClick={() => setControlsOpen((v) => !v)}
+                onClick={() =>
+                  controlsOpen ? closeControls() : setControlsOpen(true)
+                }
               >
                 {controlsOpen ? "Edit controls বন্ধ" : "Header ও Edit controls"}
               </button>
