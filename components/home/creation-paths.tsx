@@ -48,7 +48,7 @@ export default function CreationPaths() {
           </div>
         </Link>
         <Link
-          href="#start"
+          href="/question-builder"
           className="hm-path-card hm-path-database"
           aria-labelledby="database-path-title"
           aria-describedby="database-path-description"

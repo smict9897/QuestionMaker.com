@@ -1,6 +1,7 @@
 import "./globals.css";
 import "@/components/design-system.css";
 import "@/components/compact-workspace.css";
+import "@/components/home/mobile-home.css";
 import "@/components/ready-papers/studio-responsive.css";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";

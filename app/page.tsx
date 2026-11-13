@@ -197,15 +197,6 @@ export default async function Home() {
         <main>
           <div className="hm-hero-stack">
             <CreationPaths />
-            <HomeStarter
-              rows={(starterBank || []).map((r) => ({
-                category: r.category,
-                subject: r.subject,
-                topic: r.topic,
-                count: r._count._all,
-              }))}
-              unavailable={starterBank === null}
-            />
             <PaperAnimation />
             <HomeStats
               rows={
@@ -217,6 +208,15 @@ export default async function Home() {
                     }))
               }
               daily={daily}
+            />
+            <HomeStarter
+              rows={(starterBank || []).map((r) => ({
+                category: r.category,
+                subject: r.subject,
+                topic: r.topic,
+                count: r._count._all,
+              }))}
+              unavailable={starterBank === null}
             />
           </div>
           <HomeGuide />

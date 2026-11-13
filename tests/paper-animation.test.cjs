@@ -58,8 +58,9 @@ test("animation respects reduced motion, pauses outside viewport and cleans up t
   assert.match(source, /observer.disconnect/);
   assert.doesNotMatch(source, /\bfetch\s*\(|localStorage|savePaper/);
 });
-test("demo appears between selection and bank statistics", () => {
+test("demo appears immediately after entry cards and before bank statistics", () => {
   const page = fs.readFileSync("app/page.tsx", "utf8");
-  assert.ok(page.indexOf("<HomeStarter") < page.indexOf("<PaperAnimation"));
+  assert.ok(page.indexOf("<CreationPaths") < page.indexOf("<PaperAnimation"));
+  assert.ok(page.indexOf("<HomeStats") < page.indexOf("<HomeStarter"));
   assert.ok(page.indexOf("<PaperAnimation") < page.indexOf("<HomeStats"));
 });
