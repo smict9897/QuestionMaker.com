@@ -175,3 +175,103 @@
     min-height: 32px;
   }
 }
+
+/* Normal phone viewport only. Desktop-site browsers normally expose a wider
+   CSS viewport and keep the complete existing interface. No UA sniffing. */
+@media screen {
+  .qm-app .rp-phone-answer {
+    display: none;
+  }
+}
+@media screen and (max-width: 639px) {
+  .qm-app
+    .rp-stage-edit
+    > :is(.rp-studio-head, .rp-hero, .rp-studio-actions, .rp-answer-tools) {
+    display: none;
+  }
+  /* Keep status announcements available to assistive technology. */
+  .qm-app .rp-stage-edit > .rp-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .qm-app .rp-stage-edit .rp-phone-answer {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+  }
+  .qm-app .rp-stage-edit .rp-editor {
+    grid-template-columns: minmax(0, 32fr) minmax(0, 68fr);
+    gap: 8px;
+    align-items: start;
+  }
+  .qm-app .rp-stage-edit .rp-controls,
+  .qm-app .rp-stage-edit .rp-controls:not(.rp-controls-open) {
+    display: block;
+    max-height: none;
+    overflow: visible;
+    padding: 12px 8px;
+    border-radius: 14px;
+  }
+  .qm-app .rp-stage-edit .rp-controls-heading {
+    position: static;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  .qm-app .rp-stage-edit .rp-controls-heading h2 {
+    font-size: 15px;
+  }
+  .qm-app .rp-stage-edit :is(.rp-controls-done, .rp-mobile-controls) {
+    display: none;
+  }
+  .qm-app .rp-stage-edit .rp-controls :is(label, summary) {
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+  .qm-app
+    .rp-stage-edit
+    .rp-controls
+    :is(input:not([type="checkbox"]), select) {
+    font-size: 14px;
+    padding: 8px 5px;
+  }
+  .qm-app .rp-stage-edit .rp-controls .rp-toolbar {
+    gap: 5px;
+  }
+  .qm-app .rp-stage-edit .rp-controls button {
+    font-size: 12px;
+    padding: 8px 6px;
+  }
+  .qm-app .rp-stage-edit .rp-controls .rp-muted {
+    font-size: 11px;
+  }
+  .qm-app .rp-stage-edit .rp-order {
+    gap: 4px;
+  }
+  .qm-app .rp-stage-edit .rp-order > div {
+    flex-wrap: wrap;
+  }
+  .qm-app .rp-stage-edit .rp-canvas-panel {
+    padding: 10px 6px;
+    border-radius: 14px;
+    position: static;
+  }
+  .qm-app .rp-stage-edit .rp-canvas-panel .rp-toolbar {
+    gap: 5px;
+    font-size: 12px;
+  }
+  .qm-app .rp-stage-edit .rp-canvas-panel .rp-toolbar button {
+    padding: 8px;
+    font-size: 12px;
+  }
+  .qm-app .rp-stage-edit .rp-live-review h3 {
+    font-size: 14px;
+  }
+  .qm-app .rp-stage-edit .rp-canvas-panel .rp-muted {
+    font-size: 11px;
+  }
+}

@@ -550,7 +550,7 @@ export default function ReadyStudio({
     }
   }
   return (
-    <main className="rp-root rp-studio">
+    <main className={`rp-root rp-studio rp-stage-${step}`}>
       <div className="rp-studio-head" data-noprint>
         <Link href={adminPreset ? "/admin/ready-papers" : "/ready-papers"}>
           <ArrowLeft size={18} />
@@ -588,7 +588,7 @@ export default function ReadyStudio({
         </p>
       )}
       {pages.length > 0 && (
-        <div className="rp-toolbar" data-noprint>
+        <div className="rp-toolbar rp-studio-actions" data-noprint>
           <button onClick={() => setStep("select")}>
             Page নির্বাচন ({selected.length})
           </button>
@@ -613,39 +613,54 @@ export default function ReadyStudio({
           )}
         </div>
       )}
-      {paid && receipt && !adminPreset && (
-        <AIAnswers
-          receiptId={receipt}
-          onJob={setAIJob}
-          onPrint={() => {
-            setPrintKind("ai");
-            setStep("preview");
-          }}
-        />
-      )}
-      {pages.length > 0 && (
-        <AnswerAssistant
-          id={paper.id}
-          url={paper.url}
-          pages={pages}
-          selected={selected}
-          admin={adminPreset}
-          entries={entries}
-          onSaved={(entry) =>
-            setEntries((old) => [
-              ...old.filter((v) => v.questionPage !== entry.questionPage),
-              entry,
-            ])
-          }
-          onPrint={(kind) => {
-            if (!paid) {
-              setCheckout(true);
-              return;
+      <div className="rp-answer-tools" data-noprint>
+        {paid && receipt && !adminPreset && (
+          <AIAnswers
+            receiptId={receipt}
+            onJob={setAIJob}
+            onPrint={() => {
+              setPrintKind("ai");
+              setStep("preview");
+            }}
+          />
+        )}
+        {pages.length > 0 && (
+          <AnswerAssistant
+            id={paper.id}
+            url={paper.url}
+            pages={pages}
+            selected={selected}
+            admin={adminPreset}
+            entries={entries}
+            onSaved={(entry) =>
+              setEntries((old) => [
+                ...old.filter((v) => v.questionPage !== entry.questionPage),
+                entry,
+              ])
             }
-            setPrintKind(kind);
-            setStep("preview");
-          }}
-        />
+            onPrint={(kind) => {
+              if (!paid) {
+                setCheckout(true);
+                return;
+              }
+              setPrintKind(kind);
+              setStep("preview");
+            }}
+          />
+        )}
+      </div>
+      {step === "edit" && paid && receipt && !adminPreset && (
+        <div className="rp-phone-answer" data-noprint>
+          <button
+            type="button"
+            onClick={() => {
+              setPrintKind("ai");
+              setStep("preview");
+            }}
+          >
+            উত্তরপত্র দেখুন
+          </button>
+        </div>
       )}
       {step === "select" && (
         <section data-noprint>
