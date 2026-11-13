@@ -3,6 +3,8 @@ import { auth } from "@/auth";
 import { z } from "zod";
 import {
   WalletError,
+  teacherTid,
+  rechargeApprovalAmount,
   account,
   ensureWallet,
   MIN_RECHARGE_PAISA,
@@ -44,9 +46,7 @@ export async function purchaseQuestions(raw: unknown, expectedTotal: number) {
       if (q.total !== 0 && q.total !== expectedTotal)
         throw new WalletError("মূল্য বদলেছে। আবার মূল্য দেখুন।");
       if (!q.canAfford)
-        throw new WalletError(
-          "Balance পর্যাপ্ত নয়। কমপক্ষে ৳২০ recharge করুন।",
-        );
+        throw new WalletError("Balance পর্যাপ্ত নয়। কমপক্ষে ৳২০ recharge করুন।");
       if (q.total > 0) {
         const current = await account(tx, id);
         await tx.setting.update({
@@ -79,9 +79,7 @@ export async function purchaseQuestions(raw: unknown, expectedTotal: number) {
     return {
       ok: false as const,
       error:
-        e instanceof WalletError
-          ? e.message
-          : "Checkout হয়নি। আবার চেষ্টা করুন।",
+        e instanceof WalletError ? e.message : "Checkout হয়নি। আবার চেষ্টা করুন।",
     };
   }
 }
@@ -147,12 +145,16 @@ export async function submitRecharge(form: FormData) {
   } catch {
     return {
       ok: false,
-      error:
-        "অনুরোধ নেওয়া যায়নি। আগের pending অনুরোধ বা ব্যবহৃত TrxID পরীক্ষা করুন।",
+      error: "অনুরোধ নেওয়া যায়নি। আগের pending অনুরোধ বা ব্যবহৃত TrxID পরীক্ষা করুন।",
     };
   }
 }
-export async function reviewRecharge(key: string, approve: boolean) {
+export async function reviewRecharge(
+  key: string,
+  approve: boolean,
+  amountInput?: string,
+  reasonInput = "",
+) {
   const id = await userId();
   await walletTransaction(async (tx) => {
     const admin = await tx.user.findUnique({
@@ -172,13 +174,32 @@ export async function reviewRecharge(key: string, approve: boolean) {
       r.amount > 5000000
     )
       throw new WalletError("Invalid amount");
+    if (
+      typeof r.userId !== "string" ||
+      key !== `wallet:recharge:${r.userId}:${r.trx}`
+    )
+      throw new WalletError("আবেদনের পরিচয় সঠিক নয়।");
+    const approvedAmount = approve
+      ? amountInput === undefined
+        ? r.amount
+        : rechargeApprovalAmount(amountInput)
+      : 0;
+    const reason = reasonInput.trim();
+    if (
+      reason.length > 500 ||
+      (approve && approvedAmount !== r.amount && reason.length < 5)
+    )
+      throw new WalletError("পরিমাণ পরিবর্তনের কারণ লিখুন (৫–৫০০ অক্ষর)।");
     const a = await account(tx, r.userId);
+    if (a.admin) throw new WalletError("ADMIN-এর recharge প্রয়োজন নেই।");
+    if (approve && !Number.isSafeInteger(a.balance + approvedAmount))
+      throw new WalletError("Balance সীমা অতিক্রম করেছে।");
     if (approve) {
       await tx.setting.update({
         where: { key: `wallet:account:${r.userId}` },
         data: {
           value: JSON.stringify({
-            balance: a.balance + r.amount,
+            balance: a.balance + approvedAmount,
             bonus: a.bonus,
           }),
         },
@@ -190,6 +211,10 @@ export async function reviewRecharge(key: string, approve: boolean) {
         value: JSON.stringify({
           ...r,
           status: approve ? "APPROVED" : "REJECTED",
+          approvedAmount,
+          requestedAmount: r.amount,
+          tid: teacherTid(r.userId),
+          reviewReason: reason,
           reviewer: id,
           reviewedAt: new Date().toISOString(),
         }),
@@ -198,6 +223,7 @@ export async function reviewRecharge(key: string, approve: boolean) {
   });
   revalidatePath("/wallet");
   revalidatePath("/admin/wallet");
+  revalidatePath("/dashboard");
 }
 
 export async function checkQuestionAccess(raw: unknown) {
@@ -216,6 +242,38 @@ export async function checkQuestionAccess(raw: unknown) {
     return {
       ok: false,
       error: "প্রশ্নের payment যাচাই হয়নি। আবার চেষ্টা করুন।",
+    };
+  }
+}
+
+export async function reviewRechargeForm(
+  _previous: { ok: boolean; message: string },
+  form: FormData,
+): Promise<{ ok: boolean; message: string }> {
+  try {
+    const decision = form.get("decision");
+    if (decision !== "approve" && decision !== "reject")
+      throw new WalletError("সিদ্ধান্ত নির্বাচন করুন।");
+    await reviewRecharge(
+      String(form.get("requestKey") || ""),
+      decision === "approve",
+      String(form.get("amount") || ""),
+      String(form.get("reason") || ""),
+    );
+    return {
+      ok: true,
+      message:
+        decision === "approve"
+          ? "ব্যালেন্স যোগ হয়েছে।"
+          : "আবেদন প্রত্যাখ্যান করা হয়েছে।",
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof WalletError
+          ? error.message
+          : "আবেদন যাচাই হয়নি। আবার চেষ্টা করুন।",
     };
   }
 }

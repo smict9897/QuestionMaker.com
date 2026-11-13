@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { formatMoney } from "@/lib/wallet";
+import { formatMoney, teacherTid } from "@/lib/wallet";
 import {
   workspaceSummary,
   safeWalletRecord,
@@ -66,6 +66,9 @@ export default async function WalletPage() {
           <h1 style={{ fontSize: "1.8rem", fontWeight: 800 }}>আমার ওয়ালেট</h1>
           <Link href="/dashboard">ড্যাশবোর্ডে ফিরুন →</Link>
         </div>
+        <p className="mb-4">
+          আপনার TID: <strong>{teacherTid(s.user.id)}</strong>
+        </p>
         <section className="tw-wallet-stats">
           <div className="tw-stats">
             <div className="tw-stat">
@@ -149,7 +152,11 @@ export default async function WalletPage() {
                       </td>
                       <td>
                         {Number.isSafeInteger(r.amount)
-                          ? formatMoney(r.amount)
+                          ? formatMoney(
+                              r.status === "APPROVED"
+                                ? (r.approvedAmount ?? r.amount)
+                                : r.amount,
+                            )
                           : "—"}
                       </td>
                       <td>
@@ -194,7 +201,11 @@ export default async function WalletPage() {
                       <td>{String(r.questionId || "—")}</td>
                       <td>
                         {Number.isSafeInteger(r.amount)
-                          ? formatMoney(r.amount)
+                          ? formatMoney(
+                              r.status === "APPROVED"
+                                ? (r.approvedAmount ?? r.amount)
+                                : r.amount,
+                            )
                           : "—"}
                       </td>
                     </tr>

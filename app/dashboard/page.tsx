@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { formatMoney } from "@/lib/wallet";
+import { formatMoney, teacherTid } from "@/lib/wallet";
 import { workspaceSummary } from "@/lib/workspace-summary";
 import TeacherOnboarding from "@/components/teacher-onboarding";
 import TeacherWorkspace, {
@@ -88,6 +88,9 @@ export default async function Dashboard({
           <span className="tw-eyebrow">আপনার প্রশ্ন তৈরির কর্মক্ষেত্র</span>
           <p>{greeting()},</p>
           <h1>{user.name || "স্বাগতম"}</h1>
+          <p className="tw-muted">
+            আপনার TID: <strong>{teacherTid(user.id)}</strong>
+          </p>
           <p>{profile?.institution || "শিক্ষাদান ও প্রস্তুতি—সবকিছু এক জায়গায়।"}</p>
           <div className="tw-actions">
             <Link href="/#start" className="tw-primary">
@@ -143,6 +146,16 @@ export default async function Dashboard({
             হোম <ArrowUpRight size={15} style={{ display: "inline" }} />
           </Link>
         </div>
+        <section className="tw-cards" aria-label="প্রশ্নপত্র তৈরির দুটি মাধ্যম">
+          <Link className="tw-feature tw-green" href="/question-builder">
+            <h3>ডাটাবেজ থেকে প্রশ্নপত্র তৈরি করুন</h3>
+            <p>বিষয় ও অধ্যায় অনুযায়ী প্রশ্ন বেছে সাজান।</p>
+          </Link>
+          <Link className="tw-feature tw-purple" href="/ready-papers">
+            <h3>পিডিএফ থেকে প্রশ্নপত্র তৈরি করুন</h3>
+            <p>বোর্ড ও স্কুলের PDF থেকে প্রশ্ন বেছে সাজান।</p>
+          </Link>
+        </section>
         <WorkspaceCards />
         <section className="tw-panel">
           <h2>আপনার অ্যাকাউন্ট, এক নজরে</h2>
