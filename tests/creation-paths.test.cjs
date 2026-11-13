@@ -37,14 +37,14 @@ test("creation cards render accessible native links to the existing workflows", 
   ])
     assert.ok(html.includes(text));
   assert.match(html, /href="\/ready-papers"/);
-  assert.match(html, /href="#start"/);
+  assert.match(html, /href="\/question-builder"/);
   assert.match(html, /aria-labelledby="creation-heading"/);
   assert.equal((html.match(/<h1/g) || []).length, 1);
 });
-test("entry cards precede the unchanged selector, demo and real statistics", () => {
+test("entry cards lead directly to demo and statistics, with the legacy selector below", () => {
   const page = fs.readFileSync("app/page.tsx", "utf8");
   assert.ok(page.indexOf("<CreationPaths") < page.indexOf("<HomeStarter"));
-  assert.ok(page.indexOf("<HomeStarter") < page.indexOf("<PaperAnimation"));
+  assert.ok(page.indexOf("<HomeStats") < page.indexOf("<HomeStarter"));
   assert.ok(page.indexOf("<PaperAnimation") < page.indexOf("<HomeStats"));
   const selector = fs.readFileSync(
     "components/home/home-workspace.tsx",
@@ -61,4 +61,12 @@ test("shared chrome theme is screen scoped and honors reduced motion", () => {
   assert.match(css, /focus-visible/);
   assert.match(css, /grid-template-columns:\s*1fr/);
   assert.doesNotMatch(css, /(?:^|\n)\s*(?:input|button|article|\.a4)\s*\{/);
+});
+
+test("mobile homepage preserves reference two-card composition and native zoom", () => {
+  const css = fs.readFileSync("components/home/mobile-home.css", "utf8");
+  assert.match(css, /@media screen and \(max-width: 640px\)/);
+  assert.match(css, /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.doesNotMatch(css, /(?:zoom|transform):/);
+  assert.match(fs.readFileSync("app/layout.tsx", "utf8"), /import "@\/components\/home\/mobile-home.css"/);
 });

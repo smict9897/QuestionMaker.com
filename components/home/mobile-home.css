@@ -1,0 +1,100 @@
+/* The mobile entry keeps the reference's two-card composition. No viewport
+   scaling: native browser zoom, accessible links and live demo stay intact. */
+@media screen and (max-width: 640px) {
+  .qm-app .qk-home .hm-hero-stack {
+    padding: 20px 10px;
+    gap: 18px;
+  }
+  .qm-app .qk-home .hm-creation {
+    margin-bottom: 0;
+  }
+  .qm-app .qk-home .hm-creation-heading {
+    margin-bottom: 18px;
+    gap: 8px;
+  }
+  .qm-app .qk-home .hm-creation-heading h1 {
+    font-size: clamp(25px, 6.4vw, 32px);
+  }
+  .qm-app .qk-home .hm-creation-heading p {
+    font-size: 14px;
+  }
+  .qm-app .qk-home .hm-creation-eyebrow {
+    font-size: 9px;
+    letter-spacing: 0.04em;
+  }
+  .qm-app .qk-home .hm-creation-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .qm-app .qk-home .hm-path-card {
+    padding: 18px 12px;
+    border-radius: 18px;
+    min-width: 0;
+  }
+  .qm-app .qk-home .hm-path-top {
+    gap: 7px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .qm-app .qk-home .hm-path-icon {
+    width: 39px;
+    height: 42px;
+    border-radius: 12px;
+  }
+  .qm-app .qk-home .hm-path-icon svg {
+    width: 24px;
+  }
+  .qm-app .qk-home .hm-path-kind {
+    font-size: 8px;
+    letter-spacing: 0.03em;
+  }
+  .qm-app .qk-home .hm-path-arrow {
+    width: 18px;
+  }
+  .qm-app .qk-home .hm-path-card h2 {
+    font-size: clamp(18px, 4.8vw, 26px);
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+  }
+  .qm-app .qk-home .hm-path-card > p {
+    font-size: 13px;
+    line-height: 1.85;
+    margin-bottom: 22px;
+  }
+  .qm-app .qk-home .hm-path-bottom {
+    gap: 8px;
+    padding-top: 14px;
+  }
+  .qm-app .qk-home .hm-path-bottom > span {
+    font-size: 10px;
+  }
+  .qm-app .qk-home .hm-path-bottom strong {
+    font-size: 12px;
+    gap: 6px;
+  }
+  .qm-app .qk-home .hm-brand {
+    min-width: 0;
+    gap: 6px;
+  }
+  .qm-app .qk-home .hm-brand > a {
+    min-width: 0;
+  }
+  .qm-app .qk-home .hm-topbar {
+    height: auto;
+    min-height: 68px;
+    flex-wrap: wrap;
+    padding: 10px;
+  }
+  .qm-app .qk-home .hm-account {
+    margin-left: auto;
+    gap: 6px;
+  }
+  .qm-app .qk-home .hm-account > span {
+    display: none;
+  }
+  .qm-app .qk-home .hm-account :is(.hm-primary, .hm-outline) {
+    font-size: 12px;
+    min-height: 40px;
+    padding: 8px 10px;
+  }
+}
