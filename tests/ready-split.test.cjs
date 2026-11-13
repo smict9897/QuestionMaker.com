@@ -113,7 +113,8 @@ test("worker pauses for upload acknowledgement; heavy split code is lazy and upl
   assert.match(client, /resumeReadyPart\(part.id\)/);
   assert.match(client, /worker\?\.terminate/);
   assert.match(admin, /await import\("@\/lib\/ready-auto-import"\)/);
-  assert.match(route, /await admin\(\)/);
+  assert.match(route, /await readyUploadActor\(\)/);
+  assert.match(route, /canManagePending\(actor, p\)/);
   assert.match(route, /maximumSizeInBytes: 10_000_000/);
   assert.match(route, /addRandomSuffix: false/);
 });

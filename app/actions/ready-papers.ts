@@ -104,28 +104,34 @@ export async function updateReadyPaper(
   await admin();
   try {
     z.string().uuid().parse(id);
-    const row = await db.setting.findUnique({
-      where: { key: READY_PREFIX + id },
-    });
-    const old = row && parseReady(row.value);
-    if (!old || old.deletedAt) throw Error();
-    const record = readyRecordSchema.parse({
-      ...old,
-      ...readyMetadataSchema.parse(raw),
-      presets: presets === undefined ? old.presets : presets,
-    });
-    if (
-      (record.grade !== old.grade || record.subject !== old.subject) &&
-      !validReadyPair(record.grade, record.subject)
-    )
-      throw Error("Invalid class/subject");
-    await db.setting.update({
-      where: { key: READY_PREFIX + id },
-      data: { value: JSON.stringify(record) },
+    await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtext(${id}))`;
+      const row = await tx.setting.findUnique({
+        where: { key: READY_PREFIX + id },
+      });
+      const old = row && parseReady(row.value);
+      if (!old || old.deletedAt) throw Error();
+      const record = readyRecordSchema.parse({
+        ...old,
+        ...readyMetadataSchema.parse(raw),
+        presets: presets === undefined ? old.presets : presets,
+      });
+      if (
+        (record.grade !== old.grade || record.subject !== old.subject) &&
+        !validReadyPair(record.grade, record.subject)
+      )
+        throw Error("Invalid class/subject");
+      if (old.ownerId && record.published && old.moderation !== "approved")
+        throw Error("Approval required");
+      await tx.setting.update({
+        where: { key: READY_PREFIX + id },
+        data: { value: JSON.stringify(record) },
+      });
     });
     revalidatePath("/ready-papers");
     revalidatePath(`/ready-papers/${id}`);
     revalidatePath("/admin/ready-papers");
+    revalidatePath("/ready-papers/upload");
     return { ok: true as const };
   } catch {
     return { ok: false as const, error: "Save হয়নি। তথ্য আবার যাচাই করুন।" };
@@ -137,23 +143,27 @@ export async function deleteReadyPaper(id: string) {
   await admin();
   try {
     z.string().uuid().parse(id);
-    const row = await db.setting.findUnique({
-      where: { key: READY_PREFIX + id },
-    });
-    const old = row && parseReady(row.value);
-    if (!old) return { ok: false as const, error: "প্রশ্নপত্র পাওয়া যায়নি।" };
-    await db.setting.update({
-      where: { key: READY_PREFIX + id },
-      data: {
-        value: JSON.stringify({
-          ...old,
-          published: false,
-          deletedAt: old.deletedAt || new Date().toISOString(),
-        }),
-      },
+    await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtext(${id}))`;
+      const row = await tx.setting.findUnique({
+        where: { key: READY_PREFIX + id },
+      });
+      const old = row && parseReady(row.value);
+      if (!old) throw Error("Missing");
+      await tx.setting.update({
+        where: { key: READY_PREFIX + id },
+        data: {
+          value: JSON.stringify({
+            ...old,
+            published: false,
+            deletedAt: old.deletedAt || new Date().toISOString(),
+          }),
+        },
+      });
     });
     revalidatePath("/ready-papers");
     revalidatePath("/admin/ready-papers");
+    revalidatePath("/ready-papers/upload");
     revalidatePath(`/ready-papers/${id}`);
     return { ok: true as const };
   } catch {

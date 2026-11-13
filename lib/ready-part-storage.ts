@@ -1,3 +1,4 @@
+import { UPLOAD_INDEX, REVIEW_INDEX } from "./ready-submissions";
 import { db } from "@/lib/db";
 import { head } from "@vercel/blob";
 import { PDFDocument } from "pdf-lib";
@@ -63,6 +64,10 @@ export async function finalizeReadyPart(id: string, url: string) {
     throw Error("Invalid page count");
   const record = readyRecordSchema.parse({
     ...pending.meta,
+    ownerId: pending.ownerId,
+    uploaderName: pending.uploaderName,
+    moderation: pending.ownerId ? "pending" : undefined,
+    published: pending.ownerId ? false : pending.meta.published,
     id,
     url,
     at: pending.at,
@@ -73,9 +78,22 @@ export async function finalizeReadyPart(id: string, url: string) {
     pageStart: pending.start,
     pageEnd: pending.end,
   });
-  await db.setting.upsert({
-    where: { key: READY_PREFIX + id },
-    create: { key: READY_PREFIX + id, value: JSON.stringify(record) },
-    update: {},
+  await db.$transaction(async (tx) => {
+    await tx.setting.upsert({
+      where: { key: READY_PREFIX + id },
+      create: { key: READY_PREFIX + id, value: JSON.stringify(record) },
+      update: {},
+    });
+    if (record.ownerId) {
+      for (const key of [
+        `${UPLOAD_INDEX}${record.ownerId}:${id}`,
+        `${REVIEW_INDEX}${id}`,
+      ])
+        await tx.setting.upsert({
+          where: { key },
+          create: { key, value: JSON.stringify({ id }) },
+          update: {},
+        });
+    }
   });
 }

@@ -73,6 +73,12 @@ export const readyMetadataSchema = z.object({
 export const readyRecordSchema = readyMetadataSchema.extend({
   id: z.string().uuid(),
   deletedAt: z.string().datetime().optional(),
+  ownerId: z.string().min(1).max(200).optional(),
+  uploaderName: z.string().max(120).optional(),
+  moderation: z.enum(["pending", "approved", "changes", "rejected"]).optional(),
+  reviewNote: z.string().max(1000).optional(),
+  reviewedBy: z.string().max(200).optional(),
+  reviewedAt: z.string().datetime().optional(),
   url: z
     .string()
     .url()

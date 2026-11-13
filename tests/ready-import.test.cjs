@@ -77,13 +77,34 @@ function setup() {
     BlobNotFoundError,
   };
   const storage = load("lib/ready-part-storage.ts", {
-    "@/lib/db": { db: { setting } },
+    "@/lib/db": {
+      db: {
+        setting,
+        $transaction: async (fn) => fn({ setting, $queryRaw: async () => {} }),
+      },
+    },
     "@vercel/blob": blob,
     "./ready-papers": model,
+    "./ready-submissions": {
+      UPLOAD_INDEX: "readyuploadowner:v1:",
+      REVIEW_INDEX: "readysubmission:v1:",
+    },
   });
   const action = load("app/actions/ready-import.ts", {
-    "@/lib/db": { db: { setting } },
+    "@/lib/db": {
+      db: {
+        setting,
+        $transaction: async (fn) => fn({ setting, $queryRaw: async () => {} }),
+      },
+    },
     "@/lib/guard": guard,
+    "@/lib/ready-submissions": {
+      readyUploadActor: async () => {
+        await guard.admin();
+        return { id: "admin", admin: true };
+      },
+      canManagePending: (actor, p) => actor.admin || actor.id === p.ownerId,
+    },
     "@vercel/blob": blob,
     "@/lib/ready-papers": model,
     "@/lib/ready-paper-catalog": { validReadyPair: () => true },

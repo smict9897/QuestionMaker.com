@@ -1,5 +1,6 @@
+import { READY_PREFIX } from "@/lib/ready-papers";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
-import { admin } from "@/lib/guard";
+import { readyUploadActor, canManagePending } from "@/lib/ready-submissions";
 import { db } from "@/lib/db";
 import { PENDING_PART, finalizeReadyPart } from "@/lib/ready-part-storage";
 export const runtime = "nodejs";
@@ -11,7 +12,7 @@ export async function POST(request: Request) {
       request,
       body,
       onBeforeGenerateToken: async (pathname) => {
-        await admin();
+        const actor = await readyUploadActor();
         const match = /^ready-papers\/parts\/([a-f0-9-]{36})\.pdf$/.exec(
           pathname,
         );
@@ -20,7 +21,12 @@ export async function POST(request: Request) {
           where: { key: PENDING_PART + match[1] },
         });
         if (!row) throw Error("Missing session");
+        const existing = await db.setting.findUnique({
+          where: { key: READY_PREFIX + match[1] },
+        });
+        if (existing) throw Error("Already finalized");
         const p = JSON.parse(row.value);
+        if (!canManagePending(actor, p)) throw Error("Not owner");
         if (p.path !== pathname || Date.now() - Date.parse(p.at) > 3600000)
           throw Error("Expired session");
         return {

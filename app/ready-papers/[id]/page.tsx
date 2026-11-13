@@ -1,3 +1,4 @@
+import { canReadReady } from "@/lib/ready-submissions";
 import { getReadyPurchase } from "@/app/actions/ready-commerce";
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
@@ -31,7 +32,7 @@ export default async function Paper({
   const paper = row && parseReady(row.value);
   if (
     !paper ||
-    (!paper.published && s.user.role !== "ADMIN" && !initialPurchase)
+    !canReadReady(paper, s.user.id, s.user.role === "ADMIN", !!initialPurchase)
   )
     notFound();
   const isAdminPreset =
