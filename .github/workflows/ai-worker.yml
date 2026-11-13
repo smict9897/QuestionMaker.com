@@ -1,10 +1,8 @@
 name: AI Task Worker
 
 on:
-  schedule:
-    # প্রতি ৫ মিনিট পর পর চলবে (UTC Time)
-    - cron: '*/5 * * * *'
-  workflow_dispatch: # চাইলে ম্যানুয়ালিও রান করা যাবে
+  # স্বয়ংক্রিয় schedule আপাতত বন্ধ। পুনরায় চালু করতে schedule ফিরিয়ে দিন।
+  workflow_dispatch: # প্রয়োজন হলে শুধু ম্যানুয়ালি চালানো যাবে
 
 jobs:
   run-worker:
