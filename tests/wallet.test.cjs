@@ -115,6 +115,10 @@ function setup() {
     actions: load("app/actions/wallet.ts"),
     transfers: load("app/actions/wallet-transfer.ts"),
     withdrawals: load("app/actions/wallet-withdrawal.ts"),
+    handovers: load("app/actions/withdrawal-handover.ts"),
+    setRole: (id, role) => {
+      users[id].role = role;
+    },
     purchases: load("app/actions/marketplace-purchase.ts"),
     disputes: load("app/actions/marketplace-refund.ts"),
     refunds: load("lib/marketplace-refund.ts"),
@@ -1458,4 +1462,215 @@ test("corrupt limits fail closed for new financial requests without touching wal
     false,
   );
   assert.deepEqual(y.store, old);
+});
+
+async function handoverSetup() {
+  const x = await withdrawalSetup();
+  await x.withdrawals.requestWithdrawal({}, withdrawForm());
+  const key = [...x.store.keys()].find((k) =>
+    k.startsWith("wallet:withdrawal:v1:"),
+  );
+  x.setSession("a");
+  assert.equal(
+    (await x.withdrawals.claimWithdrawal({}, claimForm(key))).ok,
+    true,
+  );
+  return {
+    ...x,
+    key,
+    pointer: key.replace(
+      "wallet:withdrawal:v1:",
+      "wallet:withdrawal-handover:v1:",
+    ),
+  };
+}
+function handoverForm(x, mode = "OFFER", patch = {}) {
+  const f = new FormData(),
+    r = JSON.parse(x.store.get(x.key)),
+    p = x.store.has(x.pointer) ? JSON.parse(x.store.get(x.pointer)) : null;
+  for (const [k, v] of Object.entries({
+    key: x.key,
+    mode,
+    to: "b",
+    note: "Payment stopped and external statement checked",
+    claimedAt: r.claimedAt,
+    claimHandoverId: r.handoverId || "",
+    handoverId: p?.id || "",
+    confirmed: "on",
+    ...patch,
+  }))
+    f.set(k, v);
+  return f;
+}
+test("two-party handover freezes settlement until acceptance, updates claim and keeps immutable audit without changing funds", async () => {
+  const x = await handoverSetup(),
+    before = x.store.get("wallet:account:u");
+  assert.equal(
+    (await x.handovers.manageWithdrawalHandover({}, handoverForm(x))).ok,
+    true,
+  );
+  assert.equal(
+    (await x.withdrawals.reviewWithdrawal({}, withdrawalReview(x.key, "PAID")))
+      .ok,
+    false,
+  );
+  assert.equal(
+    (await x.withdrawals.claimWithdrawal({}, claimForm(x.key))).ok,
+    false,
+  );
+  x.setSession("b");
+  assert.equal(
+    (await x.handovers.manageWithdrawalHandover({}, handoverForm(x, "ACCEPT")))
+      .ok,
+    true,
+  );
+  const r = JSON.parse(x.store.get(x.key));
+  assert.equal(r.claimedBy, "b");
+  assert.equal(r.handoverId, JSON.parse(x.store.get(x.pointer)).id);
+  assert.equal(x.store.get("wallet:account:u"), before);
+  assert.equal(
+    [...x.store.keys()].filter((k) =>
+      k.startsWith("wallet:withdrawal-handover-audit:"),
+    ).length,
+    2,
+  );
+  // A stale pre-handover form cannot settle even when actor now owns the claim.
+  assert.equal(
+    (await x.withdrawals.reviewWithdrawal({}, withdrawalReview(x.key, "PAID")))
+      .ok,
+    false,
+  );
+  const review = withdrawalReview(x.key, "PAID");
+  review.set("handoverId", r.handoverId);
+  assert.equal((await x.withdrawals.reviewWithdrawal({}, review)).ok, true);
+  x.setSession("a");
+  assert.equal((await x.withdrawals.reviewWithdrawal({}, review)).ok, false);
+});
+test("only current claimant can offer/cancel; only designated fresh ADMIN can accept", async () => {
+  const x = await handoverSetup();
+  x.setSession("b");
+  assert.equal(
+    (await x.handovers.manageWithdrawalHandover({}, handoverForm(x))).ok,
+    false,
+  );
+  x.setSession("a");
+  for (const patch of [
+    { to: "a" },
+    { to: "v" },
+    { to: "unknown" },
+    { confirmed: "" },
+    { note: "short" },
+    { claimedAt: "2020-01-01T00:00:00Z" },
+  ])
+    assert.equal(
+      (
+        await x.handovers.manageWithdrawalHandover(
+          {},
+          handoverForm(x, "OFFER", patch),
+        )
+      ).ok,
+      false,
+    );
+  assert.equal(
+    (await x.handovers.manageWithdrawalHandover({}, handoverForm(x))).ok,
+    true,
+  );
+  assert.equal(
+    (await x.handovers.manageWithdrawalHandover({}, handoverForm(x, "ACCEPT")))
+      .ok,
+    false,
+  );
+  x.setSession("b");
+  assert.equal(
+    (await x.handovers.manageWithdrawalHandover({}, handoverForm(x, "CANCEL")))
+      .ok,
+    false,
+  );
+  x.setRole("b", "TEACHER");
+  assert.equal(
+    (await x.handovers.manageWithdrawalHandover({}, handoverForm(x, "ACCEPT")))
+      .ok,
+    false,
+  );
+  x.setSession("a");
+  assert.equal(
+    (await x.handovers.manageWithdrawalHandover({}, handoverForm(x, "CANCEL")))
+      .ok,
+    true,
+  );
+  assert.equal(JSON.parse(x.store.get(x.key)).claimedBy, "a");
+  assert.equal(
+    (await x.withdrawals.reviewWithdrawal({}, withdrawalReview(x.key))).ok,
+    true,
+  );
+});
+test("failed handover audit/claim writes roll back claim, pointer and funds", async () => {
+  for (const prefix of [
+    "wallet:withdrawal-handover-audit:",
+    "wallet:withdrawal-claim:",
+    "wallet:withdrawal:v1:",
+  ]) {
+    const x = await handoverSetup();
+    await x.handovers.manageWithdrawalHandover({}, handoverForm(x));
+    const before = new Map(x.store);
+    x.setSession("b");
+    x.setFail(prefix);
+    assert.equal(
+      (
+        await x.handovers.manageWithdrawalHandover(
+          {},
+          handoverForm(x, "ACCEPT"),
+        )
+      ).ok,
+      false,
+    );
+    assert.deepEqual(x.store, before);
+  }
+});
+test("stale/cancelled handover and changed hold/claim audit cannot transfer authority", async () => {
+  const x = await handoverSetup();
+  await x.handovers.manageWithdrawalHandover({}, handoverForm(x));
+  const stale = handoverForm(x, "ACCEPT");
+  await x.handovers.manageWithdrawalHandover({}, handoverForm(x, "CANCEL"));
+  await x.handovers.manageWithdrawalHandover({}, handoverForm(x));
+  x.setSession("b");
+  assert.equal(
+    (await x.handovers.manageWithdrawalHandover({}, stale)).ok,
+    false,
+  );
+  const active = "wallet:withdrawal-active:v1:u";
+  x.store.set(active, "");
+  assert.equal(
+    (await x.handovers.manageWithdrawalHandover({}, handoverForm(x, "ACCEPT")))
+      .ok,
+    false,
+  );
+  x.store.set(active, x.key);
+  x.store.set(
+    "wallet:withdrawal-claim:v1:u:" + JSON.parse(x.store.get(x.key)).id,
+    "{}",
+  );
+  assert.equal(
+    (await x.handovers.manageWithdrawalHandover({}, handoverForm(x, "ACCEPT")))
+      .ok,
+    false,
+  );
+});
+test("concurrent acceptance commits one transition/audit and no release or duplicate payout", async () => {
+  const x = await handoverSetup();
+  await x.handovers.manageWithdrawalHandover({}, handoverForm(x));
+  x.setSession("b");
+  const before = x.store.get("wallet:account:u"),
+    f = handoverForm(x, "ACCEPT");
+  const results = await Promise.all(
+    Array.from({ length: 8 }, () =>
+      x.handovers.manageWithdrawalHandover({}, f),
+    ),
+  );
+  assert.equal(results.filter((r) => r.ok).length, 1);
+  assert.equal(x.store.get("wallet:account:u"), before);
+  assert.equal(
+    [...x.store.keys()].filter((k) => k.endsWith(":ACCEPT")).length,
+    1,
+  );
 });
