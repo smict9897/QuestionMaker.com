@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { readWalletLimits } from "@/lib/wallet-limits";
 import { ensureWallet, formatMoney } from "@/lib/wallet";
 import { WithdrawalRequest } from "@/components/wallet-withdrawal";
 import type { Withdrawal } from "@/app/actions/wallet-withdrawal";
@@ -13,6 +14,7 @@ export default async function WithdrawPage() {
   if (!id) redirect("/login?next=/wallet/withdraw");
   const wallet = await ensureWallet(id);
   if (wallet.admin) redirect("/wallet");
+  const limits = await readWalletLimits(db);
   const rows = await db.setting.findMany({
     where: { key: { startsWith: `wallet:withdrawal:v1:${id}:` } },
     orderBy: { key: "desc" },
@@ -30,8 +32,9 @@ export default async function WithdrawPage() {
       <h1 className="text-2xl font-bold">বিক্রির আয় উত্তোলন</h1>
       <p>
         অবশিষ্ট নিজের বিক্রির আয়:{" "}
-        <strong>{formatMoney(wallet.funds.earnings)}</strong>। ন্যূনতম ৳১০০।
-        বোনাস, রিচার্জ ও Send Money-তে পাওয়া টাকা উত্তোলনযোগ্য নয়।
+        <strong>{formatMoney(wallet.funds.earnings)}</strong>। ন্যূনতম ৳১০০। প্রতি
+        অনুরোধে সর্বোচ্চ {formatMoney(limits.withdrawalMax)}। বোনাস, রিচার্জ ও Send
+        Money-তে পাওয়া টাকা উত্তোলনযোগ্য নয়।
       </p>
       <p>
         অনুরোধে টাকা ব্যবহারযোগ্য ব্যালেন্স থেকে হোল্ড হবে। অ্যাডমিন ম্যানুয়ালি bKash-এ
@@ -43,7 +46,10 @@ export default async function WithdrawPage() {
       {active?.value ? (
         <p role="status">আপনার একটি অনুরোধ নিষ্পত্তির অপেক্ষায় আছে।</p>
       ) : wallet.funds.earnings >= 10000 ? (
-        <WithdrawalRequest requestId={randomUUID()} />
+        <WithdrawalRequest
+          requestId={randomUUID()}
+          maximum={limits.withdrawalMax}
+        />
       ) : (
         <p>অনুরোধ করতে অন্তত ৳১০০ নিজের অবশিষ্ট বিক্রির আয় প্রয়োজন।</p>
       )}

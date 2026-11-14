@@ -110,6 +110,8 @@ function setup() {
   }
   return {
     wallet: load("lib/wallet.ts"),
+    limits: load("lib/wallet-limits.ts"),
+    limitsActions: load("app/actions/wallet-limits.ts"),
     actions: load("app/actions/wallet.ts"),
     transfers: load("app/actions/wallet-transfer.ts"),
     withdrawals: load("app/actions/wallet-withdrawal.ts"),
@@ -1220,4 +1222,240 @@ test("claim audit mismatch or removed hold blocks payment recording without chan
     );
     assert.deepEqual(x.store, before);
   }
+});
+function limitsForm(
+  revision = "0",
+  transfer = "5000",
+  withdraw = "50000",
+  lookups = "30",
+) {
+  const f = new FormData();
+  f.set("revision", revision);
+  f.set("transferDaily", transfer);
+  f.set("withdrawalMax", withdraw);
+  f.set("recipientLookups", lookups);
+  f.set("note", "Verified conservative financial operating limits.");
+  f.set("confirmed", "on");
+  return f;
+}
+test("wallet limits defaults preserve old behavior and reject malformed persisted configs", () => {
+  const x = setup();
+  assert.deepEqual(
+    x.limits.parseWalletLimits(null),
+    x.limits.DEFAULT_WALLET_LIMITS,
+  );
+  for (const raw of [
+    "{}",
+    "null",
+    "broken",
+    JSON.stringify({
+      ...x.limits.DEFAULT_WALLET_LIMITS,
+      revision: 1,
+      updatedBy: "a",
+      updatedAt: new Date().toISOString(),
+      transferDaily: 0,
+    }),
+    JSON.stringify({
+      ...x.limits.DEFAULT_WALLET_LIMITS,
+      revision: 1,
+      updatedBy: "a",
+      updatedAt: new Date().toISOString(),
+      withdrawalMax: 9999,
+    }),
+  ])
+    assert.throws(() => x.limits.parseWalletLimits(raw));
+  for (const raw of ["-1", "1e3", "NaN", "100.001", "50001"])
+    assert.throws(() => x.limits.limitMoney(raw, 100, 5000000));
+});
+test("only fresh admin with consent and valid inputs may configure hard-bounded limits", async () => {
+  const x = setup();
+  assert.equal(
+    (await x.limitsActions.updateWalletLimits({}, limitsForm())).ok,
+    false,
+  );
+  x.setSession("");
+  assert.equal(
+    (await x.limitsActions.updateWalletLimits({}, limitsForm())).ok,
+    false,
+  );
+  x.setSession("a");
+  for (const [key, value] of [
+    ["confirmed", ""],
+    ["withdrawalMax", "99.99"],
+    ["transferDaily", "50001"],
+    ["recipientLookups", "101"],
+    ["recipientLookups", "1.5"],
+    ["revision", "NaN"],
+    ["note", "short"],
+  ]) {
+    const f = limitsForm();
+    f.set(key, value);
+    assert.equal(
+      (await x.limitsActions.updateWalletLimits({}, f)).ok,
+      false,
+      key,
+    );
+  }
+  assert.equal(x.store.size, 0);
+  assert.equal(
+    (await x.limitsActions.updateWalletLimits({}, limitsForm())).ok,
+    true,
+  );
+  assert.equal(
+    x.limits.parseWalletLimits(x.store.get(x.limits.WALLET_LIMITS_KEY))
+      .revision,
+    1,
+  );
+});
+test("concurrent limit edits accept one revision and preserve immutable before/after audit", async () => {
+  const x = setup();
+  x.setSession("a");
+  const result = await Promise.all(
+    Array.from({ length: 8 }, () =>
+      x.limitsActions.updateWalletLimits(
+        {},
+        limitsForm("0", "1000", "500", "5"),
+      ),
+    ),
+  );
+  assert.equal(result.filter((r) => r.ok).length, 1);
+  const key = "wallet:limits-audit:v1:000000000001",
+    audit = JSON.parse(x.store.get(key));
+  assert.equal(audit.before.revision, 0);
+  assert.equal(audit.after.transferDaily, 100000);
+  assert.equal(audit.after.updatedBy, "a");
+  x.setSession("b");
+  assert.equal(
+    (
+      await x.limitsActions.updateWalletLimits(
+        {},
+        limitsForm("1", "2000", "1000", "10"),
+      )
+    ).ok,
+    true,
+  );
+  assert.equal(x.store.get(key), JSON.stringify(audit));
+  assert.equal(
+    JSON.parse(x.store.get("wallet:limits-audit:v1:000000000002")).after
+      .updatedBy,
+    "b",
+  );
+});
+test("limit audit or config write failure rolls back both records", async () => {
+  for (const failure of ["wallet:limits-audit:v1:", "wallet:limits:v1"]) {
+    const x = setup();
+    x.setSession("a");
+    const before = new Map(x.store);
+    x.setFail(failure);
+    assert.equal(
+      (await x.limitsActions.updateWalletLimits({}, limitsForm())).ok,
+      false,
+    );
+    assert.deepEqual(x.store, before);
+  }
+});
+test("latest lower Send Money limit blocks existing quote; daily lookup reduction does not reset usage", async () => {
+  const x = await transferSetup();
+  const q = await x.transfers.prepareWalletTransfer(
+    {},
+    transferForm(x.wallet.teacherTid("v"), "10"),
+  );
+  assert.equal(q.ok, true);
+  x.setSession("a");
+  assert.equal(
+    (
+      await x.limitsActions.updateWalletLimits(
+        {},
+        limitsForm("0", "5", "100", "1"),
+      )
+    ).ok,
+    true,
+  );
+  x.setSession("u");
+  const before = new Map(x.store),
+    f = new FormData();
+  f.set("quoteId", q.quoteId);
+  f.set("confirmed", "on");
+  assert.equal((await x.transfers.confirmWalletTransfer({}, f)).ok, false);
+  assert.deepEqual(x.store, before);
+  assert.equal(
+    (
+      await x.transfers.prepareWalletTransfer(
+        {},
+        transferForm(x.wallet.teacherTid("v"), "1"),
+      )
+    ).ok,
+    false,
+  );
+});
+test("new withdrawal maximum is enforced, existing hold remains settleable after reduction", async () => {
+  const x = await withdrawalSetup();
+  assert.equal(
+    (await x.withdrawals.requestWithdrawal({}, withdrawForm(undefined, "200")))
+      .ok,
+    true,
+  );
+  const key = [...x.store.keys()].find((k) =>
+    k.startsWith("wallet:withdrawal:v1:"),
+  );
+  x.setSession("a");
+  assert.equal(
+    (
+      await x.limitsActions.updateWalletLimits(
+        {},
+        limitsForm("0", "5000", "100", "30"),
+      )
+    ).ok,
+    true,
+  );
+  assert.equal(
+    (await x.withdrawals.claimWithdrawal({}, claimForm(key))).ok,
+    true,
+  );
+  assert.equal(
+    (await x.withdrawals.reviewWithdrawal({}, withdrawalReview(key))).ok,
+    true,
+  );
+  x.setSession("u");
+  assert.equal(
+    (
+      await x.withdrawals.requestWithdrawal(
+        {},
+        withdrawForm("22222222-2222-2222-2222-222222222222", "200"),
+      )
+    ).ok,
+    false,
+  );
+  assert.equal(
+    (
+      await x.withdrawals.requestWithdrawal(
+        {},
+        withdrawForm("22222222-2222-2222-2222-222222222222", "100"),
+      )
+    ).ok,
+    true,
+  );
+});
+test("corrupt limits fail closed for new financial requests without touching wallets", async () => {
+  const x = await transferSetup();
+  x.store.set(x.limits.WALLET_LIMITS_KEY, "broken");
+  const before = new Map(x.store);
+  assert.equal(
+    (
+      await x.transfers.prepareWalletTransfer(
+        {},
+        transferForm(x.wallet.teacherTid("v"), "1"),
+      )
+    ).ok,
+    false,
+  );
+  assert.deepEqual(x.store, before);
+  const y = await withdrawalSetup();
+  y.store.set(y.limits.WALLET_LIMITS_KEY, "{}");
+  const old = new Map(y.store);
+  assert.equal(
+    (await y.withdrawals.requestWithdrawal({}, withdrawForm())).ok,
+    false,
+  );
+  assert.deepEqual(y.store, old);
 });

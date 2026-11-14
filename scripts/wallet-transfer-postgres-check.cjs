@@ -429,6 +429,45 @@ const fs = require("node:fs"),
     console.log(
       "PASS PostgreSQL refund: forced final receipt failure rolls back both wallets/access/dispute; 8 concurrent approvals refund once to exact original sources and revoke online copy.",
     );
+    session = "u";
+    const pendingForm = new FormData();
+    pendingForm.set("tid", wallet.teacherTid("v"));
+    pendingForm.set("amount", "10");
+    const pending = await transfers.prepareWalletTransfer({}, pendingForm);
+    assert.equal(pending.ok, true);
+    const limitActions = load("app/actions/wallet-limits.ts"),
+      limitLib = load("lib/wallet-limits.ts");
+    const lf = new FormData();
+    lf.set("revision", "0");
+    lf.set("transferDaily", "5");
+    lf.set("withdrawalMax", "100");
+    lf.set("recipientLookups", "1");
+    lf.set("note", "Disposable concurrent limit change verification");
+    lf.set("confirmed", "on");
+    const edits = await Promise.all(
+      Array.from({ length: 8 }, (_, i) => {
+        session = i % 2 ? "a" : "b";
+        return limitActions.updateWalletLimits({}, lf);
+      }),
+    );
+    assert.equal(edits.filter((r) => r.ok).length, 1);
+    assert.equal((await limitLib.readWalletLimits(db)).revision, 1);
+    assert.equal(
+      await db.setting.count({
+        where: { key: { startsWith: "wallet:limits-audit:v1:" } },
+      }),
+      1,
+    );
+    session = "u";
+    const late = new FormData();
+    late.set("quoteId", pending.quoteId);
+    late.set("confirmed", "on");
+    const beforeLate = await wallet.ensureWallet("u");
+    assert.equal((await transfers.confirmWalletTransfer({}, late)).ok, false);
+    assert.deepEqual(await wallet.ensureWallet("u"), beforeLate);
+    console.log(
+      "PASS PostgreSQL configurable limits: 8 concurrent admin edits accept one revision/audit; reduced current cap blocks earlier pending quote without changing balance.",
+    );
     console.log(
       "PASS actual disposable PostgreSQL: advisory-lock bonus once, audited recharge, recipient-history failure rolls back both wallets/ledger, 8 concurrent retries credit once, received funds never become earnings.",
     );
