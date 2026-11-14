@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import Link from "next/link";
+import { resourceCheckoutAvailable } from "@/lib/resource-checkout";
 import { buy } from "@/app/actions/pay";
 import { resourceDestination } from "@/lib/resource-access";
 import { db } from "@/lib/db";
@@ -45,7 +46,7 @@ export default async function Videos() {
               <div key={v.id}>
                 <h2 className="mb-2 font-semibold">{v.title}</h2>
                 <p>৳{v.priceBdt} · পেইড ভিডিও</p>
-                {!paid.has(v.id) && (
+                {!paid.has(v.id) && resourceCheckoutAvailable(v) && (
                   <form action={buy.bind(null, v.id)}>
                     <button className="underline">কিনুন</button>
                   </form>

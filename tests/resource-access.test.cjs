@@ -151,6 +151,7 @@ test("public paid video cards never embed or expose source even without login", 
       },
     },
     "@/app/actions/pay": { buy: async () => {} },
+    "@/lib/resource-checkout": { resourceCheckoutAvailable: () => true },
     "@/auth": { auth: async () => null },
     "@/lib/resource-access": access,
     "@/lib/resource-vault": {
