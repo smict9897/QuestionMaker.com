@@ -26,6 +26,9 @@ export default async function Admin() {
       <Link href="/admin/wallet-limits" className="rounded-xl border p-4">
         Send Money ও উত্তোলনের সীমা নিয়ন্ত্রণ →
       </Link>
+      <Link href="/admin/financial-report" className="rounded-xl border p-4">
+        তারিখভিত্তিক / সর্বমোট আর্থিক রিপোর্ট →
+      </Link>
       {/* 🔔 পেন্ডিং পেমেন্ট সতর্কতা */}
       {pendingPayments > 0 && (
         <Link

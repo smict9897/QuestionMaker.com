@@ -45,17 +45,22 @@ const fs = require("node:fs"),
       const m = new Module(file, module);
       m.paths = module.paths;
       m.require = (n) =>
-        n === "@/lib/db"
-          ? { db }
-          : n === "@/auth"
-            ? { auth: async () => (session ? { user: { id: session } } : null) }
-            : n === "next/cache"
-              ? { revalidatePath() {} }
-              : n === "@/lib/paper-generation"
-                ? { visibleQuestions: () => ({}) }
-                : n.startsWith("@/lib/")
-                  ? load(n.replace("@/", "") + ".ts")
-                  : require(n);
+        n === "server-only"
+          ? {}
+          : n === "@/lib/db"
+            ? { db }
+            : n === "@/auth"
+              ? {
+                  auth: async () =>
+                    session ? { user: { id: session } } : null,
+                }
+              : n === "next/cache"
+                ? { revalidatePath() {} }
+                : n === "@/lib/paper-generation"
+                  ? { visibleQuestions: () => ({}) }
+                  : n.startsWith("@/lib/")
+                    ? load(n.replace("@/", "") + ".ts")
+                    : require(n);
       m._compile(
         ts.transpileModule(fs.readFileSync(file, "utf8"), {
           compilerOptions: {
@@ -467,6 +472,19 @@ const fs = require("node:fs"),
     assert.deepEqual(await wallet.ensureWallet("u"), beforeLate);
     console.log(
       "PASS PostgreSQL configurable limits: 8 concurrent admin edits accept one revision/audit; reduced current cap blocks earlier pending quote without changing balance.",
+    );
+    const reportData = load("lib/wallet-financial-data.ts");
+    await assert.rejects(() => reportData.readFinancialReport("u"));
+    const financial = await reportData.readFinancialReport("a");
+    assert.equal(financial.complete, true);
+    assert.equal(financial.gross.amount, 1001);
+    assert.equal(financial.refunds.amount, 1001);
+    assert.equal(financial.adjusted.amount, 0);
+    assert.equal(financial.rejected.amount, 10000);
+    assert.equal(financial.held.amount, 0);
+    assert.ok(Number.isFinite(Date.parse(financial.asOf)));
+    console.log(
+      "PASS PostgreSQL repeatable-read financial report: nonadmin rejected, original sale/refund reconciled, released hold counted as rejection not payout.",
     );
     console.log(
       "PASS actual disposable PostgreSQL: advisory-lock bonus once, audited recharge, recipient-history failure rolls back both wallets/ledger, 8 concurrent retries credit once, received funds never become earnings.",
