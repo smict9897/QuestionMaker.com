@@ -32,6 +32,9 @@ export default async function Admin() {
       <Link href="/admin/support" className="rounded-xl border p-4">
         সহায়তা / গোপনীয়তা / কপিরাইট অনুরোধ →
       </Link>
+      <Link href="/admin/pdf-storage" className="rounded-xl border p-4">
+        PDF storage প্রস্তুতি ও পরীক্ষা →
+      </Link>
       {/* 🔔 পেন্ডিং পেমেন্ট সতর্কতা */}
       {pendingPayments > 0 && (
         <Link
