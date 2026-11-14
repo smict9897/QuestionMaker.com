@@ -316,6 +316,94 @@ const fs = require("node:fs"),
     console.log(
       "PASS PostgreSQL marketplace: platform receipt failure rolls back both wallets/copy, 8 retries purchase once, exact 600/401 paisa split, institution edit preserves snapshot.",
     );
+    const disputes = load("app/actions/marketplace-refund.ts"),
+      refunds = load("lib/marketplace-refund.ts");
+    const cf = new FormData();
+    cf.set("paperId", paperId);
+    cf.set("reason", "Disposable incorrect paper refund request");
+    cf.set("confirmed", "on");
+    assert.equal((await disputes.reportMarketPurchase({}, cf)).ok, true);
+    const originalLedger = await db.setting.findUnique({
+        where: { key: refunds.marketDebitKey("u", paperId) },
+      }),
+      originalSources = refunds.refundSources(
+        originalLedger.value,
+        "u",
+        paperId,
+        1001,
+      ),
+      beforeRefund = await wallet.ensureWallet("u"),
+      sellerPreRefund = await wallet.ensureWallet("v");
+    const rf = new FormData();
+    rf.set("key", refunds.disputeKey("u", paperId));
+    rf.set("decision", "REFUNDED");
+    rf.set("note", "Disposable issue verified against original snapshot");
+    rf.set("confirmed", "on");
+    session = "a";
+    await db.$executeRawUnsafe(
+      "CREATE OR REPLACE FUNCTION fail_refund_receipt() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.key LIKE 'market:refund:v1:%' THEN RAISE EXCEPTION 'forced refund receipt failure'; END IF; RETURN NEW; END; $$",
+    );
+    await db.$executeRawUnsafe(
+      'CREATE TRIGGER fail_refund_receipt_trigger BEFORE INSERT ON "Setting" FOR EACH ROW EXECUTE FUNCTION fail_refund_receipt()',
+    );
+    assert.equal((await disputes.reviewMarketDispute({}, rf)).ok, false);
+    assert.deepEqual(await wallet.ensureWallet("u"), beforeRefund);
+    assert.deepEqual(await wallet.ensureWallet("v"), sellerPreRefund);
+    assert.equal(
+      JSON.parse(
+        (
+          await db.setting.findUnique({
+            where: { key: refunds.disputeKey("u", paperId) },
+          })
+        ).value,
+      ).status,
+      "OPEN",
+    );
+    commerce.validatePurchase(
+      (
+        await db.setting.findUnique({
+          where: { key: commerce.purchaseKey("u", paperId) },
+        })
+      ).value,
+      "u",
+      paperId,
+    );
+    await db.$executeRawUnsafe(
+      'DROP TRIGGER fail_refund_receipt_trigger ON "Setting"',
+    );
+    const refundResults = await Promise.all(
+      Array.from({ length: 8 }, () => disputes.reviewMarketDispute({}, rf)),
+    );
+    assert.ok(refundResults.every((r) => r.ok));
+    const afterRefund = await wallet.ensureWallet("u");
+    assert.equal(afterRefund.balance, beforeRefund.balance + 1001);
+    for (const source of ["bonus", "recharge", "received", "earnings"])
+      assert.equal(
+        afterRefund.funds[source],
+        beforeRefund.funds[source] + originalSources[source],
+      );
+    assert.equal(
+      (await wallet.ensureWallet("v")).funds.earnings,
+      sellerPreRefund.funds.earnings - 600,
+    );
+    const refunded = (
+      await db.setting.findUnique({
+        where: { key: commerce.purchaseKey("u", paperId) },
+      })
+    ).value;
+    assert.throws(() => commerce.validatePurchase(refunded, "u", paperId));
+    assert.ok(
+      commerce.validatePurchase(refunded, "u", paperId, true).refundedAt,
+    );
+    assert.equal(
+      await db.setting.count({
+        where: { key: `market:refund:v1:u:${paperId}` },
+      }),
+      1,
+    );
+    console.log(
+      "PASS PostgreSQL refund: forced final receipt failure rolls back both wallets/access/dispute; 8 concurrent approvals refund once to exact original sources and revoke online copy.",
+    );
     console.log(
       "PASS actual disposable PostgreSQL: advisory-lock bonus once, audited recharge, recipient-history failure rolls back both wallets/ledger, 8 concurrent retries credit once, received funds never become earnings.",
     );

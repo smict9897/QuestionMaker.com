@@ -20,6 +20,7 @@ export type MarketPurchase = {
   revision: number;
   purchasedAt: string;
   institution: string;
+  refundedAt?: string;
 };
 export function purchaseKey(buyerId: string, paperId: string) {
   return `${PURCHASE_PREFIX}${buyerId}:${paperId}`;
@@ -67,11 +68,16 @@ export function validatePurchase(
   raw: string,
   buyerId: string,
   paperId: string,
+  includeRefunded = false,
 ): MarketPurchase {
   const r = JSON.parse(raw) as MarketPurchase;
   if (
     !r ||
     r.version !== 1 ||
+    (!includeRefunded && r.refundedAt !== undefined) ||
+    (r.refundedAt !== undefined &&
+      (typeof r.refundedAt !== "string" ||
+        !Number.isFinite(Date.parse(r.refundedAt)))) ||
     r.buyerId !== buyerId ||
     r.paperId !== paperId ||
     typeof r.sellerId !== "string" ||

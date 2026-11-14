@@ -52,7 +52,11 @@ export async function buyMarketPaper(
       const key = purchaseKey(buyerId, id),
         previous = await tx.setting.findUnique({ where: { key } });
       if (previous) {
-        validatePurchase(previous.value, buyerId, id);
+        const prior = validatePurchase(previous.value, buyerId, id, true);
+        if (prior.refundedAt)
+          throw new WalletError(
+            "এই ক্রয় রিফান্ড হয়েছে; একই ক্রয় আবার চার্জ করা হবে না। অভিযোগের অবস্থা দেখুন।",
+          );
         return;
       }
       const row = await tx.setting.findUnique({

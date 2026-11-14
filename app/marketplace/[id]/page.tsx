@@ -60,8 +60,8 @@ export default async function MarketDetail({
       </Link>
       <MarketplaceSample sample={publicMarketSample(row!.value, id)} />
       {owned ? (
-        <Link href={`/dashboard/library/${id}`} className="block underline">
-          আগে কেনা কপি খুলুন — নতুন চার্জ নেই →
+        <Link href="/dashboard/library" className="block underline">
+          কেনা কপি দেখুন (রিফান্ড হলে কপি বন্ধ) →
         </Link>
       ) : !user?.id ? (
         <Link
