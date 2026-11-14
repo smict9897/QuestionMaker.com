@@ -1,3 +1,7 @@
+import {
+  withdrawalListOptions,
+  withdrawalListPage,
+} from "@/lib/withdrawal-list";
 import HandoverForm from "@/components/withdrawal-handover";
 import { handoverKey, parseHandover } from "@/lib/withdrawal-handover";
 import Link from "next/link";
@@ -15,11 +19,13 @@ export const metadata = { title: "উত্তোলন নিষ্পত্ত
 export default async function WithdrawalsAdmin({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; after?: string }>;
 }) {
-  const requested = (await searchParams).status;
-  const status =
-    requested === "PAID" || requested === "REJECTED" ? requested : "HELD";
+  const filters = await searchParams;
+  const { status, after, query } = withdrawalListOptions(
+    filters.status,
+    filters.after,
+  );
   const id = (await auth())?.user?.id;
   if (!id) redirect("/login?next=/admin/withdrawals");
   if (
@@ -27,14 +33,10 @@ export default async function WithdrawalsAdmin({
       ?.role !== "ADMIN"
   )
     redirect("/dashboard");
-  const rows = await db.setting.findMany({
-    where: {
-      key: { startsWith: "wallet:withdrawal:v1:" },
-      value: { contains: `"status":"${status}"` },
-    },
-    orderBy: { key: "asc" },
-    take: 100,
-  });
+  const { rows, next } = withdrawalListPage(
+    await db.setting.findMany(query),
+    status,
+  );
   const [handoverRows, admins] = await Promise.all([
     db.setting.findMany({
       where: { key: { in: rows.map((r) => handoverKey(r.key)) } },
@@ -52,23 +54,36 @@ export default async function WithdrawalsAdmin({
       <Link href="/admin">← অ্যাডমিন</Link>
       <h1 className="text-2xl font-bold">উত্তোলন নিষ্পত্তি</h1>
       <p>
-        সর্বোচ্চ ১০০টি নির্বাচিত অবস্থার অনুরোধ। এই বাটন টাকা পাঠায় না। বাইরে bKash-এ
-        পাঠানোর আগে নিজের দায়িত্বে নিন, আগের পেমেন্ট/TrxID, নম্বর ও পরিমাণ যাচাই
-        করুন। দায়িত্বের মেয়াদ শেষ হয় না, অন্য অ্যাডমিন নিতে পারেন না। একই অ্যাডমিন
-        একাধিক ট্যাব থেকেও একবারই টাকা পাঠাবেন। বাইরের পেমেন্ট সফটওয়্যার দিয়ে
-        আটকানো যায় না। দায়িত্বপ্রাপ্ত অ্যাডমিন অনুপস্থিত হলে হিসাব যাচাই ছাড়া আবার
-        টাকা পাঠাবেন না; দায়িত্বপ্রাপ্ত চাইলে নির্দিষ্ট অ্যাডমিনকে প্রস্তাব দিতে পারেন।
-        প্রাপক গ্রহণের আগে দায়িত্ব বদলাবে না; অপেক্ষমাণ অবস্থায় নিষ্পত্তি বন্ধ থাকবে।
+        প্রতি পাতায় সর্বোচ্চ ১০০টি নির্বাচিত অবস্থার অনুরোধ; পরের অনুরোধগুলো নিচের লিংকে
+        দেখুন। এই বাটন টাকা পাঠায় না। বাইরে bKash-এ পাঠানোর আগে নিজের দায়িত্বে
+        নিন, আগের পেমেন্ট/TrxID, নম্বর ও পরিমাণ যাচাই করুন। দায়িত্বের মেয়াদ শেষ হয়
+        না, অন্য অ্যাডমিন নিতে পারেন না। একই অ্যাডমিন একাধিক ট্যাব থেকেও একবারই টাকা
+        পাঠাবেন। বাইরের পেমেন্ট সফটওয়্যার দিয়ে আটকানো যায় না। দায়িত্বপ্রাপ্ত অ্যাডমিন
+        অনুপস্থিত হলে হিসাব যাচাই ছাড়া আবার টাকা পাঠাবেন না; দায়িত্বপ্রাপ্ত চাইলে
+        নির্দিষ্ট অ্যাডমিনকে প্রস্তাব দিতে পারেন। প্রাপক গ্রহণের আগে দায়িত্ব বদলাবে না;
+        অপেক্ষমাণ অবস্থায় নিষ্পত্তি বন্ধ থাকবে।
       </p>
       <nav className="flex gap-4">
         <Link href="?status=HELD">অপেক্ষমাণ</Link>
         <Link href="?status=PAID">পেমেন্ট নথিভুক্ত</Link>
         <Link href="?status=REJECTED">বাতিল</Link>
       </nav>
+      {!rows.length && (
+        <p role="status">এই পাতায় নির্বাচিত অবস্থার কোনো অনুরোধ নেই।</p>
+      )}
+      {after && (
+        <Link
+          className="underline"
+          href={`/admin/withdrawals?status=${status}`}
+        >
+          এই অবস্থার প্রথম পাতায় ফিরুন
+        </Link>
+      )}
       {rows.map((row) => {
         let r, proposal;
         try {
           r = parseWithdrawal(row.key, row.value);
+          if (r.status !== status) throw Error("Filter mismatch");
           const raw = handovers.get(handoverKey(row.key));
           if (raw) proposal = parseHandover(raw, row.key);
         } catch {
@@ -132,6 +147,11 @@ export default async function WithdrawalsAdmin({
           </article>
         );
       })}
+      {next && (
+        <Link className="underline" href={next}>
+          পরের অনুরোধগুলো দেখুন →
+        </Link>
+      )}
     </main>
   );
 }
