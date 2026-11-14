@@ -109,6 +109,7 @@ function setup() {
     wallet: load("lib/wallet.ts"),
     actions: load("app/actions/wallet.ts"),
     transfers: load("app/actions/wallet-transfer.ts"),
+    withdrawals: load("app/actions/wallet-withdrawal.ts"),
     store,
     setFail: (key) => (failKey = key),
     setSession: (id) => (session = id),
@@ -534,4 +535,172 @@ test("received transfer can be sent again but never becomes earnings", async () 
   const wallet = JSON.parse(x.store.get("wallet:account:u"));
   assert.equal(wallet.funds.received, 1000);
   assert.equal(wallet.funds.earnings, 0);
+});
+function withdrawForm(
+  id = "11111111-1111-1111-1111-111111111111",
+  amount = "100",
+) {
+  const f = new FormData();
+  f.set("requestId", id);
+  f.set("amount", amount);
+  f.set("number", "01712345678");
+  f.set("confirmed", "on");
+  return f;
+}
+async function withdrawalSetup() {
+  const x = setup();
+  await x.wallet.ensureWallet("u");
+  x.store.set(
+    "wallet:account:u",
+    JSON.stringify({
+      version: 2,
+      balance: 52000,
+      bonus: 2000,
+      funds: { bonus: 2000, recharge: 10000, received: 10000, earnings: 30000 },
+    }),
+  );
+  return x;
+}
+function withdrawalReview(key, decision = "REJECTED", trx = "PAYOUT123") {
+  const f = new FormData();
+  f.set("key", key);
+  f.set("decision", decision);
+  f.set("note", "verified cancellation");
+  f.set("trx", trx);
+  f.set("paidConfirmed", "on");
+  return f;
+}
+test("withdrawal holds earnings only, duplicate request debits once and active request blocks another", async () => {
+  const x = await withdrawalSetup(),
+    f = withdrawForm();
+  const result = await Promise.all(
+    Array.from({ length: 8 }, () => x.withdrawals.requestWithdrawal({}, f)),
+  );
+  assert.ok(result.every((r) => r.ok));
+  const w = await x.wallet.ensureWallet("u");
+  assert.equal(w.balance, 42000);
+  assert.deepEqual(w.funds, {
+    bonus: 2000,
+    recharge: 10000,
+    received: 10000,
+    earnings: 20000,
+  });
+  assert.equal(
+    (
+      await x.withdrawals.requestWithdrawal(
+        {},
+        withdrawForm("22222222-2222-2222-2222-222222222222"),
+      )
+    ).ok,
+    false,
+  );
+  f.set("amount", "101");
+  assert.equal((await x.withdrawals.requestWithdrawal({}, f)).ok, false);
+});
+test("withdrawal rejects non earnings, below minimum, invalid number, missing consent, unauthenticated and admin", async () => {
+  const x = setup();
+  await x.wallet.ensureWallet("u");
+  assert.equal(
+    (await x.withdrawals.requestWithdrawal({}, withdrawForm())).ok,
+    false,
+  );
+  const y = await withdrawalSetup();
+  for (const [key, value] of [
+    ["amount", "99.99"],
+    ["number", "01212345678"],
+    ["confirmed", ""],
+    ["amount", "NaN"],
+    ["amount", "50001"],
+  ]) {
+    const f = withdrawForm();
+    f.set(key, value);
+    assert.equal((await y.withdrawals.requestWithdrawal({}, f)).ok, false);
+  }
+  y.setSession("");
+  assert.equal(
+    (await y.withdrawals.requestWithdrawal({}, withdrawForm())).ok,
+    false,
+  );
+  y.setSession("a");
+  assert.equal(
+    (await y.withdrawals.requestWithdrawal({}, withdrawForm())).ok,
+    false,
+  );
+});
+test("withdrawal reject releases earnings once; nonadmin cannot review; paid after rejection blocked", async () => {
+  const x = await withdrawalSetup();
+  await x.withdrawals.requestWithdrawal({}, withdrawForm());
+  const key = [...x.store.keys()].find((k) =>
+      k.startsWith("wallet:withdrawal:v1:"),
+    ),
+    f = withdrawalReview(key);
+  assert.equal((await x.withdrawals.reviewWithdrawal({}, f)).ok, false);
+  x.setSession("a");
+  const result = await Promise.all(
+    Array.from({ length: 5 }, () => x.withdrawals.reviewWithdrawal({}, f)),
+  );
+  assert.ok(result.every((r) => r.ok));
+  assert.equal((await x.wallet.ensureWallet("u")).funds.earnings, 30000);
+  assert.equal(
+    (await x.withdrawals.reviewWithdrawal({}, withdrawalReview(key, "PAID")))
+      .ok,
+    false,
+  );
+});
+test("paid withdrawal requires actual payment confirmation and unique TrxID, no second wallet debit", async () => {
+  const x = await withdrawalSetup();
+  await x.withdrawals.requestWithdrawal({}, withdrawForm());
+  const key = [...x.store.keys()].find((k) =>
+      k.startsWith("wallet:withdrawal:v1:"),
+    ),
+    f = withdrawalReview(key, "PAID");
+  x.setSession("a");
+  f.delete("paidConfirmed");
+  assert.equal((await x.withdrawals.reviewWithdrawal({}, f)).ok, false);
+  f.set("paidConfirmed", "on");
+  assert.equal((await x.withdrawals.reviewWithdrawal({}, f)).ok, true);
+  assert.equal((await x.withdrawals.reviewWithdrawal({}, f)).ok, true);
+  assert.equal((await x.wallet.ensureWallet("u")).balance, 42000);
+  assert.equal(
+    (await x.withdrawals.reviewWithdrawal({}, withdrawalReview(key))).ok,
+    false,
+  );
+  x.setSession("u");
+  await x.withdrawals.requestWithdrawal(
+    {},
+    withdrawForm("22222222-2222-2222-2222-222222222222"),
+  );
+  x.setSession("a");
+  const key2 = [...x.store.keys()]
+    .filter((k) => k.startsWith("wallet:withdrawal:v1:"))
+    .find((k) => k !== key);
+  assert.equal(
+    (await x.withdrawals.reviewWithdrawal({}, withdrawalReview(key2, "PAID")))
+      .ok,
+    false,
+  );
+  assert.equal(JSON.parse(x.store.get(key2)).status, "HELD");
+});
+test("withdrawal record write failure rolls back earnings hold; rejection history failure preserves hold", async () => {
+  const x = await withdrawalSetup();
+  const before = new Map(x.store);
+  x.setFail("wallet:withdrawal:v1:");
+  assert.equal(
+    (await x.withdrawals.requestWithdrawal({}, withdrawForm())).ok,
+    false,
+  );
+  assert.deepEqual(x.store, before);
+  x.setFail("");
+  await x.withdrawals.requestWithdrawal({}, withdrawForm());
+  const held = new Map(x.store),
+    key = [...x.store.keys()].find((k) =>
+      k.startsWith("wallet:withdrawal:v1:"),
+    );
+  x.setSession("a");
+  x.setFail("wallet:history:v1:");
+  assert.equal(
+    (await x.withdrawals.reviewWithdrawal({}, withdrawalReview(key))).ok,
+    false,
+  );
+  assert.deepEqual(x.store, held);
 });

@@ -62,12 +62,15 @@ export function debitFunds(
   raw: FundWallet,
   amount: number,
   transfer = false,
+  earningsOnly = false,
 ): { wallet: FundWallet; used: WalletFunds } {
   const wallet = normalizeWallet(raw);
   if (!valid(amount) || amount === 0) throw new Error("Invalid debit");
-  const order: FundSource[] = transfer
-    ? ["recharge", "received", "earnings"]
-    : ["bonus", "recharge", "received", "earnings"];
+  const order: FundSource[] = earningsOnly
+    ? ["earnings"]
+    : transfer
+      ? ["recharge", "received", "earnings"]
+      : ["bonus", "recharge", "received", "earnings"];
   if (order.reduce((sum, s) => sum + wallet.funds[s], 0) < amount)
     throw new Error("Insufficient eligible balance");
   const funds = { ...wallet.funds },
