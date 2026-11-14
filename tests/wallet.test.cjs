@@ -8,6 +8,7 @@ function setup() {
     users = {
       u: { id: "u", role: "STUDENT" },
       a: { id: "a", role: "ADMIN" },
+      b: { id: "b", role: "ADMIN" },
       v: { id: "v", role: "TEACHER" },
     },
     questions = [
@@ -644,6 +645,10 @@ test("withdrawal reject releases earnings once; nonadmin cannot review; paid aft
     f = withdrawalReview(key);
   assert.equal((await x.withdrawals.reviewWithdrawal({}, f)).ok, false);
   x.setSession("a");
+  assert.equal(
+    (await x.withdrawals.claimWithdrawal({}, claimForm(key))).ok,
+    true,
+  );
   const result = await Promise.all(
     Array.from({ length: 5 }, () => x.withdrawals.reviewWithdrawal({}, f)),
   );
@@ -663,6 +668,10 @@ test("paid withdrawal requires actual payment confirmation and unique TrxID, no 
     ),
     f = withdrawalReview(key, "PAID");
   x.setSession("a");
+  assert.equal(
+    (await x.withdrawals.claimWithdrawal({}, claimForm(key))).ok,
+    true,
+  );
   f.delete("paidConfirmed");
   assert.equal((await x.withdrawals.reviewWithdrawal({}, f)).ok, false);
   f.set("paidConfirmed", "on");
@@ -683,6 +692,10 @@ test("paid withdrawal requires actual payment confirmation and unique TrxID, no 
     .filter((k) => k.startsWith("wallet:withdrawal:v1:"))
     .find((k) => k !== key);
   assert.equal(
+    (await x.withdrawals.claimWithdrawal({}, claimForm(key2))).ok,
+    true,
+  );
+  assert.equal(
     (await x.withdrawals.reviewWithdrawal({}, withdrawalReview(key2, "PAID")))
       .ok,
     false,
@@ -700,11 +713,15 @@ test("withdrawal record write failure rolls back earnings hold; rejection histor
   assert.deepEqual(x.store, before);
   x.setFail("");
   await x.withdrawals.requestWithdrawal({}, withdrawForm());
-  const held = new Map(x.store),
-    key = [...x.store.keys()].find((k) =>
-      k.startsWith("wallet:withdrawal:v1:"),
-    );
+  const key = [...x.store.keys()].find((k) =>
+    k.startsWith("wallet:withdrawal:v1:"),
+  );
   x.setSession("a");
+  assert.equal(
+    (await x.withdrawals.claimWithdrawal({}, claimForm(key))).ok,
+    true,
+  );
+  const held = new Map(x.store);
   x.setFail("wallet:history:v1:");
   assert.equal(
     (await x.withdrawals.reviewWithdrawal({}, withdrawalReview(key))).ok,
@@ -1068,4 +1085,139 @@ test("refund access checks apply to private paper and institution mutation, with
   assert.match(page, /validatePurchase\(row.value, buyerId, id\)/);
   assert.match(action, /validatePurchase\(row.value, buyerId, id\)/);
   assert.match(helper, /!includeRefunded && r.refundedAt !== undefined/);
+});
+
+function claimForm(key) {
+  const f = new FormData();
+  f.set("key", key);
+  f.set("claimConfirmed", "on");
+  return f;
+}
+test("withdrawal cannot settle before claim; other admin cannot steal or settle even with forged form", async () => {
+  const x = await withdrawalSetup();
+  await x.withdrawals.requestWithdrawal({}, withdrawForm());
+  const key = [...x.store.keys()].find((k) =>
+    k.startsWith("wallet:withdrawal:v1:"),
+  );
+  assert.equal(
+    (await x.withdrawals.claimWithdrawal({}, claimForm(key))).ok,
+    false,
+  );
+  x.setSession("");
+  assert.equal(
+    (await x.withdrawals.claimWithdrawal({}, claimForm(key))).ok,
+    false,
+  );
+  x.setSession("a");
+  assert.equal(
+    (await x.withdrawals.reviewWithdrawal({}, withdrawalReview(key, "PAID")))
+      .ok,
+    false,
+  );
+  const missing = claimForm(key);
+  missing.delete("claimConfirmed");
+  assert.equal((await x.withdrawals.claimWithdrawal({}, missing)).ok, false);
+  const results = await Promise.all(
+    Array.from({ length: 8 }, () =>
+      x.withdrawals.claimWithdrawal({}, claimForm(key)),
+    ),
+  );
+  assert.ok(results.every((r) => r.ok));
+  const r = JSON.parse(x.store.get(key));
+  assert.equal(r.claimedBy, "a");
+  assert.equal(
+    [...x.store.keys()].filter((k) =>
+      k.startsWith("wallet:withdrawal-claim:v1:"),
+    ).length,
+    1,
+  );
+  const before = new Map(x.store);
+  x.setSession("b");
+  assert.equal(
+    (await x.withdrawals.claimWithdrawal({}, claimForm(key))).ok,
+    false,
+  );
+  assert.equal(
+    (await x.withdrawals.reviewWithdrawal({}, withdrawalReview(key, "PAID")))
+      .ok,
+    false,
+  );
+  assert.equal(
+    (await x.withdrawals.reviewWithdrawal({}, withdrawalReview(key))).ok,
+    false,
+  );
+  assert.deepEqual(x.store, before);
+  x.setSession("a");
+  assert.equal(
+    (await x.withdrawals.reviewWithdrawal({}, withdrawalReview(key, "PAID")))
+      .ok,
+    true,
+  );
+  assert.equal(
+    (await x.withdrawals.claimWithdrawal({}, claimForm(key))).ok,
+    false,
+  );
+});
+test("claim record write or request write failure rolls back ownership and audit; claims do not expire", async () => {
+  for (const fail of ["wallet:withdrawal-claim:v1:", "wallet:withdrawal:v1:"]) {
+    const x = await withdrawalSetup();
+    await x.withdrawals.requestWithdrawal({}, withdrawForm());
+    const key = [...x.store.keys()].find((k) =>
+        k.startsWith("wallet:withdrawal:v1:"),
+      ),
+      before = new Map(x.store);
+    x.setSession("a");
+    x.setFail(fail);
+    assert.equal(
+      (await x.withdrawals.claimWithdrawal({}, claimForm(key))).ok,
+      false,
+    );
+    assert.deepEqual(x.store, before);
+    x.setFail("");
+    assert.equal(
+      (await x.withdrawals.claimWithdrawal({}, claimForm(key))).ok,
+      true,
+    );
+    const r = JSON.parse(x.store.get(key));
+    r.claimedAt = "2020-01-01T00:00:00.000Z";
+    x.store.set(key, JSON.stringify(r));
+    x.setSession("b");
+    assert.equal(
+      (await x.withdrawals.claimWithdrawal({}, claimForm(key))).ok,
+      false,
+    );
+  }
+});
+test("claim audit mismatch or removed hold blocks payment recording without changing money", async () => {
+  for (const scenario of ["audit", "hold", "invalid"]) {
+    const x = await withdrawalSetup();
+    await x.withdrawals.requestWithdrawal({}, withdrawForm());
+    const key = [...x.store.keys()].find((k) =>
+      k.startsWith("wallet:withdrawal:v1:"),
+    );
+    x.setSession("a");
+    assert.equal(
+      (await x.withdrawals.claimWithdrawal({}, claimForm(key))).ok,
+      true,
+    );
+    if (scenario === "audit") {
+      const audit = [...x.store.keys()].find((k) =>
+        k.startsWith("wallet:withdrawal-claim:v1:"),
+      );
+      x.store.delete(audit);
+    }
+    if (scenario === "hold") x.store.set("wallet:withdrawal-active:v1:u", "");
+    if (scenario === "invalid") {
+      const r = JSON.parse(x.store.get(key));
+      r.amount = 999999999;
+      x.store.set(key, JSON.stringify(r));
+    }
+    const before = new Map(x.store);
+    assert.equal(
+      (await x.withdrawals.reviewWithdrawal({}, withdrawalReview(key, "PAID")))
+        .ok,
+      false,
+    );
+    assert.deepEqual(x.store, before);
+  }
 });
