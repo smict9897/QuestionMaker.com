@@ -1,3 +1,5 @@
+import SourceCheckpoint from "@/components/ready-papers/source-checkpoint";
+import { vaultConfigured } from "@/lib/pdf-vault";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -8,6 +10,7 @@ import {
 import ReadyPlanCard from "@/components/ready-papers/plan-card";
 import "@/components/ready-papers/ready.css";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 export const metadata = {
   title: "আমার প্রশ্নপত্র ও উত্তরপত্র",
   robots: { index: false },
@@ -19,6 +22,7 @@ export default async function SavedReady() {
     listReadyPurchases(),
     readyPlanSummary(),
   ]);
+  const secureStorageReady = vaultConfigured();
   return (
     <main className="rp-root">
       <section className="rp-hero">
@@ -73,6 +77,9 @@ export default async function SavedReady() {
                 ? "Checkout-এর অপরিবর্তনীয় উৎস-রেকর্ড সংরক্ষিত আছে। এটি কপিরাইট বা পুনর্বিক্রির অনুমতি নয়।"
                 : "পুরোনো কপি: অপরিবর্তনীয় উৎস-রেকর্ড নেই; পুনর্বিক্রির যোগ্যতা যাচাই হয়নি।"}
             </p>
+            {secureStorageReady && p.originHash && (
+              <SourceCheckpoint receiptId={p.id} />
+            )}
             <Link href={`/ready-papers/${p.paperId}?saved=${p.id}`}>
               প্রশ্নপত্র ও উত্তরপত্র খুলুন →
             </Link>
