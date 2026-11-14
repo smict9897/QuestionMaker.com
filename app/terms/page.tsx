@@ -1,327 +1,112 @@
 import Link from "next/link";
-import { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Terms Conditions | Saifulsir.com",
-  description: "Terms and Conditions governing the use of Saifulsir.com educational platform, digital textbooks, and resources.",
+import PolicyLayout, { PolicySection } from "@/components/policy-layout";
+export const metadata = {
+  title: "ব্যবহারের শর্ত",
+  description:
+    "প্রশ্নবুকের প্রশ্নপত্র তৈরি, কেনা–বেচা, ওয়ালেট, উত্তোলন ও রিফান্ডের নিয়ম।",
 };
-
-export default function TermsPage() {
+export default function Terms() {
   return (
-    <main className="max-w-4xl mx-auto px-4 py-10 font-sans text-gray-800 leading-relaxed">
-      {/* Breadcrumb & Header */}
-      <div className="text-sm text-gray-500 mb-2">
-        <Link href="/" className="hover:underline">Home</Link> / Terms Conditions
-      </div>
-      <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-4">Terms Conditions</h1>
-      
-      <div className="space-y-1 text-sm text-gray-600 mb-6 pb-6 border-b border-gray-300">
-        <p><strong>Effective Date:</strong> October 15, 2026</p>
-        <p><strong>Last Updated:</strong> October 15, 2026</p>
+    <PolicyLayout title="ব্যবহারের শর্ত (Terms)">
+      <PolicySection title="সেবা ও নিজের অ্যাকাউন্ট">
         <p>
-          <strong>Website:</strong>{" "}
-          <a href="https://saifulsir.com" className="text-blue-600 hover:underline">
-            https://saifulsir.com
-          </a>
+          প্রশ্নবুক শিক্ষক ও ব্যবহারকারীদের প্রশ্নপত্র খোঁজা, তৈরি, সংরক্ষণ এবং অনুমোদিত
+          প্রশ্নপত্র কেনা–বেচার ব্যবস্থা দেয়। নিজের পরিচয় ও ব্যবহারযোগ্য যোগাযোগের তথ্য
+          দিন। লগইনের গোপন তথ্য রক্ষা করুন। অননুমোদিত প্রবেশ, ভুয়া TrxID, নিজের সঙ্গে
+          ভুয়া লেনদেন বা অন্যের অধিকার লঙ্ঘন করা যাবে না।
+        </p>
+      </PolicySection>
+      <PolicySection title="তৈরির চার্জ ও ওয়ালেট">
+        <p>
+          প্রশ্ন তৈরি ও মার্কেটপ্লেসে কেনা আলাদা চার্জ। নিশ্চিত করার আগে সংশ্লিষ্ট পৃষ্ঠার
+          মূল্য/নির্বাচন যাচাই করুন। Free browser OCR ও paid AI এক সেবা নয়; AI ফল ভুল
+          বা অসম্পূর্ণ হতে পারে। পরীক্ষায় ব্যবহারের আগে নিজে যাচাই করুন।
         </p>
         <p>
-          <strong>Contact:</strong>{" "}
-          <a href="mailto:support@saifulsir.com" className="text-blue-600 hover:underline">
-            support@saifulsir.com
-          </a>
+          ওয়ালেটে bonus, recharge, received এবং নিজের sales earnings আলাদা।
+          বোনাস পাঠানো বা উত্তোলন করা যায় না। Send Money-তে পাওয়া টাকা
+          ব্যবহার/আবার পাঠানো যায়, কিন্তু উত্তোলনযোগ্য বিক্রির আয় হয়ে যায় না। ওয়ালেট
+          সাধারণ ব্যাংক হিসাব নয়। সিস্টেমের বর্তমান সীমা সংশ্লিষ্ট পৃষ্ঠায় দেখানো হয়
+          এবং server তা প্রয়োগ করে।
         </p>
-      </div>
-
-      <p className="mb-4">
-        Welcome to <strong>Saifulsir.com – The Educational Platform</strong>. These Terms &amp; Conditions govern your use of our website, applications, digital textbooks, and all educational services provided through our platform. Please review these terms carefully before accessing our materials.
-      </p>
-
-      <p className="mb-8">
-        By accessing, browsing, or using Saifulsir.com, you confirm that you are at least <strong>13 years of age</strong> (or possess parental/guardian consent), have read and understood these Terms, and agree to be legally bound by them. If you do not agree to these terms, please discontinue use of our website immediately.
-      </p>
-
-      <hr className="my-6 border-gray-300" />
-
-      {/* Section 1 */}
-      <section className="space-y-4 mb-8">
-        <h2 className="text-xl font-bold text-gray-900">1. Acceptance of Terms &amp; Ownership</h2>
+      </PolicySection>
+      <PolicySection title="কেনা কপি ও ব্যবহারের সীমা">
         <p>
-          By using any portion of Saifulsir.com, you enter into a legally binding agreement with <strong>Saiful Islam</strong> (the &quot;Owner&quot; and Founder) and agree to comply with all terms, conditions, and applicable local and international laws. These Terms apply uniformly to all learners, educators, and visitors (&quot;Users&quot;).
+          মূল্য নিশ্চিত করে কিনলে ওয়ালেট থেকে একবার কাটা হয়। ক্রেতার লাইব্রেরি থেকে
+          একই স্থির কপি আবার খোলা/প্রিন্টে নতুন চার্জ নেই। শুধু প্রতিষ্ঠানের নাম পরিবর্তন
+          করা যায়; প্রশ্ন ও অন্য বিন্যাস সম্পাদনার অধিকার দেওয়া হয় না। কেনা কপি
+          পুনর্বিক্রি, প্রকাশ্যে পূর্ণ কপি ছড়িয়ে দেওয়া বা নিজের তৈরি হিসেবে বিক্রির
+          আবেদন করা যাবে না।
         </p>
         <p>
-          We reserve the right to revise or update these Terms at our discretion. Continued use of Saifulsir.com after updates are published signifies your acceptance of the revised Terms.
+          কেনার আগের নমুনা সীমিত অংশ; সম্পূর্ণ প্রশ্ন বা পৃষ্ঠা নয়। জলছাপ কপি/স্ক্রিনশট
+          পুরোপুরি আটকায় না। কেনার আগে শিরোনাম, শ্রেণি, বিষয়, মূল্য ও উপলব্ধ নমুনা
+          যাচাই করুন।
         </p>
-      </section>
-
-      <hr className="my-6 border-gray-300" />
-
-      {/* Section 2 */}
-      <section className="space-y-4 mb-8">
-        <h2 className="text-xl font-bold text-gray-900">2. Scope &amp; Description of Educational Services</h2>
-        <p>Saifulsir.com is an open digital educational repository that provides:</p>
-        <ul className="list-disc pl-5 space-y-2 text-gray-700">
-          <li>Digital textbooks, question papers, and downloadable syllabus PDFs</li>
-          <li>Comprehensive study notes, suggestions, and academic summaries</li>
-          <li>Islamic educational references, moral literature, and scholarly articles</li>
-          <li>Subject-specific guides spanning science, mathematics, literature, and ICT</li>
-          <li>Interactive web utilities (GPA/CGPA calculators, image and exam photo formatting tools)</li>
-        </ul>
+      </PolicySection>
+      <PolicySection title="বিক্রেতার অধিকার ও আয়">
         <p>
-          All resources provided through Saifulsir.com are dedicated strictly to <strong>personal, non-commercial, and educational study</strong>.
+          বর্তমানে যোগ্য নিজের সংরক্ষিত database-তৈরি প্রশ্নপত্র বিক্রির আবেদন করা যায়।
+          নিজের তৈরি assembled PDF-এর বিক্রির ব্যবস্থা এখনও সম্পূর্ণ নয়। বাইরের সরাসরি
+          upload বা কেনা কপি নিজস্ব তৈরি ধরে পুনর্বিক্রি অনুমোদিত নয়। প্রয়োজনীয়
+          অধিকার/অনুমতি থাকার দায়িত্ব বিক্রেতার; admin approval কপিরাইটের আইনি
+          নিশ্চয়তা নয়।
         </p>
-      </section>
-
-      <hr className="my-6 border-gray-300" />
-
-      {/* Section 3 */}
-      <section className="space-y-6 mb-8">
-        <h2 className="text-xl font-bold text-gray-900">3. Intellectual Property Rights &amp; Content Licensing</h2>
-        
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-gray-900">3.1 Saifulsir.com Original Content</h3>
-          <p>
-            All original content published on Saifulsir.com – including articles, website layouts, custom graphics, brand identity, user interface styling, and interactive web tools – constitutes the <strong>exclusive intellectual property of Saifulsir.com</strong> and is protected under national and international copyright statutes.
-          </p>
-          <p>
-            You may <strong>not</strong> scrape, reproduce, sell, sublicense, or commercially exploit any proprietary code or original writings from this website without explicit prior written authorization.
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-gray-900">3.2 Educational Materials &amp; Fair Use</h3>
-          <p>
-            Certain educational materials (such as curriculum books or board question references) are organized for non-profit study assistance under the recognized doctrine of <strong>Fair Use</strong>. We respect the intellectual property of original publishers and maintain a dedicated takedown process as outlined in our <Link href="/dmca" className="text-blue-600 hover:underline">DMCA Policy</Link>.
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-gray-900">3.3 User Submissions &amp; Comments</h3>
-          <p>
-            If you submit comments, academic feedback, or community suggestions to our platform, you grant Saifulsir.com a non-exclusive, perpetual, royalty-free license to publish, display, and review that content in furtherance of our educational mission.
-          </p>
-        </div>
-      </section>
-
-      <hr className="my-6 border-gray-300" />
-
-      {/* Section 4 */}
-      <section className="space-y-4 mb-8">
-        <h2 className="text-xl font-bold text-gray-900">4. Permitted Student &amp; Teacher Uses</h2>
         <p>
-          You agree to use Saifulsir.com exclusively for lawful and ethical educational purposes. You are welcome to:
+          সফল বিক্রিতে বিক্রেতার অংশ ৬০%; integer পয়সায় নিচের পূর্ণসংখ্যা নেওয়া হয়,
+          অবশিষ্ট platform-এর অংশ। যেমন ৳১০.০১-এ বিক্রেতা ৳৬.০০ ও platform ৳৪.০১।
+          তৈরির চার্জ এতে অন্তর্ভুক্ত নয়। অনুমোদনের জন্য মান, বিষয় ও অধ্যায় সঠিক হতে
+          হবে।
         </p>
-        <ul className="space-y-2 text-sm text-gray-700">
-          <li>✅ Access, read, and bookmark study resources for your personal academic revision</li>
-          <li>✅ Download available textbook PDFs and notes for personal offline study</li>
-          <li>✅ Share webpage links with fellow students, study circles, and classrooms</li>
-          <li>✅ Print physical copies for individual personal learning and exam preparation</li>
-        </ul>
-      </section>
-
-      <hr className="my-6 border-gray-300" />
-
-      {/* Section 5 */}
-      <section className="space-y-4 mb-8">
-        <h2 className="text-xl font-bold text-gray-900">5. Prohibited Activities &amp; Platform Security</h2>
+      </PolicySection>
+      <PolicySection title="Send Money ও উত্তোলন">
         <p>
-          To preserve platform integrity and ensure equitable access for all learners, users are strictly prohibited from:
+          TID দিয়ে পাঠানোর আগে প্রাপকের নাম, TID ও পরিমাণ মিলিয়ে নিশ্চিত করুন। ভুল
+          প্রাপকে নিজে পাঠানো লেনদেন স্বয়ংক্রিয়ভাবে ফেরত পাওয়া যাবে—এমন নিশ্চয়তা
+          নেই।
         </p>
-        <ul className="space-y-2 text-sm text-gray-700">
-          <li>❌ Deploying automated crawlers, scrapers, data-mining scripts, or bots to harvest bulk content</li>
-          <li>❌ Attempting to circumvent server firewalls, exploit vulnerabilities, or disrupt infrastructure</li>
-          <li>❌ Transmitting malware, malicious links, worms, or disruptive code</li>
-          <li>❌ Repackaging, selling, or charging fees for resources obtained freely from Saifulsir.com</li>
-          <li>❌ Impersonating the website owner, administrative staff, or educators</li>
-          <li>❌ Engaging in abusive conduct, spamming comment sections, or violating the legal rights of others</li>
-        </ul>
-        <p className="mt-4 text-sm font-medium text-red-600">
-          Violators will face immediate IP blocking, revocation of platform privileges, and, where applicable, referral to relevant law enforcement bodies.
-        </p>
-      </section>
-
-      <hr className="my-6 border-gray-300" />
-
-      {/* Section 6 */}
-      <section className="space-y-4 mb-8">
-        <h2 className="text-xl font-bold text-gray-900">6. External Links &amp; Third-Party Services</h2>
         <p>
-          Saifulsir.com may reference links to official educational boards, universities, or external services. These links are provided solely as academic references. We disclaim any liability for:
+          শুধু নিজের অবশিষ্ট sales earnings থেকে ন্যূনতম ৳১০০ উত্তোলনের অনুরোধ করা যায়।
+          অনুরোধে টাকা হোল্ড হয়; নিষ্পত্তির আগে আবার খরচ করা যায় না। অ্যাডমিন দায়িত্ব
+          নিয়ে বাইরে ম্যানুয়ালি bKash-এ পাঠিয়ে TrxID রাখেন, অথবা বাতিল করলে আয়
+          ফেরত আসে। এটি স্বয়ংক্রিয় পেমেন্ট নয় এবং নির্দিষ্ট সময়ে নিষ্পত্তির প্রতিশ্রুতি
+          নেই। সিস্টেম ফি ৳০; bKash-এর cash-out চার্জ অন্তর্ভুক্ত নয়।
         </p>
-        <ul className="list-disc pl-5 space-y-2 text-gray-700">
-          <li>The availability, accuracy, or integrity of external web destinations</li>
-          <li>The independent privacy policies or terms enforced by third-party platforms</li>
-          <li>Any loss or consequence resulting from your interactions on external websites</li>
-        </ul>
-      </section>
-
-      <hr className="my-6 border-gray-300" />
-
-      {/* Section 7 */}
-      <section className="space-y-4 mb-8">
-        <h2 className="text-xl font-bold text-gray-900">7. Advertising &amp; Affiliate Disclosure</h2>
+      </PolicySection>
+      <PolicySection title="অভিযোগ ও রিফান্ড">
         <p>
-          Saifulsir.com is monetized in part through digital advertising served by <strong>Google AdSense</strong> and legitimate academic sponsors. As such:
+          নিজের কেনা কপির লাইব্রেরি থেকে সমস্যা জানান। অ্যাডমিন কারণ যাচাই করে
+          রিফান্ড বা নোটসহ অন্য নিষ্পত্তি করতে পারেন। স্বয়ংক্রিয় রিফান্ড নয়। অনুমোদিত
+          full refund-এ মূল টাকা যে উৎস থেকে কেটেছিল সেই উৎসেই ফেরত যায় এবং
+          অনলাইন কপির অ্যাক্সেস বন্ধ হয়। আগের ডাউনলোড/প্রিন্ট প্রযুক্তিগতভাবে ফিরিয়ে
+          নেওয়া যায় না; রিফান্ডের পরে ব্যবহার/বিতরণ করবেন না।
         </p>
-        <ul className="list-disc pl-5 space-y-2 text-gray-700">
-          <li>Advertisements displayed help subsidize high-bandwidth server hosting and development costs</li>
-          <li>Advertising partners deploy cookies to serve contextually relevant advertisements in accordance with Google Publisher Policies</li>
-          <li>Editorial content and academic resource selections remain independent of commercial sponsorships</li>
-        </ul>
-      </section>
-
-      <hr className="my-6 border-gray-300" />
-
-      {/* Section 8 */}
-      <section className="space-y-4 mb-8">
-        <h2 className="text-xl font-bold text-gray-900">8. Disclaimer of Warranties</h2>
         <p>
-          Saifulsir.com is provided on an <strong>&quot;as-is&quot;</strong> and <strong>&quot;as-available&quot;</strong> basis. To the fullest extent permissible by law, we disclaim all warranties, express or implied, including warranties of merchantability, fitness for a particular academic purpose, and non-infringement. We do not guarantee that the site will operate uninterrupted or error-free at all times.
+          বিক্রেতার অবশিষ্ট earnings তাঁর অংশ ফেরত দেওয়ার জন্য যথেষ্ট না থাকলে
+          স্বয়ংক্রিয় financial reversal বন্ধ থাকে; অভিযোগ খোলা রেখে আলাদা সমন্বয়
+          প্রয়োজন। অন্য উৎস জোর করে কাটা বা নির্দিষ্ট সময়ে ফেরতের নিশ্চয়তা দেওয়া হয়
+          না। প্রযোজ্য আইনের অধিকার এই প্রযুক্তিগত সীমাবদ্ধতার বর্ণনায় বাতিল হয় না।
         </p>
-      </section>
-
-      <hr className="my-6 border-gray-300" />
-
-      {/* Section 9 */}
-      <section className="space-y-4 mb-8">
-        <h2 className="text-xl font-bold text-gray-900">9. Limitation of Liability</h2>
+      </PolicySection>
+      <PolicySection title="সহায়তা ও পরিবর্তন">
         <p>
-          To the maximum extent permitted by applicable law, <strong>Saifulsir.com, its founder Saiful Islam, and its contributors</strong> shall not be liable for any direct, indirect, incidental, punitive, or consequential damages resulting from your use of or inability to access the website or its content.
-        </p>
-      </section>
-
-      <hr className="my-6 border-gray-300" />
-
-      {/* Section 10 */}
-      <section className="space-y-4 mb-8">
-        <h2 className="text-xl font-bold text-gray-900">10. Child Privacy &amp; Minor Protection</h2>
-        <p>
-          Saifulsir.com complies with student privacy guidelines and does not knowingly collect personal identifiable information from children under 13 without verifiable parental/guardian consent.
-        </p>
-      </section>
-
-      <hr className="my-6 border-gray-300" />
-
-      {/* Section 11 */}
-      <section className="space-y-4 mb-8">
-        <h2 className="text-xl font-bold text-gray-900">11. Privacy &amp; Data Handling</h2>
-        <p>
-          Your use of our platform is also governed by our comprehensive <strong>Privacy Policy</strong>, which is incorporated into these Terms by reference. Please review our data protection practices at:{" "}
-          <Link href="/privacy-policy" className="text-blue-600 hover:underline">
-            https://saifulsir.com/privacy-policy/
+          সেবার সীমা ও বৈশিষ্ট্য বদলাতে পারে; নিশ্চিত করার সময় বর্তমান তথ্য দেখুন।
+          বিরোধ, কপিরাইট ও গোপনীয়তার বিষয়ে{" "}
+          <Link className="underline" href="/contact-us">
+            যোগাযোগ
           </Link>
+          ,{" "}
+          <Link className="underline" href="/privacy">
+            গোপনীয়তা
+          </Link>{" "}
+          ও{" "}
+          <Link className="underline" href="/dmca">
+            কপিরাইট অভিযোগ
+          </Link>{" "}
+          নির্দেশনা দেখুন। প্রযোজ্য বাধ্যতামূলক আইনগত অধিকার এই শর্ত দিয়ে বাতিল করার
+          উদ্দেশ্য নেই।
         </p>
-      </section>
-
-      <hr className="my-6 border-gray-300" />
-
-      {/* Section 12 */}
-      <section className="space-y-4 mb-8">
-        <h2 className="text-xl font-bold text-gray-900">12. Copyright Infringement &amp; DMCA Compliance</h2>
-        <p>
-          We take copyright concerns seriously. To report an alleged infringement, review our formal procedure on the{" "}
-          <Link href="/dmca" className="text-blue-600 hover:underline">DMCA Policy page</Link> or submit a notice to our designated contact at{" "}
-          <a href="mailto:support@saifulsir.com" className="text-blue-600 hover:underline">
-            support@saifulsir.com
-          </a>.
-        </p>
-      </section>
-
-      <hr className="my-6 border-gray-300" />
-
-      {/* Section 13 */}
-      <section className="space-y-4 mb-8">
-        <h2 className="text-xl font-bold text-gray-900">13. Termination of Access</h2>
-        <p>
-          We reserve the right to temporarily suspend or permanently terminate access to Saifulsir.com at our sole discretion, without prior notice, if a user breaches these Terms &amp; Conditions or engages in harmful, malicious conduct.
-        </p>
-      </section>
-
-      <hr className="my-6 border-gray-300" />
-
-      {/* Section 14 */}
-      <section className="space-y-4 mb-8">
-        <h2 className="text-xl font-bold text-gray-900">14. Governing Law &amp; Jurisdiction</h2>
-        <p>
-          These Terms &amp; Conditions shall be governed by and construed in accordance with the laws of the <strong>People&apos;s Republic of Bangladesh</strong>. Any disputes arising in connection with these Terms shall fall under the exclusive jurisdiction of the competent courts of Bangladesh.
-        </p>
-      </section>
-
-      <hr className="my-6 border-gray-300" />
-
-      {/* Section 15 */}
-      <section className="space-y-4 mb-8">
-        <h2 className="text-xl font-bold text-gray-900">15. Severability &amp; Entire Agreement</h2>
-        <p>
-          If any provision of these Terms is deemed unlawful, invalid, or unenforceable, that provision shall be severed without affecting the validity and enforceability of the remaining provisions. These Terms, alongside our Privacy Policy, Cookie Policy, and Disclaimer, constitute the entire agreement between you and Saifulsir.com.
-        </p>
-      </section>
-
-      <hr className="my-6 border-gray-300" />
-
-      {/* Section 16 */}
-      <section className="space-y-4 mb-8">
-        <h2 className="text-xl font-bold text-gray-900">16. Contact Information</h2>
-        <p>
-          For any questions, legal notices, or feedback regarding these Terms &amp; Conditions, please contact us:
-        </p>
-        <ul className="space-y-2 text-gray-700">
-          <li>📧 <strong>Official Email:</strong> <a href="mailto:support@saifulsir.com" className="text-blue-600 hover:underline">support@saifulsir.com</a></li>
-          <li>🌐 <strong>Official Website:</strong> <a href="https://saifulsir.com" className="text-blue-600 hover:underline">https://saifulsir.com/</a></li>
-          <li>📥 <strong>Contact Form:</strong> <Link href="/contact-us" className="text-blue-600 hover:underline">https://saifulsir.com/contact-us/</Link></li>
-          <li>⏱️ <strong>Response Window:</strong> We review all inquiries within 24 to 48 business hours.</li>
-        </ul>
-      </section>
-
-      <hr className="my-6 border-gray-300" />
-
-      {/* Section 17: Legal & Policy Directory Table */}
-      <section className="space-y-4 mb-10">
-        <h2 className="text-xl font-bold text-gray-900">17. Legal &amp; Policy Directory</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse bg-white border border-gray-200 text-sm">
-            <thead>
-              <tr className="bg-gray-100 text-gray-800 border-b border-gray-200">
-                <th className="py-3 px-4 text-left font-semibold">Policy Document</th>
-                <th className="py-3 px-4 text-left font-semibold">Direct Link</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              <tr>
-                <td className="py-3 px-4">🔒 Privacy Policy</td>
-                <td className="py-3 px-4"><Link href="/privacy-policy" className="text-blue-600 hover:underline">saifulsir.com/privacy-policy/</Link></td>
-              </tr>
-              <tr>
-                <td className="py-3 px-4">⚠️ Disclaimer</td>
-                <td className="py-3 px-4"><Link href="/disclaimer" className="text-blue-600 hover:underline">saifulsir.com/disclaimer/</Link></td>
-              </tr>
-              <tr>
-                <td className="py-3 px-4">📜 Terms &amp; Conditions</td>
-                <td className="py-3 px-4"><Link href="/terms-conditions" className="text-blue-600 hover:underline">saifulsir.com/terms-conditions/</Link></td>
-              </tr>
-              <tr>
-                <td className="py-3 px-4">🍪 Cookie Policy</td>
-                <td className="py-3 px-4"><Link href="/cookie-policy" className="text-blue-600 hover:underline">saifulsir.com/cookie-policy/</Link></td>
-              </tr>
-              <tr>
-                <td className="py-3 px-4">🛡️ DMCA Copyright Policy</td>
-                <td className="py-3 px-4"><Link href="/dmca" className="text-blue-600 hover:underline">saifulsir.com/dmca-policy/</Link></td>
-              </tr>
-              <tr>
-                <td className="py-3 px-4">👤 About Us</td>
-                <td className="py-3 px-4"><Link href="/about-us" className="text-blue-600 hover:underline">saifulsir.com/about-us/</Link></td>
-              </tr>
-              <tr>
-                <td className="py-3 px-4">✉️ Contact Us</td>
-                <td className="py-3 px-4"><Link href="/contact-us" className="text-blue-600 hover:underline">saifulsir.com/contact-us/</Link></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <p className="text-center italic text-gray-600 mt-10">
-        Thank you for respecting our community standards and choosing Saifulsir.com for your educational journey.
-      </p>
-    </main>
+      </PolicySection>
+    </PolicyLayout>
   );
 }
