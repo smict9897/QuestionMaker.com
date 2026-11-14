@@ -51,6 +51,13 @@ function setup() {
     "@/auth": { auth: async () => session },
     "@/lib/db": { db },
     "@/lib/resource-access": access,
+    "@/lib/resource-vault": {
+      RESOURCE_PRIVATE_PREFIX: "private-resource:v1:",
+      privateResourceMarker: (id) => "private-resource:v1:" + id,
+      readPrivateResource: async () => {
+        throw Error("unavailable");
+      },
+    },
   });
   return {
     get: () =>
@@ -146,6 +153,13 @@ test("public paid video cards never embed or expose source even without login", 
     "@/app/actions/pay": { buy: async () => {} },
     "@/auth": { auth: async () => null },
     "@/lib/resource-access": access,
+    "@/lib/resource-vault": {
+      RESOURCE_PRIVATE_PREFIX: "private-resource:v1:",
+      privateResourceMarker: (id) => "private-resource:v1:" + id,
+      readPrivateResource: async () => {
+        throw Error("unavailable");
+      },
+    },
     "next/link": {
       __esModule: true,
       default: ({ href, children }) =>

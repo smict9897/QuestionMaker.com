@@ -22,6 +22,9 @@ export default async function PdfStorage() {
   return (
     <main className="mx-auto max-w-3xl p-4 space-y-5">
       <Link href="/admin">← অ্যাডমিন</Link>
+      <Link href="/admin/pdf-storage/resources" className="underline">
+        পুরোনো পেইড PDF migrate করুন →
+      </Link>
       <h1 className="text-2xl font-bold">PDF storage প্রস্তুতি ও পরীক্ষা</h1>
       <p role="status">
         {configured
