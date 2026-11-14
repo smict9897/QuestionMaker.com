@@ -3,9 +3,10 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/wallet";
-import { reportRange, REPORT_SCAN_LIMIT } from "@/lib/wallet-financial-report";
+import { reportRange } from "@/lib/wallet-financial-report";
 import { readFinancialReport } from "@/lib/wallet-financial-data";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 export const metadata = {
   title: "সমন্বিত আর্থিক রিপোর্ট",
   robots: { index: false, follow: false },
@@ -85,7 +86,7 @@ export default async function FinancialReport({
                 <strong>অসম্পূর্ণ / যাচাই প্রয়োজন—এটি চূড়ান্ত মোট নয়।</strong>
                 <p>
                   {report.truncated
-                    ? `কোনো রেকর্ডের ধরন ${REPORT_SCAN_LIMIT}টির বেশি; সীমিত স্ক্যান হয়েছে। বড় ডেটার জন্য আলাদা reconciled aggregation প্রয়োজন।`
+                    ? "স্ক্যান সম্পূর্ণ হয়নি; এই মোট ব্যবহার করবেন না।"
                     : "অবৈধ বা অসম্পূর্ণ রেকর্ড বাদ পড়েছে।"}
                 </p>
                 <p>
@@ -143,8 +144,8 @@ export default async function FinancialReport({
             <p>
               স্ক্যান: বিক্রি {report.scanned.sales}, রিফান্ড{" "}
               {report.scanned.refunds}, উত্তোলন {report.scanned.withdrawals}। একই
-              snapshot-এ সর্বোচ্চ প্রতি ধরনে {REPORT_SCAN_LIMIT}টি রেকর্ড হিসাব করা
-              হয়।
+              snapshot-এ ছোট batch-এ সব রেকর্ড যাচাই হয়; নির্দিষ্ট ১০,০০০ রেকর্ডে
+              থামে না। সময়সীমা বা query ব্যর্থ হলে আংশিক মোট দেখানো হয় না।
             </p>
             <p>
               বিক্রি কেনার সময়, রিফান্ড ফেরতের সময়, payout/বাতিল নিষ্পত্তির সময়

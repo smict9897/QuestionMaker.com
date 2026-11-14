@@ -152,8 +152,9 @@ test("scan bounds cannot masquerade as lifetime totals and only validated first 
 test("data boundary uses repeatable-read, fresh admin check and bounded receipt prefixes, never wallet/purchased content", () => {
   const s = fs.readFileSync("lib/wallet-financial-data.ts", "utf8");
   assert.match(s, /RepeatableRead/);
-  assert.ok(s.indexOf('role !== "ADMIN"') < s.indexOf("const sales"));
-  assert.match(s, /REPORT_SCAN_LIMIT \+ 1/);
+  assert.ok(s.indexOf('role !== "ADMIN"') < s.indexOf("const report"));
+  assert.match(s, /scanFinancialReport/);
+  assert.match(s, /gt: after/);
   assert.doesNotMatch(s, /market:purchase|wallet:account|snapshot\.questions/);
 });
 test("data loader denies nonadmin before reads and returns transaction timestamp with consistent options", async () => {
@@ -185,7 +186,9 @@ test("data loader denies nonadmin before reads and returns transaction timestamp
         ? { db }
         : n === "@/lib/wallet-financial-report"
           ? load("lib/wallet-financial-report.ts")
-          : require(n);
+          : n === "@/lib/wallet-financial-scan"
+            ? load("lib/wallet-financial-scan.ts")
+            : require(n);
   m._compile(
     ts.transpileModule(fs.readFileSync(file, "utf8"), {
       compilerOptions: {
@@ -204,4 +207,113 @@ test("data loader denies nonadmin before reads and returns transaction timestamp
   assert.equal(r.asOf, "2026-11-10T00:00:00.000Z");
   assert.equal(r.complete, true);
   assert.equal(r.gross.amount, 0);
+});
+
+const { scanFinancialReport, REPORT_BATCH_SIZE } = load(
+  "lib/wallet-financial-scan.ts",
+);
+function scanReader(rows) {
+  const sorted = [...rows].sort((a, b) =>
+      a.key < b.key ? -1 : a.key > b.key ? 1 : 0,
+    ),
+    calls = [];
+  return {
+    calls,
+    page: async (prefix, after, take) => {
+      calls.push({ prefix, after, take });
+      return sorted
+        .filter((r) => r.key.startsWith(prefix) && (!after || r.key > after))
+        .slice(0, take);
+    },
+    sales: async (keys) => {
+      assert.ok(keys.length <= REPORT_BATCH_SIZE);
+      return sorted.filter((r) => keys.includes(r.key));
+    },
+  };
+}
+test("batched financial scan totals over 10000 sales/refunds without truncation or unbounded lookups", async () => {
+  const count = 10007,
+    rows = [];
+  for (let i = 0; i < count; i++) {
+    const s = { ...sale, buyerId: "b" + String(i).padStart(6, "0") };
+    rows.push(saleRow(s), {
+      key: `market:refund:v1:${s.buyerId}:${paperId}`,
+      value: JSON.stringify({
+        version: 1,
+        ...s,
+        refundedAt: "2026-11-02T01:00:00Z",
+      }),
+    });
+  }
+  const reader = scanReader(rows),
+    r = await scanFinancialReport(reader, null);
+  assert.equal(r.complete, true);
+  assert.equal(r.truncated, false);
+  assert.equal(r.gross.count, count);
+  assert.equal(r.gross.amount, count * 1001);
+  assert.equal(r.refunds.count, count);
+  assert.equal(r.adjusted.amount, 0);
+  assert.equal(r.scanned.sales, count);
+  assert.equal(r.scanned.refunds, count);
+  assert.ok(reader.calls.every((c) => c.take === REPORT_BATCH_SIZE));
+  assert.ok(reader.calls.some((c) => c.after));
+});
+test("streamed report matches established pure rules including cross-date refunds, corrupt rows and current holds", async () => {
+  const rows = [
+    saleRow(),
+    refundRow(),
+    withdrawal("HELD", {
+      claimedBy: "admin",
+      claimedAt: "2026-10-01T01:00:00Z",
+    }),
+    { key: "market:platform:v1:bad", value: "{" },
+    { key: "market:refund:v1:orphan", value: "{}" },
+  ];
+  const range = reportRange("2026-11-02", "2026-11-02"),
+    pure = financialReport(
+      rows.filter((r) => r.key.startsWith("market:platform")),
+      rows.filter((r) => r.key.startsWith("market:refund")),
+      rows.filter((r) => r.key.startsWith("wallet:withdrawal")),
+      range,
+    );
+  assert.deepEqual(await scanFinancialReport(scanReader(rows), range), pure);
+});
+test("scan query failure cannot return a successful partial report", async () => {
+  const rows = Array.from({ length: REPORT_BATCH_SIZE + 1 }, (_, i) =>
+      saleRow({ ...sale, buyerId: "b" + String(i).padStart(6, "0") }),
+    ),
+    reader = scanReader(rows),
+    page = reader.page;
+  reader.page = async (p, a, t) => {
+    if (a) throw Error("database timeout");
+    return page(p, a, t);
+  };
+  await assert.rejects(
+    () => scanFinancialReport(reader, null),
+    /database timeout/,
+  );
+});
+test("non-progressing cursors, overflowing batches and unrelated refund lookups fail closed", async () => {
+  const rows = Array.from({ length: REPORT_BATCH_SIZE }, (_, i) =>
+    saleRow({ ...sale, buyerId: "b" + String(i).padStart(6, "0") }),
+  );
+  await assert.rejects(
+    () =>
+      scanFinancialReport(
+        { page: async () => rows, sales: async () => [] },
+        null,
+      ),
+    /cursor/,
+  );
+  await assert.rejects(
+    () =>
+      scanFinancialReport(
+        { page: async () => [...rows, rows[0]], sales: async () => [] },
+        null,
+      ),
+    /overflow/,
+  );
+  const reader = scanReader([refundRow()]);
+  reader.sales = async () => [saleRow({ ...sale, buyerId: "other" })];
+  await assert.rejects(() => scanFinancialReport(reader, null), /lookup/);
 });
