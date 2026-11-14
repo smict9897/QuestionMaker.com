@@ -1,4 +1,5 @@
 "use client";
+import { BRAND } from "@/lib/brand";
 
 import React, { useState } from "react";
 import Link from "next/link";
@@ -36,11 +37,11 @@ export default function Navbar() {
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 group">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-md group-hover:scale-105 transition-transform">
-                S
+                P
               </div>
               <div className="flex flex-col">
                 <span className="font-extrabold text-lg text-gray-900 tracking-tight">
-                  SaifulSir<span className="text-blue-600">.com</span>
+                  {BRAND.nameBn}
                 </span>
                 <span className="text-[10px] text-gray-500 font-medium -mt-1">
                   স্মার্ট এডুকেশন প্ল্যাটফর্ম

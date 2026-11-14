@@ -1,3 +1,4 @@
+import { publicSiteOrigin } from "@/lib/brand";
 import "./globals.css";
 import "@/components/ui-typography.css";
 import "@/components/design-system.css";
@@ -28,7 +29,7 @@ export const viewport: Viewport = {
   userScalable: true,
 };
 
-const SITE_URL = process.env.SITE_URL ?? "https://question-maker-com-g6ec.vercel.app";
+const SITE_URL = publicSiteOrigin(process.env.SITE_URL);
 
 // 🎯 ১. আদর্শলিপিতে শুধুমাত্র বাংলা ইউনিকোড রেঞ্জ (প্রশ্নপত্র ছাপার জন্য)
 const bn = localFont({

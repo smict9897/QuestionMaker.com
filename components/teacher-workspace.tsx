@@ -1,4 +1,5 @@
 "use client";
+import { BRAND } from "@/lib/brand";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
@@ -101,7 +102,7 @@ export default function TeacherWorkspace({
     <div className="tw-root">
       <header ref={header} className="tw-header">
         <Link href="/" className="tw-brand">
-          <BrandWordmark name="QuestionMakerBd.com" />
+          <BrandWordmark name={BRAND.nameBn} />
         </Link>
         <nav aria-label="অ্যাকাউন্ট মেনু">
           <Link className="tw-recharge" href="/wallet#recharge">
@@ -116,7 +117,7 @@ export default function TeacherWorkspace({
               <LayoutGrid size={21} />
             </summary>
             <div className="tw-appmenu">
-              <strong>QuestionMakerBd অ্যাপস</strong>
+              <strong>{BRAND.nameEn} অ্যাপস</strong>
               <div>
                 {workspaceLinks.map(({ label, href, icon: Icon }) => (
                   <Link key={href} href={href}>
@@ -158,7 +159,7 @@ export default function TeacherWorkspace({
       </header>
       {children}
       <footer className="tw-footer">
-        QuestionMakerBd.com · আপনার প্রশ্ন, আপনার প্রস্তুতি।{" "}
+        {BRAND.nameBn} · আপনার প্রশ্ন, আপনার প্রস্তুতি।{" "}
         <Link href="/contact-us">সহায়তা</Link>
       </footer>
     </div>

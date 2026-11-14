@@ -8,7 +8,12 @@ const { test } = require("node:test"),
 function html(props) {
   const m = new Module("prep", module);
   m.paths = module.paths;
-  m.require = (n) => (n.endsWith(".css") ? {} : require(n));
+  m.require = (n) =>
+    n === "@/lib/brand"
+      ? require("./helpers/brand.cjs")
+      : n.endsWith(".css")
+        ? {}
+        : require(n);
   m._compile(
     ts.transpileModule(
       fs.readFileSync("components/preparation-popup.tsx", "utf8"),
@@ -26,7 +31,7 @@ function html(props) {
 }
 test("processing popup is indeterminate without real progress and never invents scan/percentage claims", () => {
   const s = html({ subject: "গণিত", stage: 1 });
-  assert.match(s, /QuestionMakerBd AI/);
+  assert.match(s, /Proshnobook AI/);
   assert.match(s, /গণিত/);
   assert.doesNotMatch(s, /value="/);
   assert.doesNotMatch(s, /পাঠ্যবই স্ক্যান|৪৫%/);

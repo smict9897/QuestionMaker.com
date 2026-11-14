@@ -487,7 +487,7 @@ export default function PostForm({ post = empty, cats }: { post?: PostFormData; 
         <label><L t="Meta description" hint="shown under the title on Google" n={v.metaDescription.length} max={160} /><textarea name="metaDescription" maxLength={170} rows={3} value={v.metaDescription} onChange={on("metaDescription")} className={f} /></label>
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
           <p className="text-xs text-slate-500">Google preview</p>
-          <p className="truncate text-sm text-green-800">saifulsir.com › blog › {v.slug || "..."}</p>
+          <p className="truncate text-sm text-green-800">proshnobook.com › blog › {v.slug || "..."}</p>
           <p className="truncate text-lg text-blue-700">{v.metaTitle || v.title || "Post title"}</p>
           <p className="line-clamp-2 text-sm text-slate-600">{v.metaDescription || "The meta description appears here."}</p>
         </div>

@@ -1,3 +1,4 @@
+import { BRAND } from "@/lib/brand";
 /** Compact, static counterpart of the homepage brand intro. */
 export default function Logo({ className = "" }: { className?: string }) {
   return (
@@ -12,10 +13,10 @@ export default function Logo({ className = "" }: { className?: string }) {
       />
       <div className="min-w-0">
         <span className="block text-sm sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-          QuestionMakerBd<span className="text-[#4DB8AC]">.com</span>
+          {BRAND.nameBn}
         </span>
         <span className="block text-[8px] sm:text-[10px] text-slate-500 dark:text-slate-300">
-          Empowering Assessments with AI
+          {BRAND.tagline}
         </span>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { BRAND } from "@/lib/brand";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -13,7 +14,7 @@ type Item = [label: string, href: string, icon: any];
 
 const groups: { title: string; items: Item[] }[] = [
   {
-    title: "QuestionMakerBd.com",
+    title: BRAND.nameBn,
     items: [
       ["হোম", "/", Home],
       ["প্রশ্নপত্র তৈরি", "/question-builder", PenTool],
@@ -59,13 +60,13 @@ export default async function SiteFooter() {
         {/* Top Info Section */}
         <div className="mb-12 pb-10 border-b border-white/10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
           <div className="max-w-md">
-            <Link href="/" aria-label="QuestionMakerBd.com হোম" className="flex items-center gap-3 group">
+            <Link href="/" aria-label={`${BRAND.nameBn} হোম`} className="flex items-center gap-3 group">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] shadow-lg shadow-violet-500/20 group-hover:scale-105 transition-transform">
                 <PenTool size={20} className="text-white" />
               </div>
               <div>
-                <span className="block font-extrabold text-xl text-white tracking-tight">QuestionMakerBd.com</span>
-                <span className="block text-[10px] text-violet-400 font-semibold mt-0.5">Empowering Assessments with AI</span>
+                <span className="block font-extrabold text-xl text-white tracking-tight">{BRAND.nameBn}</span>
+                <span className="block text-[10px] text-violet-400 font-semibold mt-0.5">{BRAND.tagline}</span>
               </div>
             </Link>
             <p className="mt-4 text-slate-400 leading-relaxed text-sm">
@@ -160,7 +161,7 @@ export default async function SiteFooter() {
 
       {/* Copyright */}
       <div className="border-t border-white/10 py-6 text-center text-xs text-slate-500">
-        © {new Date().getFullYear()} QuestionMakerBd.com। সর্বস্বত্ব সংরক্ষিত।
+        © {new Date().getFullYear()} {BRAND.nameBn}। সর্বস্বত্ব সংরক্ষিত।
       </div>
     </footer>
   );
