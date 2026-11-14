@@ -40,6 +40,12 @@ export default async function PurchasedPaper({
     <main className="max-w-6xl mx-auto p-4 space-y-4">
       <div data-noprint className="space-y-3">
         <Link href="/dashboard/library">← কেনা প্রশ্নপত্র</Link>
+        <Link
+          className="block underline"
+          href={`/dashboard/library/${id}/report`}
+        >
+          সমস্যা জানান / অভিযোগের অবস্থা →
+        </Link>
         <h1 className="text-2xl font-bold">{r.title}</h1>
         <p>
           আপনার কেনা অপরিবর্তনীয় কপি · সংস্করণ {r.revision}। বর্তমান বিক্রির তালিকা

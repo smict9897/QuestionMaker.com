@@ -113,6 +113,8 @@ function setup() {
     transfers: load("app/actions/wallet-transfer.ts"),
     withdrawals: load("app/actions/wallet-withdrawal.ts"),
     purchases: load("app/actions/marketplace-purchase.ts"),
+    disputes: load("app/actions/marketplace-refund.ts"),
+    refunds: load("lib/marketplace-refund.ts"),
     market: load("lib/marketplace.ts"),
     commerce: load("lib/marketplace-purchase.ts"),
     builder: load("lib/paper-builder.ts"),
@@ -860,4 +862,210 @@ test("revenue split conserves each paisa and disallows invalid prices", () => {
   }
   for (const n of [0, -1, 100.5, NaN, 5000001])
     assert.throws(() => x.commerce.revenueSplit(n));
+});
+function complaintForm(id) {
+  const f = new FormData();
+  f.set("paperId", id);
+  f.set("reason", "The purchased paper has incorrect questions.");
+  f.set("confirmed", "on");
+  return f;
+}
+function disputeReview(x, decision = "REFUNDED") {
+  const f = new FormData();
+  f.set("key", x.refunds.disputeKey("u", x.id));
+  f.set("decision", decision);
+  f.set("note", "Verified the issue against the purchased snapshot.");
+  f.set("confirmed", "on");
+  return f;
+}
+async function disputeSetup() {
+  const x = await marketSetup();
+  const result = await x.purchases.buyMarketPaper({}, x.f);
+  assert.equal(result.ok, true);
+  assert.equal(
+    (await x.disputes.reportMarketPurchase({}, complaintForm(x.id))).ok,
+    true,
+  );
+  return x;
+}
+test("refund restores exact bonus/recharge/received/earnings sources and reverses seller earnings once", async () => {
+  const x = await marketSetup();
+  x.store.set(
+    "wallet:account:u",
+    JSON.stringify({
+      version: 2,
+      balance: 1001,
+      bonus: 2000,
+      funds: { bonus: 200, recharge: 300, received: 400, earnings: 101 },
+    }),
+  );
+  assert.equal((await x.purchases.buyMarketPaper({}, x.f)).ok, true);
+  assert.equal(
+    (await x.disputes.reportMarketPurchase({}, complaintForm(x.id))).ok,
+    true,
+  );
+  x.setSession("a");
+  const results = await Promise.all(
+    Array.from({ length: 8 }, () =>
+      x.disputes.reviewMarketDispute({}, disputeReview(x)),
+    ),
+  );
+  assert.ok(
+    results.every((r) => r.ok),
+    JSON.stringify(results),
+  );
+  assert.deepEqual((await x.wallet.ensureWallet("u")).funds, {
+    bonus: 200,
+    recharge: 300,
+    received: 400,
+    earnings: 101,
+  });
+  assert.equal((await x.wallet.ensureWallet("v")).funds.earnings, 0);
+  const raw = x.store.get(x.commerce.purchaseKey("u", x.id));
+  assert.throws(() => x.commerce.validatePurchase(raw, "u", x.id));
+  assert.ok(x.commerce.validatePurchase(raw, "u", x.id, true).refundedAt);
+  assert.equal(
+    JSON.parse(x.store.get(`market:refund:v1:u:${x.id}`)).platformAmount,
+    401,
+  );
+  x.setSession("u");
+  assert.equal((await x.purchases.buyMarketPaper({}, x.f)).ok, false);
+  const edit = new FormData();
+  edit.set("paperId", x.id);
+  edit.set("institution", "New School");
+  assert.equal(
+    (await x.purchases.savePurchasedInstitution({}, edit)).ok,
+    false,
+  );
+});
+test("only actual buyer may complain; admin required for review; explicit refund consent and reason", async () => {
+  const x = await marketSetup();
+  assert.equal(
+    (await x.disputes.reportMarketPurchase({}, complaintForm(x.id))).ok,
+    false,
+  );
+  await x.purchases.buyMarketPaper({}, x.f);
+  x.setSession("v");
+  assert.equal(
+    (await x.disputes.reportMarketPurchase({}, complaintForm(x.id))).ok,
+    false,
+  );
+  x.setSession("");
+  assert.equal(
+    (await x.disputes.reportMarketPurchase({}, complaintForm(x.id))).ok,
+    false,
+  );
+  x.setSession("u");
+  const f = complaintForm(x.id);
+  f.set("reason", "short");
+  assert.equal((await x.disputes.reportMarketPurchase({}, f)).ok, false);
+  assert.equal(
+    (await x.disputes.reportMarketPurchase({}, complaintForm(x.id))).ok,
+    true,
+  );
+  assert.equal(
+    (await x.disputes.reviewMarketDispute({}, disputeReview(x))).ok,
+    false,
+  );
+  x.setSession("a");
+  const r = disputeReview(x);
+  r.delete("confirmed");
+  assert.equal((await x.disputes.reviewMarketDispute({}, r)).ok, false);
+  r.set("confirmed", "on");
+  r.set("note", "");
+  assert.equal((await x.disputes.reviewMarketDispute({}, r)).ok, false);
+});
+test("insufficient seller earnings or original source/platform mismatch blocks refund without taking other funds", async () => {
+  for (const scenario of ["earnings", "ledger", "platform"]) {
+    const x = await disputeSetup();
+    if (scenario === "earnings")
+      x.store.set(
+        "wallet:account:v",
+        JSON.stringify({
+          version: 2,
+          balance: 2600,
+          bonus: 2000,
+          funds: { bonus: 2000, recharge: 600, received: 0, earnings: 0 },
+        }),
+      );
+    if (scenario === "ledger") {
+      const key = x.refunds.marketDebitKey("u", x.id),
+        r = JSON.parse(x.store.get(key));
+      r.used = { bonus: 0, recharge: 1000, earnings: 0, received: 0 };
+      x.store.set(key, JSON.stringify(r));
+    }
+    if (scenario === "platform") {
+      const key = `market:platform:v1:u:${x.id}`,
+        r = JSON.parse(x.store.get(key));
+      r.sellerId = "wrong";
+      x.store.set(key, JSON.stringify(r));
+    }
+    const before = new Map(x.store);
+    x.setSession("a");
+    assert.equal(
+      (await x.disputes.reviewMarketDispute({}, disputeReview(x))).ok,
+      false,
+      scenario,
+    );
+    assert.deepEqual(x.store, before);
+  }
+});
+test("refund receipt/copy/history/complaint failures roll back all money and access changes", async () => {
+  for (const failure of [
+    "market:refund:v1:",
+    "market:purchase:v1:",
+    "wallet:history:v1:u:",
+    "market:dispute:v1:",
+  ]) {
+    const x = await disputeSetup(),
+      before = new Map(x.store);
+    x.setSession("a");
+    x.setFail(failure);
+    assert.equal(
+      (await x.disputes.reviewMarketDispute({}, disputeReview(x))).ok,
+      false,
+      failure,
+    );
+    assert.deepEqual(x.store, before, failure);
+    x.setFail("");
+    assert.equal(
+      (await x.disputes.reviewMarketDispute({}, disputeReview(x))).ok,
+      true,
+    );
+  }
+});
+test("rejected complaint changes no balances and cannot later be refunded or overwritten", async () => {
+  const x = await disputeSetup(),
+    before = (await x.wallet.ensureWallet("u")).balance;
+  x.setSession("a");
+  assert.equal(
+    (await x.disputes.reviewMarketDispute({}, disputeReview(x, "REJECTED"))).ok,
+    true,
+  );
+  assert.equal(
+    (await x.disputes.reviewMarketDispute({}, disputeReview(x, "REJECTED"))).ok,
+    true,
+  );
+  assert.equal((await x.wallet.ensureWallet("u")).balance, before);
+  assert.equal(
+    (await x.disputes.reviewMarketDispute({}, disputeReview(x))).ok,
+    false,
+  );
+  x.setSession("u");
+  assert.equal(
+    (await x.disputes.reportMarketPurchase({}, complaintForm(x.id))).ok,
+    true,
+  );
+  assert.equal(
+    JSON.parse(x.store.get(x.refunds.disputeKey("u", x.id))).status,
+    "REJECTED",
+  );
+});
+test("refund access checks apply to private paper and institution mutation, with complaint audit kept", () => {
+  const page = fs.readFileSync("app/dashboard/library/[id]/page.tsx", "utf8"),
+    action = fs.readFileSync("app/actions/marketplace-purchase.ts", "utf8"),
+    helper = fs.readFileSync("lib/marketplace-purchase.ts", "utf8");
+  assert.match(page, /validatePurchase\(row.value, buyerId, id\)/);
+  assert.match(action, /validatePurchase\(row.value, buyerId, id\)/);
+  assert.match(helper, /!includeRefunded && r.refundedAt !== undefined/);
 });

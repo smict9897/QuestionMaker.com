@@ -55,3 +55,22 @@ export function pageRevenue(receipts: SaleReceipt[]) {
     { count: 0, amount: 0, sellerAmount: 0, platformAmount: 0 },
   );
 }
+/** Refund receipt must agree with the original immutable sale. */
+export function matchingRefund(raw: string, sale: SaleReceipt): boolean {
+  try {
+    const r = JSON.parse(raw);
+    return (
+      r.version === 1 &&
+      r.buyerId === sale.buyerId &&
+      r.paperId === sale.paperId &&
+      r.sellerId === sale.sellerId &&
+      r.amount === sale.amount &&
+      r.sellerAmount === sale.sellerAmount &&
+      r.platformAmount === sale.platformAmount &&
+      typeof r.refundedAt === "string" &&
+      Number.isFinite(Date.parse(r.refundedAt))
+    );
+  } catch {
+    return false;
+  }
+}

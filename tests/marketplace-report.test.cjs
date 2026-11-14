@@ -10,7 +10,12 @@ m._compile(
   }).outputText,
   "report",
 );
-const { saleReceipt, pageRevenue, PLATFORM_RECEIPT_PREFIX: p } = m.exports;
+const {
+  saleReceipt,
+  pageRevenue,
+  matchingRefund,
+  PLATFORM_RECEIPT_PREFIX: p,
+} = m.exports;
 const r = {
     buyerId: "buyer",
     sellerId: "seller",
@@ -57,4 +62,22 @@ test("revenue route verifies fresh admin role before querying receipts, bounded 
   assert.match(s, /take: 51/);
   assert.match(s, /encodeURIComponent/);
   assert.doesNotMatch(s, /purchaseKey|snapshot|dangerouslySetInnerHTML/);
+});
+
+test("refund adjustments require exact original sale and valid timestamp", () => {
+  const refund = { version: 1, ...r, refundedAt: new Date().toISOString() };
+  assert.equal(matchingRefund(JSON.stringify(refund), r), true);
+  for (const patch of [
+    { buyerId: "wrong" },
+    { amount: 1000 },
+    { platformAmount: 0 },
+    { sellerAmount: 0 },
+    { sellerId: "wrong" },
+    { refundedAt: "bad" },
+    { version: 2 },
+  ])
+    assert.equal(
+      matchingRefund(JSON.stringify({ ...refund, ...patch }), r),
+      false,
+    );
 });

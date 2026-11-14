@@ -38,14 +38,24 @@ export default async function Library({
       {rows.slice(0, 50).map((row) => {
         const paperId = row.key.slice(prefix.length);
         try {
-          const r = validatePurchase(row.value, id, paperId);
+          const r = validatePurchase(row.value, id, paperId, true);
           return (
             <article className="border rounded p-4" key={row.key}>
+              {r.refundedAt ? (
+                <p>{r.title} — রিফান্ড হয়েছে; অনলাইন কপি বন্ধ</p>
+              ) : (
+                <Link
+                  className="underline"
+                  href={`/dashboard/library/${paperId}`}
+                >
+                  {r.title} →
+                </Link>
+              )}
               <Link
-                className="underline"
-                href={`/dashboard/library/${paperId}`}
+                className="block underline"
+                href={`/dashboard/library/${paperId}/report`}
               >
-                {r.title} →
+                অভিযোগ / নিষ্পত্তির অবস্থা →
               </Link>
               <p>
                 {formatMoney(r.amount)} · {r.purchasedAt}

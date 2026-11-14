@@ -17,6 +17,12 @@ export default async function Admin() {
       <Link href="/admin/marketplace-revenue" className="rounded-xl border p-4">
         মার্কেটপ্লেস বিক্রির আর্থিক রসিদ →
       </Link>
+      <Link
+        href="/admin/marketplace-disputes"
+        className="rounded-xl border p-4"
+      >
+        মার্কেটপ্লেস অভিযোগ / রিফান্ড →
+      </Link>
       {/* 🔔 পেন্ডিং পেমেন্ট সতর্কতা */}
       {pendingPayments > 0 && (
         <Link

@@ -7,6 +7,7 @@ import {
   PLATFORM_RECEIPT_PREFIX,
   saleReceipt,
   pageRevenue,
+  matchingRefund,
 } from "@/lib/marketplace-report";
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -46,6 +47,24 @@ export default async function Revenue({
       return r ? [r] : [];
     }),
     totals = pageRevenue(receipts);
+  const refundRows = receipts.length
+    ? await db.setting.findMany({
+        where: {
+          key: {
+            in: receipts.map(
+              (r) => `market:refund:v1:${r.buyerId}:${r.paperId}`,
+            ),
+          },
+        },
+      })
+    : [];
+  const refunds = new Map(refundRows.map((row) => [row.key, row.value]));
+  const reversed = receipts.filter((r) => {
+    const raw = refunds.get(`market:refund:v1:${r.buyerId}:${r.paperId}`);
+    return !!raw && matchingRefund(raw, r);
+  });
+  const reversals = pageRevenue(reversed);
+  const invalidRefunds = refundRows.length - reversed.length;
   return (
     <main className="mx-auto max-w-5xl p-5 space-y-5">
       <Link href="/admin">← অ্যাডমিন</Link>
@@ -64,7 +83,28 @@ export default async function Revenue({
           বিক্রেতার আয়: {formatMoney(totals.sellerAmount)} · প্ল্যাটফর্ম অংশ:{" "}
           {formatMoney(totals.platformAmount)}
         </p>
+        <p>
+          এই পৃষ্ঠার বিক্রির রিফান্ড: {reversals.count}টি ·{" "}
+          {formatMoney(reversals.amount)}। সংশ্লিষ্ট প্ল্যাটফর্ম অংশ ফেরত:{" "}
+          {formatMoney(reversals.platformAmount)}।
+        </p>
+        <p>
+          যাচাইকৃত রিফান্ড বাদে এই পৃষ্ঠার বিক্রি:{" "}
+          {formatMoney(totals.amount - reversals.amount)} · বিক্রেতার অংশ{" "}
+          {formatMoney(totals.sellerAmount - reversals.sellerAmount)} · প্ল্যাটফর্ম
+          অংশ {formatMoney(totals.platformAmount - reversals.platformAmount)}।
+          এটি নিট লাভ বা নগদ নয়।
+        </p>
       </section>
+      {invalidRefunds > 0 && (
+        <p role="alert">
+          {invalidRefunds}টি রিফান্ড রসিদ মেলেনি; নিচের সমন্বিত হিসাব চূড়ান্ত নয়।
+          তদন্ত করুন।
+        </p>
+      )}
+      <Link className="block underline" href="/admin/marketplace-disputes">
+        অভিযোগ ও রিফান্ড নিষ্পত্তি →
+      </Link>
       {page.length !== receipts.length && (
         <p role="alert">
           {page.length - receipts.length}টি রসিদের তথ্য যাচাই হয়নি; যোগফল থেকে
@@ -80,6 +120,10 @@ export default async function Revenue({
           className="border rounded-xl p-4 space-y-2 break-all"
         >
           <p>{r.at}</p>
+          {reversed.some(
+            (refund) =>
+              refund.buyerId === r.buyerId && refund.paperId === r.paperId,
+          ) && <p>পূর্ণ রিফান্ড হয়েছে; মূল রসিদ অডিটের জন্য রাখা আছে।</p>}
           <p>
             ক্রেতা: {teacherTid(r.buyerId)} · বিক্রেতা: {teacherTid(r.sellerId)}
           </p>
