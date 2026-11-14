@@ -11,6 +11,9 @@ export default async function Admin() {
   return (
     <div className="grid gap-4">
       <h1 className="sr-only">অ্যাডমিন ড্যাশবোর্ড</h1>
+      <Link href="/admin/withdrawals" className="rounded-xl border p-4">
+        বিক্রির আয় উত্তোলন অনুরোধ নিষ্পত্তি →
+      </Link>
       {/* 🔔 পেন্ডিং পেমেন্ট সতর্কতা */}
       {pendingPayments > 0 && (
         <Link

@@ -172,6 +172,7 @@ export async function changeWalletFunds(
     direction: "DEBIT" | "CREDIT";
     source?: FundSource;
     transfer?: boolean;
+    earningsOnly?: boolean;
     description: string;
   },
 ) {
@@ -193,7 +194,8 @@ export async function changeWalletFunds(
       receipt.amount !== input.amount ||
       receipt.direction !== input.direction ||
       receipt.source !== (input.source ?? null) ||
-      receipt.transfer !== !!input.transfer
+      receipt.transfer !== !!input.transfer ||
+      !!receipt.earningsOnly !== !!input.earningsOnly
     )
       throw new WalletError("লেনদেনের তথ্য মেলেনি।");
     return { balance: current.balance, replay: true, receipt };
@@ -217,11 +219,16 @@ export async function changeWalletFunds(
   let used = null;
   try {
     if (input.direction === "CREDIT") {
-      if (!input.source || input.transfer)
+      if (!input.source || input.transfer || input.earningsOnly)
         throw new Error("Credit source required");
       next = creditFunds(current, input.source, input.amount);
     } else if (input.direction === "DEBIT") {
-      const result = debitFunds(current, input.amount, input.transfer);
+      const result = debitFunds(
+        current,
+        input.amount,
+        input.transfer,
+        input.earningsOnly,
+      );
       next = result.wallet;
       used = result.used;
     } else throw new Error("Invalid direction");
@@ -237,6 +244,7 @@ export async function changeWalletFunds(
     amount: input.amount,
     source: input.source ?? null,
     transfer: !!input.transfer,
+    earningsOnly: !!input.earningsOnly,
     used,
     balanceBefore: current.balance,
     balanceAfter: next.balance,

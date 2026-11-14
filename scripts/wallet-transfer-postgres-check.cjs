@@ -30,7 +30,9 @@ const fs = require("node:fs"),
     await db.$executeRawUnsafe(
       'CREATE TABLE IF NOT EXISTS "Setting" (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
     );
-    await db.$executeRawUnsafe('DROP TRIGGER IF EXISTS fail_recipient_history_trigger ON "Setting"');
+    await db.$executeRawUnsafe(
+      'DROP TRIGGER IF EXISTS fail_recipient_history_trigger ON "Setting"',
+    );
     await db.$executeRawUnsafe('TRUNCATE "User", "Setting"');
     await db.$executeRawUnsafe(
       "INSERT INTO \"User\" VALUES ('u','TEACHER','Sender'),('v','TEACHER','Recipient'),('a','ADMIN','Admin')",
@@ -153,6 +155,54 @@ const fs = require("node:fs"),
     assert.equal((await transfers.confirmWalletTransfer({}, confirm)).ok, true);
     assert.equal((await wallet.ensureWallet("u")).funds.received, 1000);
     assert.equal((await wallet.ensureWallet("u")).funds.earnings, 0);
+    const withdrawals = load("app/actions/wallet-withdrawal.ts");
+    await wallet.walletTransaction((tx) =>
+      wallet.changeWalletFunds(tx, "u", {
+        operationId: "fixture:earnings",
+        amount: 30000,
+        direction: "CREDIT",
+        source: "earnings",
+        description: "Disposable test earnings only",
+      }),
+    );
+    session = "u";
+    const wf = new FormData();
+    wf.set("requestId", "11111111-1111-1111-1111-111111111111");
+    wf.set("number", "01712345678");
+    wf.set("amount", "100");
+    wf.set("confirmed", "on");
+    const beforeHold = (await wallet.ensureWallet("u")).balance;
+    await db.$executeRawUnsafe(
+      "CREATE OR REPLACE FUNCTION fail_withdraw_record() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.key LIKE 'wallet:withdrawal:v1:%' THEN RAISE EXCEPTION 'forced withdrawal record failure'; END IF; RETURN NEW; END; $$",
+    );
+    await db.$executeRawUnsafe(
+      'CREATE TRIGGER fail_withdraw_record_trigger BEFORE INSERT ON "Setting" FOR EACH ROW EXECUTE FUNCTION fail_withdraw_record()',
+    );
+    assert.equal((await withdrawals.requestWithdrawal({}, wf)).ok, false);
+    assert.equal((await wallet.ensureWallet("u")).balance, beforeHold);
+    await db.$executeRawUnsafe(
+      'DROP TRIGGER fail_withdraw_record_trigger ON "Setting"',
+    );
+    const holds = await Promise.all(
+      Array.from({ length: 8 }, () => withdrawals.requestWithdrawal({}, wf)),
+    );
+    assert.ok(holds.every((r) => r.ok));
+    assert.equal((await wallet.ensureWallet("u")).funds.earnings, 20000);
+    const review = new FormData();
+    review.set(
+      "key",
+      "wallet:withdrawal:v1:u:11111111-1111-1111-1111-111111111111",
+    );
+    review.set("decision", "REJECTED");
+    review.set("note", "Disposable rejection test");
+    session = "a";
+    assert.equal((await withdrawals.reviewWithdrawal({}, review)).ok, true);
+    assert.equal((await withdrawals.reviewWithdrawal({}, review)).ok, true);
+    assert.equal((await wallet.ensureWallet("u")).balance, beforeHold);
+    assert.equal((await wallet.ensureWallet("u")).funds.earnings, 30000);
+    console.log(
+      "PASS PostgreSQL withdrawal: forced request failure rolls back hold, 8 concurrent requests hold once, rejection restores earnings once.",
+    );
     console.log(
       "PASS actual disposable PostgreSQL: advisory-lock bonus once, audited recharge, recipient-history failure rolls back both wallets/ledger, 8 concurrent retries credit once, received funds never become earnings.",
     );

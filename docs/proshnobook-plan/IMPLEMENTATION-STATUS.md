@@ -159,3 +159,14 @@ PDF assembled-paper provenance; source-separated wallet ledger and migration of 
 ### অবশিষ্ট মূল কাজ
 
 PDF assembled-paper provenance; protected samples ও buyer institution-name-only print; atomic marketplace purchase ও 60/40 earnings; minimum ৳১০০ earnings withdrawal ও manual bKash reconciliation; refunds/complaints/admin reports; configurable limits; site-wide rebrand/domain auth/payment verification; authenticated/mobile/payment end-to-end tests।
+
+## অষ্টম ধাপ: বিক্রির আয় থেকে manual bKash withdrawal
+
+- `/wallet/withdraw`: authenticated non-admin account-এর অবশিষ্ট `earnings` থেকেই ন্যূনতম ৳১০০, সর্বোচ্চ ৳৫০,০০০ অনুরোধ। নিজের bKash নম্বর ও explicit confirmation আবশ্যক। অন্য source ব্যবহার হয় না। মার্কেটপ্লেস earnings generation এখনও চালু নয়; কোনো production test earnings যোগ হয়নি।
+- অনুরোধে earnings-only ledger debit এবং HELD record একই advisory-locked transaction-এ। হোল্ডে থাকা টাকা create/buy/send-এ আবার খরচ হয় না। এক account-এর এক pending request। Stable request ID duplicate debit বন্ধ করে।
+- `/admin/withdrawals`: admin-only pending queue ও PAID/REJECTED audit views। বাইরের manual payout-এর explicit confirmation ও unique case-normalized TrxID ছাড়া PAID নয়। এটি টাকা পাঠানোর API নয়। বাতিলের কারণ আবশ্যক, earnings-only release হয় একবার। নিষ্পত্তির পরে conflicting decision প্রত্যাখ্যান।
+- UI-তে minimum, eligible source, fee ৳০, external cash-out fee বাদ থাকা ও guaranteed settlement time না থাকার disclosure। Wallet থেকে withdrawal এবং admin dashboard থেকে queue link।
+- Automated tests ৩৯২টি ও typecheck সফল। Permissions, non-earnings rejection, minimum/invalid input, consent, concurrent duplicates, one pending, unique payout TrxID, conflicting review, rollback এবং release-once tests।
+- Disposable PostgreSQL integration-ও সফল: forced withdrawal record failure-এ hold rollback, ৮ concurrent requests-এ একবার hold, reject retry-এ একবার earnings release। আগের source-ledger/Send Money integration-ও আবার সফল। Script extended: `scripts/wallet-transfer-postgres-check.cjs`।
+- বাস্তব payout/production wallet mutation দিয়ে পরীক্ষা নয়; authenticated production browser/mobile E2E হয়নি। একাধিক admin বাইরের bKash-এ একই request-এ একসঙ্গে টাকা পাঠানো সফটওয়্যার transaction দিয়ে ঠেকানো যায় না—manual coordination অপরিহার্য এবং UI-তে সতর্কতা আছে। ভবিষ্যৎ provider integration বা admin payout claim/assignment দরকার।
+- অবশিষ্ট: marketplace atomic purchase/60–40 ও locked buyer library/print, PDF paper provenance/sale, protected sample, refunds/reporting, full rebrand/domain auth/payment callback verification। Original plan অপরিবর্তিত।

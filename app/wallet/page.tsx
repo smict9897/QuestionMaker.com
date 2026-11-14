@@ -96,6 +96,9 @@ export default async function WalletPage() {
             <Link className="tw-link" href="/wallet/send">
               TID দিয়ে শিক্ষককে Send Money করুন →
             </Link>
+            <Link className="tw-link block mt-3" href="/wallet/withdraw">
+              নিজের বিক্রির আয় উত্তোলন →
+            </Link>
           </section>
         )}
         <section className="tw-wallet-stats">
