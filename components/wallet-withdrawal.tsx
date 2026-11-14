@@ -6,7 +6,13 @@ import {
   reviewWithdrawal,
 } from "@/app/actions/wallet-withdrawal";
 const initial = { ok: false, message: "" };
-export function WithdrawalRequest({ requestId }: { requestId: string }) {
+export function WithdrawalRequest({
+  requestId,
+  maximum = 5000000,
+}: {
+  requestId: string;
+  maximum?: number;
+}) {
   const [state, action, pending] = useActionState(requestWithdrawal, initial);
   return (
     <form action={action} className="space-y-4 rounded-xl border p-5">
@@ -18,7 +24,7 @@ export function WithdrawalRequest({ requestId }: { requestId: string }) {
           name="amount"
           type="number"
           min="100"
-          max="50000"
+          max={maximum / 100}
           step="0.01"
           required
         />

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { db } from "@/lib/db";
+import { readWalletLimits } from "@/lib/wallet-limits";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { ensureWallet, formatMoney, teacherTid } from "@/lib/wallet";
@@ -13,6 +15,7 @@ export default async function SendMoney() {
   if (!user?.id) redirect("/login?next=/wallet/send");
   const wallet = await ensureWallet(user.id);
   if (wallet.admin) redirect("/wallet");
+  const limits = await readWalletLimits(db);
   return (
     <main className="mx-auto max-w-2xl p-5 space-y-5">
       <Link href="/wallet">← ওয়ালেট</Link>
@@ -27,12 +30,14 @@ export default async function SendMoney() {
           <strong>{formatMoney(wallet.balance - wallet.funds.bonus)}</strong>
         </p>
         <p className="text-sm mt-2">
-          বোনাস পাঠানো যায় না। ন্যূনতম ৳১, প্রতি দিন সর্বোচ্চ ৳৫,০০০। ফি ৳০। প্রাপক এই
-          টাকা দিয়ে তৈরি/কেনা করতে পারবেন, উত্তোলন করতে পারবেন না। দিনে সর্বোচ্চ ৩০
+          বোনাস পাঠানো যায় না। ন্যূনতম ৳১, প্রতি দিন সর্বোচ্চ{" "}
+          {formatMoney(limits.transferDaily)}। ফি ৳০। প্রাপক এই টাকা দিয়ে
+          তৈরি/কেনা করতে পারবেন, উত্তোলন করতে পারবেন না। দিনে সর্বোচ্চ{" "}
+          {limits.recipientLookups}
           বার প্রাপক যাচাই করা যাবে।
         </p>
       </section>
-      <WalletTransfer />
+      <WalletTransfer maximum={limits.transferDaily} />
     </main>
   );
 }

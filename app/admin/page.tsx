@@ -23,6 +23,9 @@ export default async function Admin() {
       >
         মার্কেটপ্লেস অভিযোগ / রিফান্ড →
       </Link>
+      <Link href="/admin/wallet-limits" className="rounded-xl border p-4">
+        Send Money ও উত্তোলনের সীমা নিয়ন্ত্রণ →
+      </Link>
       {/* 🔔 পেন্ডিং পেমেন্ট সতর্কতা */}
       {pendingPayments > 0 && (
         <Link

@@ -7,7 +7,11 @@ import {
 } from "@/app/actions/wallet-transfer";
 import type { TransferState } from "@/app/actions/wallet-transfer";
 const initial: TransferState = { ok: false, message: "" };
-export default function WalletTransfer() {
+export default function WalletTransfer({
+  maximum = 500000,
+}: {
+  maximum?: number;
+}) {
   const [quote, prepare, preparing] = useActionState(
     prepareWalletTransfer,
     initial,
@@ -37,7 +41,7 @@ export default function WalletTransfer() {
             name="amount"
             type="number"
             min="1"
-            max="5000"
+            max={maximum / 100}
             step="0.01"
             required
           />

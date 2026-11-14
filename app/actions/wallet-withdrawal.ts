@@ -1,5 +1,6 @@
 "use server";
 import { auth } from "@/auth";
+import { readWalletLimits } from "@/lib/wallet-limits";
 import {
   walletTransaction,
   account,
@@ -64,6 +65,9 @@ export async function requestWithdrawal(
           throw new WalletError("একই অনুরোধের তথ্য বদলেছে। পেজটি নতুন করে খুলুন।");
         return;
       }
+      const limits = await readWalletLimits(tx);
+      if (amount > limits.withdrawalMax)
+        throw new WalletError("পরিমাণ বর্তমান উত্তোলন সীমার চেয়ে বেশি।");
       const activeKey = `wallet:withdrawal-active:v1:${userId}`;
       if ((await tx.setting.findUnique({ where: { key: activeKey } }))?.value)
         throw new WalletError("আগের অনুরোধ নিষ্পত্তি হওয়া পর্যন্ত অপেক্ষা করুন।");

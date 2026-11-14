@@ -1,6 +1,7 @@
 "use server";
 import { randomUUID } from "node:crypto";
 import { auth } from "@/auth";
+import { readWalletLimits } from "@/lib/wallet-limits";
 import {
   walletTransaction,
   account,
@@ -9,8 +10,7 @@ import {
   WalletError,
 } from "@/lib/wallet";
 
-// Conservative launch limits, disclosed in the form. No fee is charged.
-const DAILY_LIMIT = 500000;
+// Hard safety ceiling; current admin limits are re-read inside the financial lock.
 export type TransferState = {
   ok: boolean;
   message: string;
@@ -27,12 +27,14 @@ const dayKey = () =>
     day: "2-digit",
   }).format(new Date());
 function amountPaisa(raw: unknown) {
-  if (typeof raw !== "string" || !/^\d{1,4}(\.\d{1,2})?$/.test(raw.trim()))
+  if (typeof raw !== "string" || !/^\d{1,5}(\.\d{1,2})?$/.test(raw.trim()))
     throw new WalletError("সঠিক পরিমাণ লিখুন।");
   const [whole, fraction = ""] = raw.trim().split(".");
   const n = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
-  if (n < 100 || n > DAILY_LIMIT)
-    throw new WalletError("৳১ থেকে ৳৫,০০০ পাঠানো যাবে।");
+  if (n < 100 || n > 5000000)
+    throw new WalletError(
+      "সঠিক পাঠানোর পরিমাণ দিন; সর্বোচ্চ অনুমোদিত সীমা পেজে দেখুন।",
+    );
   return n;
 }
 async function senderId() {
@@ -61,13 +63,22 @@ export async function prepareWalletTransfer(
     if (!/^QB-[A-F0-9]{20}$/.test(tid) || tid === teacherTid(id))
       throw new WalletError("অন্য শিক্ষকের সঠিক TID দিন।");
     return await walletTransaction(async (tx) => {
+      const limits = await readWalletLimits(tx);
+      if (amount > limits.transferDaily)
+        throw new WalletError(
+          "পরিমাণ বর্তমান দৈনিক Send Money সীমার চেয়ে বেশি।",
+        );
       const wallet = await account(tx, id);
       if (wallet.admin)
         throw new WalletError("ADMIN-এর জন্য Send Money প্রযোজ্য নয়।");
       const rateKey = `wallet:transfer-lookups:v1:${id}:${dayKey()}`;
       const rate = await tx.setting.findUnique({ where: { key: rateKey } });
       const attempts = rate ? Number(rate.value) : 0;
-      if (!Number.isSafeInteger(attempts) || attempts >= 30)
+      if (
+        !Number.isSafeInteger(attempts) ||
+        attempts < 0 ||
+        attempts >= limits.recipientLookups
+      )
         throw new WalletError("আজকের প্রাপক যাচাইয়ের সীমা শেষ।");
       if (rate)
         await tx.setting.update({
@@ -142,13 +153,14 @@ export async function confirmWalletTransfer(
           ok: true,
           message: "এই Send Money আগেই সম্পন্ন হয়েছে; আবার টাকা কাটা হয়নি।",
         };
+      const limits = await readWalletLimits(tx);
       if (
         quote.status !== "PENDING" ||
         !Number.isFinite(quote.expiresAt) ||
         quote.expiresAt < Date.now() ||
         !Number.isSafeInteger(quote.amount) ||
         quote.amount < 100 ||
-        quote.amount > DAILY_LIMIT ||
+        quote.amount > limits.transferDaily ||
         quote.recipientId === id ||
         teacherTid(quote.recipientId) !== quote.tid
       )
@@ -163,9 +175,9 @@ export async function confirmWalletTransfer(
       if (
         !Number.isSafeInteger(spent) ||
         spent < 0 ||
-        spent + quote.amount > DAILY_LIMIT
+        spent + quote.amount > limits.transferDaily
       )
-        throw new WalletError("দৈনিক ৳৫,০০০ পাঠানোর সীমা অতিক্রম করেছে।");
+        throw new WalletError("বর্তমান দৈনিক Send Money সীমা অতিক্রম করেছে।");
       await changeWalletFunds(tx, id, {
         operationId: `transfer:${quoteId}:out`,
         amount: quote.amount,
