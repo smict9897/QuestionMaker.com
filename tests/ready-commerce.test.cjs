@@ -459,3 +459,173 @@ test("own pending submission uses unchanged paid checkout; others blocked until 
   );
   assert.equal((await s.actions.quoteReadyPaper(s.input(3))).ok, true);
 });
+
+test("checkout records immutable server source and filtered initial snapshot, ignoring browser provenance", async () => {
+  const s = setup();
+  s.credit(2000);
+  const q = await s.actions.quoteReadyPaper(s.input(3));
+  const r = await s.actions.checkoutReadyPaper(s.input(3), q, {
+    ...s.snap,
+    ownerId: "v",
+    source: { ownerId: "v" },
+    resaleAuthorized: true,
+  });
+  assert.equal(r.ok, true);
+  const origin = await s.actions.getReadyPurchaseOrigin(r.receiptId);
+  assert.equal(origin.ownerId, "u");
+  assert.equal(origin.kind, "READY_ASSEMBLY");
+  assert.equal(origin.source.id, paperId);
+  assert.equal(origin.classification, "LIBRARY_ASSEMBLY");
+  assert.equal(origin.resaleAuthorized, false);
+  assert.deepEqual(origin.selected, [1, 2, 3]);
+  assert.equal(origin.initialSnapshot.header.school, "School");
+  const receipt = await s.actions.getReadyPurchase(r.receiptId);
+  assert.match(receipt.originHash, /^[a-f0-9]{64}$/);
+});
+test("origin and paid receipt roll back together on provenance write failure", async () => {
+  const s = setup();
+  s.credit(2000);
+  s.setFail("readyorigin:v1:");
+  assert.equal((await s.checkout()).ok, false);
+  assert.equal(s.wallet().balance, 2000);
+  assert.equal(
+    [...s.store.keys()].filter(
+      (k) =>
+        k.startsWith("readyowned:") ||
+        k.startsWith("readyorigin:") ||
+        k.startsWith("readyai:"),
+    ).length,
+    0,
+  );
+});
+test("origin remains immutable across paid edit, source replacement, archive and checkout retry", async () => {
+  const s = setup();
+  s.credit(2000);
+  const r = await s.checkout();
+  assert.equal(r.ok, true);
+  const key = "readyorigin:v1:u:" + r.receiptId,
+    first = s.store.get(key);
+  assert.equal(
+    (
+      await s.actions.saveReadyPurchase(
+        r.receiptId,
+        { ...s.snap, header: { ...s.snap.header, school: "Changed" } },
+        [3, 2, 1],
+      )
+    ).ok,
+    true,
+  );
+  assert.equal(s.store.get(key), first);
+  assert.equal((await s.checkout()).charged, 0);
+  assert.equal(s.store.get(key), first);
+  const source = JSON.parse(s.store.get("readypaper:v1:" + paperId));
+  s.store.set(
+    "readypaper:v1:" + paperId,
+    JSON.stringify({
+      ...source,
+      url: "https://example.public.blob.vercel-storage.com/replaced.pdf",
+      deletedAt: new Date().toISOString(),
+      published: false,
+    }),
+  );
+  const origin = await s.actions.getReadyPurchaseOrigin(r.receiptId);
+  assert.equal(origin.source.url, source.url);
+  assert.equal(origin.initialSnapshot.header.school, "School");
+  assert.equal(
+    (await s.actions.getReadyPurchase(r.receiptId)).snapshot.header.school,
+    "Changed",
+  );
+  assert.equal(
+    [...s.store.keys()].filter((k) => k.startsWith("readyorigin:")).length,
+    1,
+  );
+});
+test("uploaded approved source cannot acquire library provenance or resale authorization", async () => {
+  const s = setup();
+  s.credit(2000);
+  const key = "readypaper:v1:" + paperId;
+  s.store.set(
+    key,
+    JSON.stringify({
+      ...JSON.parse(s.store.get(key)),
+      ownerId: "v",
+      moderation: "approved",
+    }),
+  );
+  const r = await s.checkout();
+  assert.equal(r.ok, true);
+  const origin = await s.actions.getReadyPurchaseOrigin(r.receiptId);
+  assert.equal(origin.classification, "UPLOADED_SOURCE");
+  assert.equal(origin.source.ownerId, "v");
+  assert.equal(origin.resaleAuthorized, false);
+});
+test("origin access is owner scoped and unauthenticated access fails", async () => {
+  const s = setup();
+  s.credit(2000);
+  const r = await s.checkout();
+  s.setSession("v");
+  assert.equal(await s.actions.getReadyPurchaseOrigin(r.receiptId), null);
+  s.setSession(null);
+  await assert.rejects(() => s.actions.getReadyPurchaseOrigin(r.receiptId));
+});
+test("missing or changed new provenance fails closed; historical receipts stay explicitly unverified", async () => {
+  const s = setup();
+  s.credit(2000);
+  const r = await s.checkout();
+  const key = "readyorigin:v1:u:" + r.receiptId,
+    original = s.store.get(key);
+  const corrupt = JSON.parse(original);
+  corrupt.source.title = "Forged";
+  s.store.set(key, JSON.stringify(corrupt));
+  await assert.rejects(() => s.actions.getReadyPurchaseOrigin(r.receiptId));
+  s.store.delete(key);
+  await assert.rejects(() => s.actions.getReadyPurchaseOrigin(r.receiptId));
+  const receiptKey = "readyowned:v1:u:" + r.receiptId,
+    old = JSON.parse(s.store.get(receiptKey));
+  delete old.originHash;
+  s.store.set(receiptKey, JSON.stringify(old));
+  assert.equal(await s.actions.getReadyPurchaseOrigin(r.receiptId), null);
+  assert.equal((await s.checkout()).charged, 0);
+  assert.equal(s.store.has(key), false);
+});
+test("concurrent checkout creates one origin and charges once", async () => {
+  const s = setup();
+  s.credit(2000);
+  const results = await Promise.all(
+    Array.from({ length: 8 }, () => s.checkout()),
+  );
+  assert.ok(results.every((r) => r.ok));
+  assert.equal(
+    results.reduce((sum, r) => sum + r.charged, 0),
+    500,
+  );
+  assert.equal(
+    [...s.store.keys()].filter((k) => k.startsWith("readyorigin:")).length,
+    1,
+  );
+});
+
+test("archived source URL cannot silently charge for a replacement PDF", async () => {
+  const s = setup();
+  s.credit(2000);
+  const input = {
+    ...s.input(3),
+    sourceUrl: "https://example.public.blob.vercel-storage.com/old.pdf",
+  };
+  assert.equal((await s.actions.quoteReadyPaper(input)).ok, false);
+  assert.equal(
+    (
+      await s.actions.checkoutReadyPaper(
+        input,
+        { total: 500, packageUnits: 0 },
+        s.snap,
+      )
+    ).ok,
+    false,
+  );
+  assert.equal(s.wallet().balance, 2000);
+  assert.equal(
+    [...s.store.keys()].filter((k) => k.startsWith("readyorigin:")).length,
+    0,
+  );
+});

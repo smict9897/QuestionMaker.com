@@ -1,4 +1,9 @@
 "use server";
+import {
+  createReadyOrigin,
+  readyOriginKey,
+  readReadyOrigin,
+} from "@/lib/ready-origin";
 import { readyAIConfigured } from "@/lib/ready-ai-config";
 import { createHash, randomUUID } from "crypto";
 import { auth } from "@/auth";
@@ -41,6 +46,7 @@ export type ReadyPurchase = {
   updatedAt: string;
   answers: z.infer<typeof answerEntrySchema>[];
   snapshot: ReadySnapshot;
+  originHash?: string;
 };
 const receiptKey = (userId: string, id: string) =>
   `readyowned:v1:${userId}:${id}`;
@@ -76,6 +82,10 @@ async function quote(tx: Tx, id: string, raw: unknown) {
   const paper = row && parseReady(row.value);
   const wallet = await account(tx, id);
   if (!paper) throw new WalletError("প্রশ্নপত্র পাওয়া যায়নি।");
+  if (input.sourceUrl !== undefined && input.sourceUrl !== paper.url)
+    throw new WalletError(
+      "মূল PDF বদলেছে। নতুন নির্বাচনের আগে Library থেকে সর্বশেষ কপি খুলুন। পুরোনো সংরক্ষিত নির্বাচন নতুন খরচ ছাড়া খোলা যাবে।",
+    );
   // Same page set from the same source is reusable; reordering/retries never debit twice.
   const receiptId = createHash("sha256")
     .update(
@@ -179,6 +189,22 @@ export async function checkoutReadyPaper(
           ),
         },
       };
+      const { origin, hash } = createReadyOrigin({
+        ownerId: id,
+        receiptId: q.receiptId,
+        createdAt: now,
+        source: paper,
+        selected: input.selected,
+        initialSnapshot: purchase.snapshot,
+      });
+      purchase.originHash = hash;
+      // Create-only and inside the same financial transaction: no charged receipt without its origin.
+      await tx.setting.create({
+        data: {
+          key: readyOriginKey(id, q.receiptId),
+          value: JSON.stringify(origin),
+        },
+      });
       await tx.setting.create({
         data: {
           key: receiptKey(id, q.receiptId),
@@ -380,5 +406,34 @@ export async function getReadyPurchase(receiptId: string) {
         data: { value: JSON.stringify(p) },
       });
     return p;
+  });
+}
+
+/** Owner-only immutable source. Historical receipts stay unverified; never fabricate provenance. */
+export async function getReadyPurchaseOrigin(receiptId: string) {
+  const id = await userId();
+  if (!/^[a-f0-9]{64}$/.test(receiptId)) return null;
+  return walletTransaction(async (tx) => {
+    const receipt = await tx.setting.findUnique({
+      where: { key: receiptKey(id, receiptId) },
+    });
+    if (!receipt) return null;
+    const purchase = JSON.parse(receipt.value) as ReadyPurchase;
+    if (purchase.ownerId !== id || purchase.id !== receiptId)
+      throw new WalletError("অনুমতি নেই।");
+    if (!purchase.originHash) return null;
+    const row = await tx.setting.findUnique({
+      where: { key: readyOriginKey(id, receiptId) },
+    });
+    if (!row) throw new WalletError("উৎস-রেকর্ড যাচাই হয়নি।");
+    const origin = readReadyOrigin(
+      row.value,
+      id,
+      receiptId,
+      purchase.originHash,
+    );
+    if (origin.source.id !== purchase.paperId)
+      throw new WalletError("উৎস মেলেনি।");
+    return origin;
   });
 }

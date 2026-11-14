@@ -1384,6 +1384,7 @@ export default function ReadyStudio({
       {checkout && (
         <ReadyCheckout
           paperId={paper.id}
+          sourceUrl={paper.url}
           selected={selected}
           snapshot={snapshot()}
           beforePurchase={async () => {

@@ -1,5 +1,8 @@
 import { canReadReady } from "@/lib/ready-submissions";
-import { getReadyPurchase } from "@/app/actions/ready-commerce";
+import {
+  getReadyPurchase,
+  getReadyPurchaseOrigin,
+} from "@/app/actions/ready-commerce";
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/lib/db";
@@ -29,7 +32,13 @@ export default async function Paper({
   const row = await db.setting.findUnique({
     where: { key: READY_PREFIX + id },
   });
-  const paper = row && parseReady(row.value);
+  // New saved assemblies retain their exact server source even if the library is edited/archived.
+  // Corrupt/missing new provenance fails closed; historical receipts retain their old behavior.
+  const origin =
+    initialPurchase?.originHash && savedId
+      ? await getReadyPurchaseOrigin(savedId)
+      : null;
+  const paper = origin?.source ?? (row && parseReady(row.value));
   if (
     !paper ||
     !canReadReady(paper, s.user.id, s.user.role === "ADMIN", !!initialPurchase)

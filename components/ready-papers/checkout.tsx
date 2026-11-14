@@ -8,6 +8,7 @@ import {
 import type { ReadySnapshot, ReadyQuote } from "@/lib/ready-commerce";
 export default function ReadyCheckout({
   paperId,
+  sourceUrl,
   selected,
   snapshot,
   onClose,
@@ -15,6 +16,7 @@ export default function ReadyCheckout({
   beforePurchase,
 }: {
   paperId: string;
+  sourceUrl: string;
   selected: number[];
   snapshot: ReadySnapshot;
   onClose: () => void;
@@ -71,7 +73,7 @@ export default function ReadyCheckout({
   }, []);
   useEffect(() => {
     let live = true;
-    quoteReadyPaper({ paperId, selected })
+    quoteReadyPaper({ paperId, sourceUrl, selected })
       .then((r) => {
         if (!live) return;
         if (r.ok) setQuote(r);
@@ -83,7 +85,7 @@ export default function ReadyCheckout({
     return () => {
       live = false;
     };
-  }, [paperId, selected]);
+  }, [paperId, sourceUrl, selected]);
   async function pay() {
     if (!quote || busy) return;
     setBusy(true);
@@ -91,14 +93,14 @@ export default function ReadyCheckout({
     try {
       await beforePurchase();
       const r = await checkoutReadyPaper(
-        { paperId, selected },
+        { paperId, sourceUrl, selected },
         { total: quote.total, packageUnits: quote.packageUnits },
         snapshot,
       );
       if (r.ok) await onPaid(r.receiptId);
       else {
         setError(r.error);
-        const q = await quoteReadyPaper({ paperId, selected });
+        const q = await quoteReadyPaper({ paperId, sourceUrl, selected });
         if (q.ok) setQuote(q);
       }
     } catch {
