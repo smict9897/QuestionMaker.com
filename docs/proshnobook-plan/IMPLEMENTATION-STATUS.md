@@ -395,3 +395,7 @@ Production inspection found no PDF_VAULT_KEYS or PDF_VAULT_ACTIVE_KEY in the pro
 ### Phase 30 — secret-free storage rollout checklist
 
 Admin PDF storage readiness now distinguishes missing/invalid keyring, missing active key and missing Blob token without disclosing values or parser errors. Explicit backup/restore, redeploy, runtime diagnostic, pilot migration/download and reference-inventory ordering is shown. This is configuration diagnosis only, not backup attestation or production validation. Typecheck and 520 security tests pass. No production keys, files or balances changed. Financial recovery/reconciliation and authenticated operational checks remain outstanding.
+
+### Phase 31 — offline encrypted vault-key backup and restore
+
+Added a dependency-free operator CLI to generate new vault keys or import the complete existing keyring into an authenticated encrypted backup, verify it and restore into new owner-only files outside the repository. Passphrase is stdin-only; key values never print; outputs refuse overwrite/symlink destinations and preserve all rotation keys. Tests exercise actual scrypt/AES-GCM, wrong passphrase/tampering, CLI roundtrip, permissions, no-overwrite, existing-env protection and repository/symlink rejection. This supplies the backup tooling, not an operator-controlled offsite backup or production provisioning. No real keys were created, no deployment configuration changed and no production files/balances were mutated. Runtime rollout, financial exception recovery and statement reconciliation remain outstanding.
