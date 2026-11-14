@@ -35,7 +35,7 @@ const fs = require("node:fs"),
     );
     await db.$executeRawUnsafe('TRUNCATE "User", "Setting"');
     await db.$executeRawUnsafe(
-      "INSERT INTO \"User\" VALUES ('u','TEACHER','Sender'),('v','TEACHER','Recipient'),('a','ADMIN','Admin')",
+      "INSERT INTO \"User\" VALUES ('u','TEACHER','Sender'),('v','TEACHER','Recipient'),('a','ADMIN','Admin'),('b','ADMIN','Second admin')",
     );
     let session = "u";
     const cache = {};
@@ -196,12 +196,37 @@ const fs = require("node:fs"),
     review.set("decision", "REJECTED");
     review.set("note", "Disposable rejection test");
     session = "a";
+    const claim = new FormData();
+    claim.set("key", review.get("key"));
+    claim.set("claimConfirmed", "on");
+    const claimResults = await Promise.all(
+      Array.from({ length: 8 }, (_, i) => {
+        session = i % 2 ? "a" : "b";
+        return withdrawals.claimWithdrawal({}, claim);
+      }),
+    );
+    const claimed = JSON.parse(
+      (await db.setting.findUnique({ where: { key: review.get("key") } }))
+        .value,
+    );
+    assert.ok(["a", "b"].includes(claimed.claimedBy));
+    assert.equal(claimResults.filter((r) => r.ok).length, 4);
+    assert.equal(
+      await db.setting.count({
+        where: { key: { startsWith: "wallet:withdrawal-claim:v1:" } },
+      }),
+      1,
+    );
+    session = claimed.claimedBy === "a" ? "b" : "a";
+    assert.equal((await withdrawals.reviewWithdrawal({}, review)).ok, false);
+    session = claimed.claimedBy;
+    assert.equal((await withdrawals.claimWithdrawal({}, claim)).ok, true);
     assert.equal((await withdrawals.reviewWithdrawal({}, review)).ok, true);
     assert.equal((await withdrawals.reviewWithdrawal({}, review)).ok, true);
     assert.equal((await wallet.ensureWallet("u")).balance, beforeHold);
     assert.equal((await wallet.ensureWallet("u")).funds.earnings, 30000);
     console.log(
-      "PASS PostgreSQL withdrawal: forced request failure rolls back hold, 8 concurrent requests hold once, rejection restores earnings once.",
+      "PASS PostgreSQL withdrawal: 8 claims across two admins yield one exclusive owner; other admin review blocked; forced request failure rolls back hold, 8 concurrent requests hold once, rejection restores earnings once.",
     );
     const purchases = load("app/actions/marketplace-purchase.ts"),
       commerce = load("lib/marketplace-purchase.ts"),

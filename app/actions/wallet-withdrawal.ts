@@ -8,19 +8,12 @@ import {
 } from "@/lib/wallet";
 import { revalidatePath } from "next/cache";
 export type WithdrawalState = { ok: boolean; message: string };
-export type Withdrawal = {
-  version: 1;
-  id: string;
-  userId: string;
-  amount: number;
-  number: string;
-  status: "HELD" | "PAID" | "REJECTED";
-  createdAt: string;
-  reviewedAt?: string;
-  reviewerId?: string;
-  trx?: string;
-  note?: string;
-};
+import {
+  parseWithdrawal,
+  assertWithdrawalClaim,
+  type Withdrawal,
+} from "@/lib/wallet-withdrawal";
+export type { Withdrawal } from "@/lib/wallet-withdrawal";
 async function actor() {
   const id = (await auth())?.user?.id;
   if (!id) throw new WalletError("আগে লগইন করুন।");
@@ -141,14 +134,15 @@ export async function reviewWithdrawal(
       if (admin?.role !== "ADMIN") throw new WalletError("অনুমতি নেই।");
       const row = await tx.setting.findUnique({ where: { key } });
       if (!row) throw new WalletError("অনুরোধ পাওয়া যায়নি।");
-      const r = JSON.parse(row.value) as Withdrawal;
-      if (
-        r.version !== 1 ||
-        key !== `wallet:withdrawal:v1:${r.userId}:${r.id}` ||
-        !Number.isSafeInteger(r.amount) ||
-        r.amount < 10000
-      )
-        throw new WalletError("অনুরোধের তথ্য সঠিক নয়।");
+      const r = parseWithdrawal(key, row.value);
+      if (r.claimedBy !== reviewerId)
+        throw new WalletError(
+          "আগে অনুরোধটি নিজের দায়িত্বে নিন। অন্য অ্যাডমিনের দায়িত্বের অনুরোধ নিষ্পত্তি করা যাবে না।",
+        );
+      const claimAudit = await tx.setting.findUnique({
+        where: { key: `wallet:withdrawal-claim:v1:${r.userId}:${r.id}` },
+      });
+      assertWithdrawalClaim(claimAudit?.value, key, r);
       if (r.status !== "HELD") {
         if (r.status === decision && (decision !== "PAID" || r.trx === trx))
           return;
@@ -199,6 +193,85 @@ export async function reviewWithdrawal(
         decision === "PAID"
           ? "ম্যানুয়াল পেমেন্টের তথ্য সংরক্ষিত।"
           : "অনুরোধ বাতিল; সংরক্ষিত বিক্রির আয় ফেরত দেওয়া হয়েছে।",
+    };
+  } catch (e) {
+    return failure(e);
+  }
+}
+
+/** Non-expiring ownership. Never auto-release or steal: an external payout may already be in progress. */
+export async function claimWithdrawal(
+  _: WithdrawalState,
+  form: FormData,
+): Promise<WithdrawalState> {
+  try {
+    const reviewerId = await actor(),
+      key = String(form.get("key") || "");
+    if (
+      !key.startsWith("wallet:withdrawal:v1:") ||
+      key.length > 250 ||
+      form.get("claimConfirmed") !== "on"
+    )
+      throw new WalletError("দায়িত্ব নেওয়ার শর্ত নিশ্চিত করুন।");
+    await walletTransaction(async (tx) => {
+      if (
+        (
+          await tx.user.findUnique({
+            where: { id: reviewerId },
+            select: { role: true },
+          })
+        )?.role !== "ADMIN"
+      )
+        throw new WalletError("অনুমতি নেই।");
+      const row = await tx.setting.findUnique({ where: { key } });
+      if (!row) throw new WalletError("অনুরোধ পাওয়া যায়নি।");
+      const r = parseWithdrawal(key, row.value);
+      if (r.status !== "HELD")
+        throw new WalletError("আগেই নিষ্পত্তি হয়েছে; টাকা পাঠাবেন না।");
+      if (
+        (
+          await tx.setting.findUnique({
+            where: { key: `wallet:withdrawal-active:v1:${r.userId}` },
+          })
+        )?.value !== key
+      )
+        throw new WalletError("হোল্ডের তথ্য মেলেনি।");
+      if (r.claimedBy) {
+        if (r.claimedBy === reviewerId) {
+          const audit = await tx.setting.findUnique({
+            where: { key: `wallet:withdrawal-claim:v1:${r.userId}:${r.id}` },
+          });
+          assertWithdrawalClaim(audit?.value, key, r);
+          return;
+        }
+        throw new WalletError("অন্য অ্যাডমিন দায়িত্ব নিয়েছেন। টাকা পাঠাবেন না।");
+      }
+      const claimedAt = new Date().toISOString();
+      await tx.setting.create({
+        data: {
+          key: `wallet:withdrawal-claim:v1:${r.userId}:${r.id}`,
+          value: JSON.stringify({
+            version: 1,
+            requestKey: key,
+            reviewerId,
+            claimedAt,
+            amount: r.amount,
+            number: r.number,
+          }),
+        },
+      });
+      await tx.setting.update({
+        where: { key },
+        data: {
+          value: JSON.stringify({ ...r, claimedBy: reviewerId, claimedAt }),
+        },
+      });
+    });
+    refresh();
+    return {
+      ok: true,
+      message:
+        "অনুরোধটি আপনার দায়িত্বে আছে। পেজের বর্তমান দায়িত্ব যাচাই করে একবারই বাইরে টাকা পাঠান, তারপর TrxID লিখুন। দায়িত্বের মেয়াদ স্বয়ংক্রিয়ভাবে শেষ হবে না।",
     };
   } catch (e) {
     return failure(e);

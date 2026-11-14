@@ -2,6 +2,7 @@
 import { useActionState } from "react";
 import {
   requestWithdrawal,
+  claimWithdrawal,
   reviewWithdrawal,
 } from "@/app/actions/wallet-withdrawal";
 const initial = { ok: false, message: "" };
@@ -84,6 +85,30 @@ export function WithdrawalReview({ recordKey }: { recordKey: string }) {
         নিষ্পত্তি সংরক্ষণ করুন
       </button>
       <p role="status">{state.message}</p>
+    </form>
+  );
+}
+
+export function WithdrawalClaim({ recordKey }: { recordKey: string }) {
+  const [state, action, pending] = useActionState(claimWithdrawal, initial);
+  return (
+    <form action={action} className="space-y-3">
+      <input type="hidden" name="key" value={recordKey} />
+      <label className="flex gap-2">
+        <input type="checkbox" name="claimConfirmed" required />
+        আগের পেমেন্ট যাচাই করেছি। দায়িত্ব সফলভাবে নেওয়ার আগে টাকা পাঠাব না। দায়িত্ব
+        স্বয়ংক্রিয়ভাবে অন্য কাউকে দেওয়া বা মেয়াদ শেষ করা হবে না।
+      </label>
+      <button
+        disabled={pending || state.ok}
+        className="rounded bg-slate-900 text-white p-3"
+      >
+        নিজের দায়িত্বে নিন
+      </button>
+      <p role="status">{state.message}</p>
+      {state.ok && (
+        <p>নিষ্পত্তির ফর্ম দেখতে পেজ নতুন করে খুলুন। এই বাটন টাকা পাঠায় না।</p>
+      )}
     </form>
   );
 }
