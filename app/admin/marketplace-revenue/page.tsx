@@ -68,6 +68,9 @@ export default async function Revenue({
   return (
     <main className="mx-auto max-w-5xl p-5 space-y-5">
       <Link href="/admin">← অ্যাডমিন</Link>
+      <Link href="/admin/financial-report" className="block underline">
+        তারিখভিত্তিক / সর্বমোট সমন্বিত রিপোর্ট →
+      </Link>
       <h1 className="text-2xl font-bold">মার্কেটপ্লেস বিক্রির হিসাব</h1>
       <p>
         প্রতি পৃষ্ঠায় সর্বোচ্চ ৫০টি স্থায়ী বিক্রির রসিদ। নিচের যোগফল শুধু এই পৃষ্ঠার
