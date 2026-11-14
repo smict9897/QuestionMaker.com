@@ -2,7 +2,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
-import { vaultConfigured } from "@/lib/pdf-vault";
+import { pdfVaultStatus } from "@/lib/pdf-vault-status";
 import PdfVaultCheck from "@/components/pdf-vault-check";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -18,7 +18,8 @@ export default async function PdfStorage() {
       ?.role !== "ADMIN"
   )
     redirect("/dashboard");
-  const configured = vaultConfigured();
+  const status = pdfVaultStatus();
+  const configured = status.configured;
   return (
     <main className="mx-auto max-w-3xl p-4 space-y-5">
       <Link href="/admin">← অ্যাডমিন</Link>
@@ -36,6 +37,36 @@ export default async function PdfStorage() {
         নিরাপদে provision করতে হবে। এখানে secret লেখা, দেখানো বা পরিবর্তন করা হয়
         না। পুরোনো decrypt key সরাবেন না; নিরাপদ key backup ছাড়া production চালু
         করবেন না।
+      </p>
+      <ul
+        className="list-disc pl-5 space-y-2"
+        aria-label="Configuration checklist"
+      >
+        <li>
+          Encryption keyring:{" "}
+          {status.keyringPresent
+            ? status.keyringValid
+              ? "বিন্যাস বৈধ"
+              : "অবৈধ—নিরাপদ configuration ঠিক করুন"
+            : "সেট করা হয়নি"}
+        </li>
+        <li>
+          Active encryption key:{" "}
+          {status.activeKeyPresent ? "পাওয়া গেছে" : "keyring-এ পাওয়া যায়নি"}
+        </li>
+        <li>
+          Blob token:{" "}
+          {status.blobTokenPresent
+            ? "সেট করা আছে; সংযোগ পরীক্ষা বাকি"
+            : "সেট করা হয়নি"}
+        </li>
+      </ul>
+      <p className="rounded border p-3">
+        নিরাপদ চালুর ক্রম: secret manager-এ key backup → আলাদা পরিবেশে restore
+        পরীক্ষা → Vercel-এ sensitive environment সেট করে redeploy → এখানে storage
+        পরীক্ষা → ছোট পরীক্ষামূলক PDF migrate/download → reference inventory যাচাই
+        করে তবেই original retirement। শুধু configuration বৈধ হওয়া backup বা
+        restore পরীক্ষার প্রমাণ নয়। Secret কখনো chat বা support form-এ পাঠাবেন না।
       </p>
       {configured && <PdfVaultCheck />}
       <p>
