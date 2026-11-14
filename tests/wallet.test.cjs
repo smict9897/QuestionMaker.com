@@ -93,7 +93,9 @@ function setup() {
                   ? { PAYMENT_METHODS: [{ id: "bKash" }, { id: "Nagad" }] }
                   : id === "@/lib/wallet"
                     ? load("lib/wallet.ts")
-                    : require(id);
+                    : id.startsWith("@/lib/")
+                      ? load(id.replace("@/", "") + ".ts")
+                      : require(id);
     m._compile(
       ts.transpileModule(fs.readFileSync(file, "utf8"), {
         compilerOptions: {
@@ -110,6 +112,10 @@ function setup() {
     actions: load("app/actions/wallet.ts"),
     transfers: load("app/actions/wallet-transfer.ts"),
     withdrawals: load("app/actions/wallet-withdrawal.ts"),
+    purchases: load("app/actions/marketplace-purchase.ts"),
+    market: load("lib/marketplace.ts"),
+    commerce: load("lib/marketplace-purchase.ts"),
+    builder: load("lib/paper-builder.ts"),
     store,
     setFail: (key) => (failKey = key),
     setSession: (id) => (session = id),
@@ -703,4 +709,155 @@ test("withdrawal record write failure rolls back earnings hold; rejection histor
     false,
   );
   assert.deepEqual(x.store, held);
+});
+async function marketSetup() {
+  const x = setup();
+  await x.wallet.ensureWallet("u");
+  await x.wallet.ensureWallet("v");
+  const id = "f".repeat(64),
+    snapshot = {
+      settings: x.builder.settingsSchema.parse({}),
+      questions: [
+        {
+          id: "m",
+          text: "Approved paper question",
+          correct: "A",
+          options: { A: "a", B: "b", C: "c", D: "d" },
+        },
+      ],
+    };
+  const r = {
+    version: 1,
+    id,
+    ownerId: "v",
+    sourceKey: "qbpaper:v:own",
+    source: "DATABASE",
+    status: "APPROVED",
+    revision: 1,
+    metadata: {
+      examType: "বার্ষিক পরীক্ষা",
+      title: "Approved paper",
+      grade: "6",
+      subject: "বাংলা",
+      chapters: ["Chapter"],
+      description: "Detailed description",
+      pricePaisa: 1001,
+      rights: true,
+    },
+    snapshot,
+    snapshotHash: x.market.snapshotHash(snapshot),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  x.store.set("market:submission:v1:" + id, JSON.stringify(r));
+  const f = new FormData();
+  f.set("paperId", id);
+  f.set("terms", x.commerce.purchaseTerms(r));
+  f.set("confirmed", "on");
+  return { ...x, id, r, f };
+}
+test("market purchase atomically splits 60/40 and stores immutable copy; concurrent retries charge once", async () => {
+  const x = await marketSetup();
+  const results = await Promise.all(
+    Array.from({ length: 8 }, () => x.purchases.buyMarketPaper({}, x.f)),
+  );
+  assert.ok(
+    results.every((r) => r.ok),
+    JSON.stringify(results),
+  );
+  assert.equal((await x.wallet.ensureWallet("u")).balance, 999);
+  assert.equal((await x.wallet.ensureWallet("v")).funds.earnings, 600);
+  const r = JSON.parse(x.store.get(x.commerce.purchaseKey("u", x.id)));
+  assert.equal(r.platformAmount, 401);
+  assert.deepEqual(r.snapshot, x.r.snapshot);
+  x.store.delete("market:submission:v1:" + x.id);
+  assert.equal((await x.purchases.buyMarketPaper({}, x.f)).ok, true);
+  assert.equal((await x.wallet.ensureWallet("u")).balance, 999);
+});
+test("market purchase rejects unauthenticated, self, admin, unapproved, modified terms and snapshot", async () => {
+  for (const scenario of [
+    "anonymous",
+    "self",
+    "admin",
+    "pending",
+    "terms",
+    "hash",
+    "poor",
+  ]) {
+    const x = await marketSetup();
+    if (scenario === "anonymous") x.setSession("");
+    if (scenario === "self") x.setSession("v");
+    if (scenario === "admin") x.setSession("a");
+    if (scenario === "pending") {
+      x.r.status = "PENDING";
+      x.store.set("market:submission:v1:" + x.id, JSON.stringify(x.r));
+    }
+    if (scenario === "terms") {
+      x.r.metadata.pricePaisa = 1000;
+      x.store.set("market:submission:v1:" + x.id, JSON.stringify(x.r));
+    }
+    if (scenario === "hash") {
+      x.r.snapshot.questions[0].text = "changed";
+      x.store.set("market:submission:v1:" + x.id, JSON.stringify(x.r));
+    }
+    if (scenario === "poor")
+      x.store.set(
+        "wallet:account:u",
+        JSON.stringify({ balance: 0, bonus: 2000 }),
+      );
+    const before = new Map(x.store);
+    assert.equal(
+      (await x.purchases.buyMarketPaper({}, x.f)).ok,
+      false,
+      scenario,
+    );
+    assert.deepEqual(x.store, before, scenario);
+  }
+});
+test("market purchase seller/history/platform failure rolls back buyer debit and seller earnings", async () => {
+  for (const fail of [
+    "wallet:account:v",
+    "wallet:history:v1:v:",
+    "market:purchase:v1:",
+    "market:platform:v1:",
+  ]) {
+    const x = await marketSetup();
+    const before = new Map(x.store);
+    x.setFail(fail);
+    assert.equal((await x.purchases.buyMarketPaper({}, x.f)).ok, false);
+    assert.deepEqual(x.store, before, fail);
+    x.setFail("");
+    assert.equal((await x.purchases.buyMarketPaper({}, x.f)).ok, true);
+  }
+});
+test("buyer can change institution only, not questions/price/owner; another user cannot edit copy", async () => {
+  const x = await marketSetup();
+  await x.purchases.buyMarketPaper({}, x.f);
+  const key = x.commerce.purchaseKey("u", x.id),
+    before = JSON.parse(x.store.get(key));
+  const f = new FormData();
+  f.set("paperId", x.id);
+  f.set("institution", "আমার বিদ্যালয়");
+  f.set("snapshot", "forged");
+  f.set("amount", "0");
+  assert.equal((await x.purchases.savePurchasedInstitution({}, f)).ok, true);
+  assert.deepEqual(JSON.parse(x.store.get(key)), {
+    ...before,
+    institution: "আমার বিদ্যালয়",
+  });
+  x.setSession("v");
+  assert.equal((await x.purchases.savePurchasedInstitution({}, f)).ok, false);
+  x.setSession("u");
+  f.set("institution", "two\nlines");
+  assert.equal((await x.purchases.savePurchasedInstitution({}, f)).ok, false);
+});
+test("revenue split conserves each paisa and disallows invalid prices", () => {
+  const x = setup();
+  for (const amount of [100, 101, 1001, 5000000]) {
+    const s = x.commerce.revenueSplit(amount);
+    assert.equal(s.sellerAmount + s.platformAmount, amount);
+    assert.equal(s.sellerAmount, Math.floor(amount * 0.6));
+  }
+  for (const n of [0, -1, 100.5, NaN, 5000001])
+    assert.throws(() => x.commerce.revenueSplit(n));
 });

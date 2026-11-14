@@ -175,6 +175,9 @@ export default async function Dashboard({
             TID দিয়ে শিক্ষককে Send Money করুন →
           </Link>
         )}
+        <Link href="/dashboard/library" className="block mb-4 underline">
+          মার্কেটপ্লেসে কেনা প্রশ্নপত্রের লাইব্রেরি →
+        </Link>
         <WorkspaceCards />
         <section className="tw-panel">
           <h2>আপনার অ্যাকাউন্ট, এক নজরে</h2>

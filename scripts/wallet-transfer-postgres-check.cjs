@@ -203,6 +203,119 @@ const fs = require("node:fs"),
     console.log(
       "PASS PostgreSQL withdrawal: forced request failure rolls back hold, 8 concurrent requests hold once, rejection restores earnings once.",
     );
+    const purchases = load("app/actions/marketplace-purchase.ts"),
+      commerce = load("lib/marketplace-purchase.ts"),
+      market = load("lib/marketplace.ts"),
+      builder = load("lib/paper-builder.ts");
+    session = "u";
+    const paperId = "f".repeat(64),
+      snapshot = {
+        settings: builder.settingsSchema.parse({}),
+        questions: [
+          {
+            id: "market-q",
+            text: "Disposable market paper",
+            correct: "A",
+            options: { A: "one", B: "two" },
+          },
+        ],
+      };
+    const sale = {
+      version: 1,
+      id: paperId,
+      ownerId: "v",
+      source: "DATABASE",
+      sourceKey: "qbpaper:v:test",
+      status: "APPROVED",
+      revision: 1,
+      metadata: {
+        examType: "বার্ষিক পরীক্ষা",
+        title: "Disposable paper",
+        grade: "6",
+        subject: "বাংলা",
+        chapters: ["প্রথম"],
+        description: "Disposable approved paper test",
+        pricePaisa: 1001,
+        rights: true,
+      },
+      snapshot,
+      snapshotHash: market.snapshotHash(snapshot),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    await db.setting.create({
+      data: {
+        key: market.MARKET_PREFIX + paperId,
+        value: JSON.stringify(sale),
+      },
+    });
+    const purchaseForm = new FormData();
+    purchaseForm.set("paperId", paperId);
+    purchaseForm.set("terms", commerce.purchaseTerms(sale));
+    purchaseForm.set("confirmed", "on");
+    const buyerBefore = await wallet.ensureWallet("u"),
+      sellerBefore = await wallet.ensureWallet("v");
+    await db.$executeRawUnsafe(
+      "CREATE OR REPLACE FUNCTION fail_market_platform() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.key LIKE 'market:platform:v1:%' THEN RAISE EXCEPTION 'forced platform receipt failure'; END IF; RETURN NEW; END; $$",
+    );
+    await db.$executeRawUnsafe(
+      'CREATE TRIGGER fail_market_platform_trigger BEFORE INSERT ON "Setting" FOR EACH ROW EXECUTE FUNCTION fail_market_platform()',
+    );
+    assert.equal((await purchases.buyMarketPaper({}, purchaseForm)).ok, false);
+    assert.deepEqual(await wallet.ensureWallet("u"), buyerBefore);
+    assert.deepEqual(await wallet.ensureWallet("v"), sellerBefore);
+    assert.equal(
+      await db.setting.count({
+        where: { key: commerce.purchaseKey("u", paperId) },
+      }),
+      0,
+    );
+    await db.$executeRawUnsafe(
+      'DROP TRIGGER fail_market_platform_trigger ON "Setting"',
+    );
+    const sales = await Promise.all(
+      Array.from({ length: 8 }, () =>
+        purchases.buyMarketPaper({}, purchaseForm),
+      ),
+    );
+    assert.ok(sales.every((r) => r.ok));
+    assert.equal(
+      (await wallet.ensureWallet("u")).balance,
+      buyerBefore.balance - 1001,
+    );
+    assert.equal(
+      (await wallet.ensureWallet("v")).funds.earnings,
+      sellerBefore.funds.earnings + 600,
+    );
+    const copy = commerce.validatePurchase(
+      (
+        await db.setting.findUnique({
+          where: { key: commerce.purchaseKey("u", paperId) },
+        })
+      ).value,
+      "u",
+      paperId,
+    );
+    assert.equal(copy.platformAmount, 401);
+    const institutionForm = new FormData();
+    institutionForm.set("paperId", paperId);
+    institutionForm.set("institution", "Disposable school");
+    assert.equal(
+      (await purchases.savePurchasedInstitution({}, institutionForm)).ok,
+      true,
+    );
+    const saved = JSON.parse(
+      (
+        await db.setting.findUnique({
+          where: { key: commerce.purchaseKey("u", paperId) },
+        })
+      ).value,
+    );
+    assert.deepEqual(saved.snapshot, snapshot);
+    assert.equal(saved.institution, "Disposable school");
+    console.log(
+      "PASS PostgreSQL marketplace: platform receipt failure rolls back both wallets/copy, 8 retries purchase once, exact 600/401 paisa split, institution edit preserves snapshot.",
+    );
     console.log(
       "PASS actual disposable PostgreSQL: advisory-lock bonus once, audited recharge, recipient-history failure rolls back both wallets/ledger, 8 concurrent retries credit once, received funds never become earnings.",
     );

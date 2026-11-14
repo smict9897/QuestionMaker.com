@@ -1,4 +1,11 @@
 import Link from "next/link";
+import { auth } from "@/auth";
+import {
+  purchaseKey,
+  purchaseTerms,
+  saleRecord,
+} from "@/lib/marketplace-purchase";
+import { MarketplaceBuy } from "@/components/marketplace-purchase";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { MARKET_PREFIX } from "@/lib/marketplace";
@@ -18,6 +25,18 @@ export default async function MarketDetail({
   });
   const paper = row && publicMarketPaper(row.value);
   if (!paper || paper.id !== id) notFound();
+  const user = (await auth())?.user;
+  const owned = user?.id
+    ? await db.setting.findUnique({
+        where: { key: purchaseKey(user.id, id) },
+        select: { key: true },
+      })
+    : null;
+  let terms: string | null = null;
+  try {
+    const record = saleRecord(row!.value, id);
+    if (record.ownerId !== user?.id) terms = purchaseTerms(record);
+  } catch {}
   return (
     <main className="mx-auto max-w-3xl p-5 space-y-4">
       <Link href="/marketplace">← মার্কেটপ্লেস</Link>
@@ -37,12 +56,30 @@ export default async function MarketDetail({
       <Link href={`/teachers/${paper.sellerTid}`} className="block underline">
         বিক্রেতার প্রোফাইল · {paper.sellerTid}
       </Link>
-      <div className="rounded-xl bg-amber-50 p-4">
-        <p>
-          কেনাকাটা ও সম্পূর্ণ প্রশ্নপত্রের প্রিভিউ এখনও চালু হয়নি। এখন কোনো টাকা কাটা
-          হবে না।
-        </p>
-      </div>
+      <p>
+        কেনার আগের মূল প্রশ্নপত্রের নমুনা এখনও উপলব্ধ নয়; উপরের তথ্য দেখে কেনার সিদ্ধান্ত
+        নিন।
+      </p>
+      {owned ? (
+        <Link href={`/dashboard/library/${id}`} className="block underline">
+          আগে কেনা কপি খুলুন — নতুন চার্জ নেই →
+        </Link>
+      ) : !user?.id ? (
+        <Link
+          className="block underline"
+          href={`/login?next=/marketplace/${id}`}
+        >
+          কিনতে লগইন করুন →
+        </Link>
+      ) : terms ? (
+        <MarketplaceBuy
+          id={id}
+          terms={terms}
+          price={formatMoney(paper.metadata.pricePaisa)}
+        />
+      ) : (
+        <p>নিজের প্রশ্নপত্র অথবা বর্তমানে checkout অনুপলব্ধ।</p>
+      )}
     </main>
   );
 }
