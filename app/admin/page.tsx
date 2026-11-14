@@ -14,6 +14,9 @@ export default async function Admin() {
       <Link href="/admin/withdrawals" className="rounded-xl border p-4">
         বিক্রির আয় উত্তোলন অনুরোধ নিষ্পত্তি →
       </Link>
+      <Link href="/admin/marketplace-revenue" className="rounded-xl border p-4">
+        মার্কেটপ্লেস বিক্রির আর্থিক রসিদ →
+      </Link>
       {/* 🔔 পেন্ডিং পেমেন্ট সতর্কতা */}
       {pendingPayments > 0 && (
         <Link
