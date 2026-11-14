@@ -189,3 +189,24 @@ PDF assembled-paper provenance; protected samples ও buyer institution-name-onl
 - Synthetic Chromium 320/390/768/1440: no horizontal overflow, purchased institution rendered, no editable paper controls, print hides form/buttons, PDF generated। Fixture/action mock; authenticated production checkout/mobile/printer E2E নয়। Scratch files `/home/user/purchase-browser`-এ, Git-এ binary/PDF নেই।
 - Platform receipt বর্তমানে audit record, bank/bKash settlement বা revenue-report dashboard নয়। Manual admin payout coordination caveat বহাল। No automatic refund route; refund/dispute reporting এখনও pending।
 - অবশিষ্ট: নিজের PDF assembled-paper provenance ও sale, protected pre-purchase sample, refunds/disputes/admin reports, configurable financial limits, payout admin assignment, full rebrand/domain auth/payment callback verification, authenticated production end-to-end validation। Original plan unchanged।
+
+## দশম ধাপ: কেনার আগের সীমিত জলছাপযুক্ত নমুনা
+
+- Approved immutable database snapshot/hash/renderability যাচাইয়ের পর server-only `publicMarketSample` public allowlist তৈরি করে। Public component-এ snapshot, settings, question IDs, correct answer, explanation, option, attachment বা private URLs দেওয়া হয় না।
+- স্থির deterministic excerpt selection: প্রতি পাঁচ প্রশ্নে একটি, minimum একটি/max দুটি eligible প্রশ্নের শুরু; প্রতিটি stem-এর সর্বোচ্চ অর্ধেক এবং ১৬০ Unicode character পর্যন্ত। Single-question paper-ও কখনো পুরো stem প্রকাশ করে না। Client pagination/offset/seed দিয়ে অন্য slice নেওয়ার endpoint নেই।
+- HTML/resource URL/data এবং obvious inline উত্তর/সমাধান/ব্যাখ্যা লেখা stem বাদ। Detection সম্পূর্ণ নির্ভুল নয়—UI-তে সীমা বলা আছে। React escaped plain text; rich HTML/Markdown/external image rendering নয়।
+- Watermarked excerpt sheet-এ এটি পূর্ণ প্রশ্ন/পৃষ্ঠা নয় বলা আছে। কোনো নিরাপদ excerpt না পেলে unavailable disclosure; fake sample নয়। Original full layout buyer copy-তে থাকে। Cards/catalog-এ নতুন sample link description।
+- জলছাপ DRM নয়; screenshot/copy পুরোপুরি আটকানোর দাবি নেই। নতুন sample schema-তে source snapshot client-এ পাঠানো হয় না। Existing buyer-only full copy অপরিবর্তিত।
+
+## একাদশ ধাপের প্রথম অংশ: admin sales receipt report
+
+- `/admin/marketplace-revenue`: fresh DB role ADMIN যাচাইয়ের পর শুধু platform receipt prefix পড়া হয়। Purchased question snapshots/buyer institution/bKash numbers পড়া হয় না।
+- ৫০টি record/page cursor pagination, stable receipt-key order। Validated allowlisted financial fields এবং TID; invalid receipts count/alert সহ totals থেকে বাদ।
+- Gross sale, seller earnings ও platform share কেবল current page-এর totals বলে স্পষ্ট label। এটি lifetime totals, net profit, external settlement/cash balance report নয়। Existing withdrawal audit views-এর link।
+- Immutable historical receipts listing সরালেও থাকে। Report read-only; কোনো payout/refund/balance mutation নেই। Admin dashboard link যুক্ত।
+
+### দশম / একাদশ প্রথম অংশের যাচাই ও অবশিষ্ট
+
+- Typecheck + ৪০৪ tests passed। New tests cover deterministic/minimum/small/300-question excerpt limits, secret-field absence, inline solution/resource suppression, unapproved/tampered/wrong identity fail-closed, report field allowlist/integer sums/invalid receipts/admin-before-query/pagination bound। পুরোনো metadata-only card safety assertions বজায় রেখে obsolete unavailable-text assertion নতুন sample wording-এ আপডেট।
+- Browser/mobile/authenticated production E2E এই ধাপে করা হয়নি; production money ব্যবহার হয়নি। Report sample count/selection সম্পূর্ণ UI/financial DB E2E নয়।
+- এখনও বাকি: নিজস্ব PDF assembled-paper provenance ও sale; refund/dispute flow এবং source-aware financial reversal; lifetime/date-range/settlement reconciliation reports; admin payout assignment/configurable financial limits; full rebrand/domain auth/payment callback verification; final authenticated/mobile/print/payment E2E। মূল পরিকল্পনা অপরিবর্তিত।

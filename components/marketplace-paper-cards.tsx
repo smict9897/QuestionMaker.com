@@ -29,7 +29,7 @@ export default function MarketplacePaperCards({
               {p.metadata.chapters.join(" · ")}
             </span>
             <span className="pb-paper-disclaimer">
-              মূল প্রশ্নপত্রের প্রিভিউ এখনও উপলব্ধ নয়
+              বিবরণে সীমিত পাঠ্য নমুনা দেখুন
             </span>
           </Link>
           <div className="pb-paper-info">

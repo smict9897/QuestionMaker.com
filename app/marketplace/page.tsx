@@ -70,7 +70,7 @@ export default async function Marketplace({
       <MarketplaceFilters key={JSON.stringify(filters)} initial={filters} />
       <p className="pb-notice">
         শুধু অনুমোদিত প্রশ্নপত্র দেখানো হচ্ছে। বিবরণ থেকে মূল্য নিশ্চিত করে কিনতে পারবেন।
-        কেনার আগের মূল প্রশ্নপত্রের নমুনা এখনও উপলব্ধ নয়।
+        বিবরণে উপলব্ধ সীমিত পাঠ্য নমুনা যাচাই করুন।
       </p>
       <MarketplacePaperCards papers={result.papers} />
       {!result.papers.length && (
