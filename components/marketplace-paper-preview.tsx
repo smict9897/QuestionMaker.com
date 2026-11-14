@@ -9,14 +9,32 @@ import "katex/dist/katex.min.css";
 /** Private owner/admin review only. No save, question-edit or public delivery action. */
 export default function MarketplacePaperPreview({
   snapshot,
+  institution,
 }: {
   snapshot: { settings: unknown; questions: unknown[] };
+  institution?: string;
 }) {
   const [setName, setSetName] = useState<"ক" | "খ">();
-  const model = useMemo(
-    () => marketPreviewModel(snapshot, setName),
-    [snapshot, setName],
-  );
+  const model = useMemo(() => {
+    const model = marketPreviewModel(snapshot, setName);
+    if (institution) {
+      model.settings = {
+        ...model.settings,
+        info: { ...model.settings.info, inst: institution },
+        header: {
+          ...model.settings.header,
+          fields: {
+            ...model.settings.header.fields,
+            institute: {
+              ...model.settings.header.fields.institute,
+              value: institution,
+            },
+          },
+        },
+      };
+    }
+    return model;
+  }, [snapshot, setName, institution]);
   const container = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [width] = paperDimensions(model.settings);
@@ -47,12 +65,12 @@ export default function MarketplacePaperPreview({
       className="paper-builder-root space-y-3"
       aria-label="স্থির প্রশ্নপত্রের পৃষ্ঠা প্রিভিউ"
     >
-      <p className="rounded bg-indigo-50 p-3 text-sm">
+      <p data-noprint className="rounded bg-indigo-50 p-3 text-sm">
         জমা দেওয়া স্থির কপির প্রিভিউ। এখানে প্রশ্ন বা সেটিংস সম্পাদনা করা যায় না।
         সংরক্ষিত পৃষ্ঠার মাপ ও ফন্ট বজায় রাখা হয়েছে।
       </p>
       {model.settings.show.autoSet && (
-        <label>
+        <label data-noprint>
           সেট দেখুন{" "}
           <select
             className="rounded border p-2"

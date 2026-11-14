@@ -170,3 +170,22 @@ PDF assembled-paper provenance; protected samples ও buyer institution-name-onl
 - Disposable PostgreSQL integration-ও সফল: forced withdrawal record failure-এ hold rollback, ৮ concurrent requests-এ একবার hold, reject retry-এ একবার earnings release। আগের source-ledger/Send Money integration-ও আবার সফল। Script extended: `scripts/wallet-transfer-postgres-check.cjs`।
 - বাস্তব payout/production wallet mutation দিয়ে পরীক্ষা নয়; authenticated production browser/mobile E2E হয়নি। একাধিক admin বাইরের bKash-এ একই request-এ একসঙ্গে টাকা পাঠানো সফটওয়্যার transaction দিয়ে ঠেকানো যায় না—manual coordination অপরিহার্য এবং UI-তে সতর্কতা আছে। ভবিষ্যৎ provider integration বা admin payout claim/assignment দরকার।
 - অবশিষ্ট: marketplace atomic purchase/60–40 ও locked buyer library/print, PDF paper provenance/sale, protected sample, refunds/reporting, full rebrand/domain auth/payment callback verification। Original plan অপরিবর্তিত।
+
+## নবম ধাপ: মার্কেটপ্লেস কেনাকাটা, ৬০/৪০ ও ক্রেতার স্থির লাইব্রেরি
+
+- অনুমোদিত database-paper detail-এ explicit price confirmation। Confirmed terms hash paper ID, owner, revision, immutable snapshot hash, price এবং title-এর সঙ্গে bound। বদলানো মূল্য/কপি পুরোনো confirmation দিয়ে কেনা যায় না। Server নতুন করে approval, metadata ও renderability/hash যাচাই করে।
+- Authenticated non-admin buyer নিজের paper কিনতে পারেন না। Non-admin seller account server-এ যাচাই। এক buyer/paper-এর durable unique purchase record; একই request concurrent/repeated হলেও একবার debit/earnings credit। ইতিমধ্যে কেনা হলে listing সরালেও repeat action নতুন চার্জ করে না।
+- একই global wallet advisory transaction-এ buyer source-aware debit, seller earnings credit, independent frozen buyer snapshot এবং platform receipt তৈরি। Seller ৬০% integer paisa floor; বাকি platform ৪০% plus fractional-paisa remainder। উদাহরণ ৳১০.০১ → seller ৳৬.০০, platform ৳৪.০১। Creation charge আলাদাই থাকে; seller listing price-এর অংশ নয়।
+- Seller আয় wallet earnings-এ আসায় create/buy/send এবং existing minimum ৳১০০ withdrawal-এ ব্যবহারযোগ্য। Bonus/recharge/received source rules আগের মতো; withdrawn/held earnings spend হয় না।
+- `/dashboard/library` owner-scoped paginated purchased list; `/dashboard/library/[id]` session buyer-only immutable copy। Listing পরে বদলানো/সরানো হলেও নিজের stored copy খোলা যায়। আবার খোলা/প্রিন্টে চার্জ নেই।
+- Buyer form শুধু ২–২০০ অক্ষরের single-line institution name গ্রহণ করে। Client থেকে snapshot/amount/settings পরিবর্তন পাঠালেও সেগুলো নেওয়া হয় না। Snapshot/hash অপরিবর্তিত; rendering-এ শুধু পুরোনো institute field override। Questions/editing handles অনুপস্থিত, source layout/font বজায় রেখে browser print। Saved institution ব্যবহার হয়; unsaved input নয়।
+- Buy form-এ price, rounding, restricted editing, no bought-copy resale, no automatic refund এবং digital-copy redistribution পুরোপুরি আটকানোর প্রযুক্তিগত সীমা বলা আছে। পূর্ণ প্রশ্নপত্রের pre-purchase sample এখনও pending এবং তা পরিষ্কার বলা আছে। Public page-এ snapshot দেওয়া হয়নি।
+- Catalog/admin/withdrawal-এর আগের checkout-not-enabled লেখা সংশোধন। Profile-এ purchased library link।
+
+### নবম ধাপের যাচাই ও সীমাবদ্ধতা
+
+- Typecheck এবং ৩৯৭ tests pass: split conservation, ৮ concurrent purchase retries, invalid/auth/self/admin/price-change/approval/hash checks, insufficient funds, seller/history/copy/platform write-failure rollback, immutable owner-only institution changes।
+- Extended disposable PostgreSQL script pass: forced final platform-receipt insert failure হলে buyer/seller/copy rollback; আট retries-এ একবার purchase; exact 600/401 paisa allocation; institution edit snapshot অপরিবর্তিত। আগের withdrawal/Send Money integration-ও পুনরায় pass। Production money ব্যবহার হয়নি।
+- Synthetic Chromium 320/390/768/1440: no horizontal overflow, purchased institution rendered, no editable paper controls, print hides form/buttons, PDF generated। Fixture/action mock; authenticated production checkout/mobile/printer E2E নয়। Scratch files `/home/user/purchase-browser`-এ, Git-এ binary/PDF নেই।
+- Platform receipt বর্তমানে audit record, bank/bKash settlement বা revenue-report dashboard নয়। Manual admin payout coordination caveat বহাল। No automatic refund route; refund/dispute reporting এখনও pending।
+- অবশিষ্ট: নিজের PDF assembled-paper provenance ও sale, protected pre-purchase sample, refunds/disputes/admin reports, configurable financial limits, payout admin assignment, full rebrand/domain auth/payment callback verification, authenticated production end-to-end validation। Original plan unchanged।
