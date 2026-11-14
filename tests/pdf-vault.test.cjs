@@ -18,7 +18,9 @@ async function setup() {
   let session = "u",
     fail = false,
     queue = Promise.resolve(),
-    fetchHook = null;
+    fetchHook = null,
+    diagnosticRole = "ADMIN",
+    failDelete = false;
   const setting = {
     findUnique: async ({ where }) =>
       store.has(where.key)
@@ -30,13 +32,22 @@ async function setup() {
       store.set(data.key, data.value);
       return data;
     },
+    update: async ({ where, data }) => {
+      if (!store.has(where.key)) throw Error("missing");
+      store.set(where.key, data.value);
+      return data;
+    },
     upsert: async ({ where, create, update }) => {
       const v = store.has(where.key) ? update : create;
       store.set(where.key, v.value);
       return v;
     },
   };
-  const tx = { setting };
+  const tx = {
+    setting,
+    $queryRaw: async () => [],
+    user: { findUnique: async () => ({ role: diagnosticRole }) },
+  };
   const transaction = (fn) => {
     const r = queue.then(async () => {
       const before = new Map(store);
@@ -89,6 +100,7 @@ async function setup() {
                         return { url };
                       },
                       del: async (url) => {
+                        if (failDelete) throw Error("provider secret error");
                         deleted.push(url);
                         blobs.delete(url);
                       },
@@ -172,6 +184,10 @@ async function setup() {
     route: load("app/api/ready-vault/[receiptId]/route.ts"),
     action: load("app/actions/ready-vault.ts"),
     load,
+    diagnostic: load("lib/pdf-vault-check.ts"),
+    diagnosticAction: load("app/actions/pdf-vault-check.ts"),
+    setDiagnosticRole: (role) => (diagnosticRole = role),
+    setFailDelete: () => (failDelete = true),
     setSession: (v) => (session = v),
     setFail: () => (fail = true),
     setFetchHook: (hook) => (fetchHook = hook),
@@ -522,5 +538,65 @@ test(
     } finally {
       process.env.PDF_VAULT_KEYS = keys;
     }
+  }),
+);
+test(
+  "diagnostic performs real crypto/PDF roundtrip with mock Blob and deletes only its test object",
+  withSetup(async (s) => {
+    const originalKeys = [...s.store.keys()];
+    const r = await s.diagnostic.runPdfVaultCheck("u");
+    assert.deepEqual(r, { verified: true, cleanup: true });
+    assert.equal(
+      [...s.blobs.keys()].filter((k) => k.includes("/pdf-vault/")).length,
+      0,
+    );
+    assert.ok(originalKeys.every((k) => s.store.has(k)));
+    const auditKey = [...s.store.keys()].find((k) =>
+      k.startsWith("pdf-vault:diagnostic:audit:"),
+    );
+    const audit = JSON.parse(s.store.get(auditKey));
+    assert.equal(audit.verified, true);
+    assert.equal(audit.cleanup, true);
+    assert.equal(audit.orphanUrl, undefined);
+    assert.ok([...s.store.keys()].every((k) => !k.startsWith("wallet:")));
+    await assert.rejects(() => s.diagnostic.runPdfVaultCheck("u"));
+    assert.equal(s.calls.length, 1);
+  }),
+);
+test(
+  "diagnostic fresh admin check and explicit action consent block all provider work",
+  withSetup(async (s) => {
+    s.setDiagnosticRole("STUDENT");
+    await assert.rejects(() => s.diagnostic.runPdfVaultCheck("u"));
+    assert.equal(s.calls.length, 0);
+    s.setDiagnosticRole("ADMIN");
+    const no = await s.diagnosticAction.checkPdfVault({}, new FormData());
+    assert.equal(no.ok, false);
+    assert.equal(s.calls.length, 0);
+    s.setSession(null);
+    const f = new FormData();
+    f.set("confirmed", "on");
+    assert.equal((await s.diagnosticAction.checkPdfVault({}, f)).ok, false);
+  }),
+);
+test(
+  "diagnostic cleanup failure is not a successful rollout check and retains orphan only in private audit",
+  withSetup(async (s) => {
+    s.setFailDelete();
+    const f = new FormData();
+    f.set("confirmed", "on");
+    const r = await s.diagnosticAction.checkPdfVault({}, f);
+    assert.equal(r.ok, false);
+    assert.doesNotMatch(
+      r.message,
+      /provider secret|public\.blob|test-only-token/,
+    );
+    const key = [...s.store.keys()].find((k) =>
+        k.startsWith("pdf-vault:diagnostic:audit:"),
+      ),
+      audit = JSON.parse(s.store.get(key));
+    assert.equal(audit.verified, true);
+    assert.equal(audit.cleanup, false);
+    assert.match(audit.orphanUrl, /pdf-vault/);
   }),
 );

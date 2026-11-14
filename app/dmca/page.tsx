@@ -37,9 +37,12 @@ export default function Copyright() {
           <Link className="underline" href="/contact-us">
             প্রকাশিত যোগাযোগের মাধ্যম
           </Link>{" "}
-          ব্যবহার করুন। যোগাযোগের মাধ্যম এখনও প্রকাশিত না থাকলে সাধারণ কপিরাইট
-          অভিযোগ গ্রহণের channel অসম্পূর্ণ—এখানে কাল্পনিক inbox বা designated legal
-          agent দাবি করা হচ্ছে না।
+          অথবা লগইন করে{" "}
+          <Link className="underline" href="/support">
+            কপিরাইটের অনুরোধ
+          </Link>{" "}
+          পাঠান। এখানে কাল্পনিক inbox বা designated legal agent দাবি করা হচ্ছে না।
+          Login করতে না পারলে যোগাযোগ পাতার উপলব্ধ বিকল্প দেখুন।
         </p>
         <p>
           তথ্য যাচাইয়ের জন্য অতিরিক্ত ব্যাখ্যা চাওয়া, প্রকাশনা সীমিত করা বা উপকরণ
