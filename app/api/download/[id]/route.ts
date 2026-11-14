@@ -1,3 +1,8 @@
+import {
+  RESOURCE_PRIVATE_PREFIX,
+  privateResourceMarker,
+  readPrivateResource,
+} from "@/lib/resource-vault";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
@@ -17,6 +22,37 @@ export async function GET(
   if (!r) return new NextResponse("Not found", { status: 404, headers });
   if (!Number.isSafeInteger(r.priceBdt) || r.priceBdt < 0)
     return new NextResponse("Unavailable", { status: 503, headers });
+  if (r.fileUrl.startsWith(RESOURCE_PRIVATE_PREFIX)) {
+    const uid = (await auth())?.user?.id;
+    if (!uid && r.priceBdt > 0)
+      return new NextResponse("Unauthorized", { status: 401, headers });
+    if (r.fileUrl !== privateResourceMarker(r.id))
+      return new NextResponse("Unavailable", { status: 503, headers });
+    if (req.headers.has("range"))
+      return new NextResponse("Range not supported", { status: 416, headers });
+    try {
+      const bytes = await readPrivateResource(uid || null, r.id);
+      await db.resource.update({
+        where: { id: r.id },
+        data: { downloads: { increment: 1 } },
+      });
+      return new NextResponse(new Uint8Array(bytes), {
+        headers: {
+          ...headers,
+          "Content-Type": "application/pdf",
+          "Content-Disposition":
+            'attachment; filename="proshnobook-resource.pdf"',
+          "Content-Length": String(bytes.length),
+          "Content-Security-Policy": "sandbox; default-src 'none'",
+        },
+      });
+    } catch {
+      return new NextResponse("Not found or unavailable", {
+        status: 404,
+        headers,
+      });
+    }
+  }
   if (r.priceBdt > 0) {
     const u = (await auth())?.user;
     if (!u?.id)
