@@ -121,6 +121,7 @@ function setup() {
     },
     purchases: load("app/actions/marketplace-purchase.ts"),
     disputes: load("app/actions/marketplace-refund.ts"),
+    refundReadiness: load("app/actions/refund-readiness.ts"),
     refunds: load("lib/marketplace-refund.ts"),
     market: load("lib/marketplace.ts"),
     commerce: load("lib/marketplace-purchase.ts"),
@@ -1673,4 +1674,99 @@ test("concurrent acceptance commits one transition/audit and no release or dupli
     [...x.store.keys()].filter((k) => k.endsWith(":ACCEPT")).length,
     1,
   );
+});
+
+test("refund readiness is admin-only and read-only; ready state is not a refund", async () => {
+  const x = await disputeSetup(),
+    f = disputeReview(x),
+    before = new Map(x.store);
+  assert.equal(
+    (await x.refundReadiness.inspectRefundReadiness({}, f)).ok,
+    false,
+  );
+  x.setSession("a");
+  const r = await x.refundReadiness.inspectRefundReadiness({}, f);
+  assert.equal(r.ok, true);
+  assert.equal(r.required, 600);
+  assert.equal(r.available, 600);
+  assert.equal(r.shortfall, 0);
+  assert.deepEqual(x.store, before);
+  x.setRole("a", "TEACHER");
+  assert.equal(
+    (await x.refundReadiness.inspectRefundReadiness({}, f)).ok,
+    false,
+  );
+});
+test("refund readiness excludes recharge/bonus/received/held earnings and reports exact shortfall without creating debt", async () => {
+  const x = await disputeSetup();
+  x.store.set(
+    "wallet:account:v",
+    JSON.stringify({
+      version: 2,
+      balance: 30050,
+      bonus: 0,
+      funds: { bonus: 0, recharge: 10000, received: 20000, earnings: 50 },
+    }),
+  );
+  x.setSession("a");
+  const before = new Map(x.store),
+    r = await x.refundReadiness.inspectRefundReadiness({}, disputeReview(x));
+  assert.equal(r.ok, true);
+  assert.equal(r.shortfall, 550);
+  assert.equal(r.available, 50);
+  assert.deepEqual(x.store, before);
+  assert.equal(
+    (await x.disputes.reviewMarketDispute({}, disputeReview(x))).ok,
+    false,
+  );
+  assert.deepEqual(x.store, before);
+});
+test("refund readiness rejects missing/mismatched receipts and source ledger, corrupt wallet and closed complaint", async () => {
+  for (const scenario of ["receipt", "ledger", "wallet", "closed"]) {
+    const x = await disputeSetup();
+    x.setSession("a");
+    if (scenario === "receipt") {
+      const key = `market:platform:v1:u:${x.id}`,
+        r = JSON.parse(x.store.get(key));
+      r.sellerId = "wrong";
+      x.store.set(key, JSON.stringify(r));
+    }
+    if (scenario === "ledger")
+      x.store.delete(x.refunds.marketDebitKey("u", x.id));
+    if (scenario === "wallet") x.store.set("wallet:account:v", "{}");
+    if (scenario === "closed")
+      await x.disputes.reviewMarketDispute({}, disputeReview(x, "REJECTED"));
+    const before = new Map(x.store);
+    const r = await x.refundReadiness.inspectRefundReadiness(
+      {},
+      disputeReview(x),
+    );
+    assert.equal(r.ok, false);
+    assert.equal(r.shortfall, undefined);
+    assert.deepEqual(x.store, before);
+  }
+});
+test("an earlier ready result does not bypass financial revalidation after seller earnings change", async () => {
+  const x = await disputeSetup();
+  x.setSession("a");
+  const r = await x.refundReadiness.inspectRefundReadiness(
+    {},
+    disputeReview(x),
+  );
+  assert.equal(r.shortfall, 0);
+  x.store.set(
+    "wallet:account:v",
+    JSON.stringify({
+      version: 2,
+      balance: 2000,
+      bonus: 2000,
+      funds: { bonus: 2000, recharge: 0, received: 0, earnings: 0 },
+    }),
+  );
+  const before = new Map(x.store);
+  assert.equal(
+    (await x.disputes.reviewMarketDispute({}, disputeReview(x))).ok,
+    false,
+  );
+  assert.deepEqual(x.store, before);
 });
