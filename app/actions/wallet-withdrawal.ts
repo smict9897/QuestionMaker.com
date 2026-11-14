@@ -1,4 +1,8 @@
 "use server";
+import {
+  handoverKey,
+  assertNoPendingHandover,
+} from "@/lib/withdrawal-handover";
 import { auth } from "@/auth";
 import { readWalletLimits } from "@/lib/wallet-limits";
 import {
@@ -139,6 +143,15 @@ export async function reviewWithdrawal(
       const row = await tx.setting.findUnique({ where: { key } });
       if (!row) throw new WalletError("অনুরোধ পাওয়া যায়নি।");
       const r = parseWithdrawal(key, row.value);
+      assertNoPendingHandover(
+        (await tx.setting.findUnique({ where: { key: handoverKey(key) } }))
+          ?.value,
+        key,
+      );
+      if (r.handoverId && String(form.get("handoverId") || "") !== r.handoverId)
+        throw new WalletError(
+          "দায়িত্ব বদলেছে। সর্বশেষ পেজ খুলুন; টাকা পাঠাবেন না।",
+        );
       if (r.claimedBy !== reviewerId)
         throw new WalletError(
           "আগে অনুরোধটি নিজের দায়িত্বে নিন। অন্য অ্যাডমিনের দায়িত্বের অনুরোধ নিষ্পত্তি করা যাবে না।",
@@ -230,6 +243,11 @@ export async function claimWithdrawal(
       const row = await tx.setting.findUnique({ where: { key } });
       if (!row) throw new WalletError("অনুরোধ পাওয়া যায়নি।");
       const r = parseWithdrawal(key, row.value);
+      assertNoPendingHandover(
+        (await tx.setting.findUnique({ where: { key: handoverKey(key) } }))
+          ?.value,
+        key,
+      );
       if (r.status !== "HELD")
         throw new WalletError("আগেই নিষ্পত্তি হয়েছে; টাকা পাঠাবেন না।");
       if (

@@ -1,3 +1,5 @@
+import HandoverForm from "@/components/withdrawal-handover";
+import { handoverKey, parseHandover } from "@/lib/withdrawal-handover";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -33,6 +35,18 @@ export default async function WithdrawalsAdmin({
     orderBy: { key: "asc" },
     take: 100,
   });
+  const [handoverRows, admins] = await Promise.all([
+    db.setting.findMany({
+      where: { key: { in: rows.map((r) => handoverKey(r.key)) } },
+      take: 100,
+    }),
+    db.user.findMany({
+      where: { role: "ADMIN", id: { not: id } },
+      select: { id: true, name: true },
+      take: 100,
+    }),
+  ]);
+  const handovers = new Map(handoverRows.map((r) => [r.key, r.value]));
   return (
     <main className="mx-auto max-w-3xl p-5 space-y-5">
       <Link href="/admin">← অ্যাডমিন</Link>
@@ -43,7 +57,8 @@ export default async function WithdrawalsAdmin({
         করুন। দায়িত্বের মেয়াদ শেষ হয় না, অন্য অ্যাডমিন নিতে পারেন না। একই অ্যাডমিন
         একাধিক ট্যাব থেকেও একবারই টাকা পাঠাবেন। বাইরের পেমেন্ট সফটওয়্যার দিয়ে
         আটকানো যায় না। দায়িত্বপ্রাপ্ত অ্যাডমিন অনুপস্থিত হলে হিসাব যাচাই ছাড়া আবার
-        টাকা পাঠাবেন না; নিরাপদ হস্তান্তর ব্যবস্থা এখনও নেই।
+        টাকা পাঠাবেন না; দায়িত্বপ্রাপ্ত চাইলে নির্দিষ্ট অ্যাডমিনকে প্রস্তাব দিতে পারেন।
+        প্রাপক গ্রহণের আগে দায়িত্ব বদলাবে না; অপেক্ষমাণ অবস্থায় নিষ্পত্তি বন্ধ থাকবে।
       </p>
       <nav className="flex gap-4">
         <Link href="?status=HELD">অপেক্ষমাণ</Link>
@@ -51,9 +66,11 @@ export default async function WithdrawalsAdmin({
         <Link href="?status=REJECTED">বাতিল</Link>
       </nav>
       {rows.map((row) => {
-        let r;
+        let r, proposal;
         try {
           r = parseWithdrawal(row.key, row.value);
+          const raw = handovers.get(handoverKey(row.key));
+          if (raw) proposal = parseHandover(raw, row.key);
         } catch {
           return (
             <p role="alert" key={row.key}>
@@ -75,11 +92,30 @@ export default async function WithdrawalsAdmin({
                 {r.claimedAt}
               </p>
             )}
+            {r.status === "HELD" &&
+              r.claimedBy &&
+              (r.claimedBy === id || proposal?.status === "PENDING") && (
+                <HandoverForm
+                  recordKey={row.key}
+                  claimedAt={r.claimedAt!}
+                  claimHandoverId={r.handoverId}
+                  admins={admins.filter((a) => a.id !== r.userId)}
+                  proposal={proposal}
+                  actor={id}
+                />
+              )}
             {r.status === "HELD" ? (
-              !r.claimedBy ? (
+              proposal?.status === "PENDING" ? (
+                <p role="status">
+                  হস্তান্তর অপেক্ষমাণ; এখন টাকা পাঠানো বা নিষ্পত্তি করা যাবে না।
+                </p>
+              ) : !r.claimedBy ? (
                 <WithdrawalClaim recordKey={row.key} />
               ) : r.claimedBy === id ? (
-                <WithdrawalReview recordKey={row.key} />
+                <WithdrawalReview
+                  recordKey={row.key}
+                  handoverId={r.handoverId}
+                />
               ) : (
                 <p role="status">
                   অন্য অ্যাডমিনের দায়িত্বে আছে। টাকা পাঠাবেন না; নিষ্পত্তি করা যাবে

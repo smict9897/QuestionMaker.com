@@ -56,11 +56,18 @@ export function WithdrawalRequest({
     </form>
   );
 }
-export function WithdrawalReview({ recordKey }: { recordKey: string }) {
+export function WithdrawalReview({
+  recordKey,
+  handoverId = "",
+}: {
+  recordKey: string;
+  handoverId?: string;
+}) {
   const [state, action, pending] = useActionState(reviewWithdrawal, initial);
   return (
     <form action={action} className="space-y-3">
       <input name="key" value={recordKey} type="hidden" />
+      <input name="handoverId" value={handoverId} type="hidden" />
       <label className="block">
         সিদ্ধান্ত
         <select name="decision" className="block border p-2">

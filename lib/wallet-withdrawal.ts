@@ -12,6 +12,7 @@ export type Withdrawal = {
   note?: string;
   claimedBy?: string;
   claimedAt?: string;
+  handoverId?: string;
 };
 /** Legacy pending records without a claim remain valid, but must be claimed before review. */
 export function parseWithdrawal(key: string, raw: string): Withdrawal {
@@ -31,6 +32,9 @@ export function parseWithdrawal(key: string, raw: string): Withdrawal {
     !["HELD", "PAID", "REJECTED"].includes(r.status) ||
     typeof r.createdAt !== "string" ||
     !Number.isFinite(Date.parse(r.createdAt)) ||
+    (r.handoverId !== undefined &&
+      (typeof r.handoverId !== "string" ||
+        !/^[a-f0-9-]{36}$/.test(r.handoverId))) ||
     ((r.claimedBy !== undefined || r.claimedAt !== undefined) &&
       (typeof r.claimedBy !== "string" ||
         !r.claimedBy ||
