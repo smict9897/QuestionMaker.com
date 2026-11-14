@@ -62,3 +62,26 @@ External deletion is not a database transaction. Before calling the provider, pe
 A PENDING operation is not retried in its first five minutes. After investigating the audit/provider state, ADMIN may explicitly retry older PENDING/UNKNOWN operations with fresh backup/destructive consent; the archive is reverified each time. Same-operation finalization checks prevent a stale worker overwriting a newer attempt. REMOVED retries are idempotent. Keep the tombstone even when provider status is uncertain. Do not remove/overwrite migration, manifest, intent or attempt records manually to force completion.
 
 REMOVED means the storage deletion call returned success, not proof that every edge cache/public client link has expired. Downloaded, printed and cached copies cannot be recalled. No production files are retired automatically by deploy; this patch adds a gated operator workflow only. Automated tests mock provider and serialized DB, so real provider propagation, backup restore and database concurrency checks remain rollout requirements. Financial balances, receipts and payouts are never changed by retirement.
+
+## Offline encrypted key backup utility (phase 31)
+
+Run `scripts/pdf-vault-backup.cjs` on a **trusted operator computer**, not a shared build host. It uses only Node built-ins and does not call any provider. A new vault needs a passphrase kept in an operator-controlled secret manager independently from the backup. Do not send it or vault keys through chat. The tool uses scrypt (N=32768, r=8, p=1, random 32-byte salt) and AES-256-GCM (random 12-byte nonce, version-bound AAD). All rotation keys are backed up together. Outputs must be outside this repository, are exclusively created with mode 0600, and existing files/symlinks are never overwritten. Unix permissions do not replace full-disk encryption/access control, and filesystem snapshots/backups may retain plaintext environment files.
+
+Commands (passphrase must be piped through stdin, never supplied as an argument):
+
+- `node scripts/pdf-vault-backup.cjs create /secure/location/vault.backup /secure/location/vault.env`: generate a fresh 32-byte v1 key, encrypt backup, locally decrypt/compare, write backup and deployment env file. Refuses when vault environment is already present; **do not create new keys to replace a live vault**.
+- `node scripts/pdf-vault-backup.cjs import /secure/location/vault.backup`: back up the complete existing `PDF_VAULT_KEYS` and `PDF_VAULT_ACTIVE_KEY` already loaded securely into the operator process environment. Does not write plaintext output.
+- `node scripts/pdf-vault-backup.cjs verify /secure/location/vault.backup`: authenticate, decrypt and validate without writing keys or printing values.
+- `node scripts/pdf-vault-backup.cjs restore /secure/location/vault.backup /secure/location/restored.env`: write a new owner-only environment file, never overwrite an existing file.
+
+Supply stdin from your secret manager. For a trusted Bash terminal, a hidden prompt is also possible (do not run with shell tracing/recording enabled):
+
+```bash
+read -r -s -p 'Backup passphrase: ' vault_passphrase; printf '\n'
+printf '%s\n' "$vault_passphrase" | node scripts/pdf-vault-backup.cjs verify /secure/location/vault.backup
+unset vault_passphrase
+```
+
+For other commands replace only `verify ...` with the required command. Use a strong independent randomly generated passphrase (tool accepts 16–1024 bytes). Lost passphrases are not recoverable. The tool suppresses secret-bearing errors and never logs keys. JavaScript strings cannot be reliably erased from memory; use a trusted machine, no core dumps/debuggers/process tracing, and terminate the process after use.
+
+Before production: store the encrypted backup offsite and the passphrase separately; restore on an independent trusted environment; verify the restored keyring matches the original (e.g. `cmp` without printing contents). In Vercel's secure environment editor set `PDF_VAULT_KEYS` to the JSON **value only**, without the shell single quotes from the env file, and `PDF_VAULT_ACTIVE_KEY` to its active ID. Retain every deployed historical key. Use sensitive server-only values and isolated preview storage first, then redeploy and perform the authenticated admin storage diagnostic plus a pilot encrypted download. Do not claim the backup tool's local roundtrip proves an offsite restore, production connectivity or permission isolation. No provider configuration or file retirement is performed by this script. Handle/remove plaintext output through your organization's secret-handling policy; do not rely on secure deletion on SSDs.
