@@ -29,6 +29,9 @@ export default async function Admin() {
       <Link href="/admin/financial-report" className="rounded-xl border p-4">
         তারিখভিত্তিক / সর্বমোট আর্থিক রিপোর্ট →
       </Link>
+      <Link href="/admin/support" className="rounded-xl border p-4">
+        সহায়তা / গোপনীয়তা / কপিরাইট অনুরোধ →
+      </Link>
       {/* 🔔 পেন্ডিং পেমেন্ট সতর্কতা */}
       {pendingPayments > 0 && (
         <Link
