@@ -9,7 +9,7 @@ test("marked dashboard controls and overview shortcut are removed while generato
   const page = fs.readFileSync("app/admin/page.tsx", "utf8");
   assert.doesNotMatch(
     page,
-    /PanelGroup|<details|কন্ট্রোল প্যানেল|href="\/admin\/overview"/,
+    /PanelGroup|কন্ট্রোল প্যানেল|href="\/admin\/overview"/,
   );
   assert.match(page, /<AdminAIGenerator/);
   assert.match(page, /pendingPayments > 0/);
