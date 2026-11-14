@@ -1,7 +1,7 @@
 "use client";
+import { BRAND } from "@/lib/brand";
 
 import { useEffect, useState, type ReactNode } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, ChevronRight, Search, X } from "lucide-react";
@@ -174,8 +174,8 @@ export default function MobileHeaderDrawer({ open, onClose, userName, actions }:
         }`}
       >
         <div className="flex items-center justify-between border-b border-slate-200 p-3">
-          <Link href="/" onClick={onClose} aria-label="SaifulSir.com home">
-            <Image src="/logo.png" alt="SaifulSir.com" width={689} height={245} className="h-10 w-auto" />
+          <Link href="/" onClick={onClose} aria-label={`${BRAND.nameBn} হোম`}>
+            <span className="font-bold text-xl">{BRAND.nameBn}</span>
           </Link>
           <button onClick={onClose} aria-label="Close menu" className="rounded-lg p-2 hover:bg-slate-100">
             <X size={22} />

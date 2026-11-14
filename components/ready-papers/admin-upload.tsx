@@ -34,7 +34,7 @@ export default function ReadyUpload({
         <section className="rp-panel" role="alert">
           <h2>PDF storage সংযুক্ত করা বাকি</h2>
           <p>
-            Vercel-এ এই QuestionMaker প্রজেক্টের জন্য আলাদা public Blob store তৈরি
+            Vercel-এ এই Proshnobook প্রজেক্টের জন্য আলাদা public Blob store তৈরি
             ও সংযুক্ত করুন, তারপর redeploy করুন। সংযোগ না হওয়া পর্যন্ত PDF upload হবে
             না।
           </p>

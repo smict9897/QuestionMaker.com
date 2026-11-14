@@ -1,4 +1,5 @@
 "use client";
+import { BRAND } from "@/lib/brand";
 import { useEffect, useRef, type ReactNode } from "react";
 import {
   Sparkles,
@@ -51,7 +52,7 @@ export default function PreparationPopup({
     >
       <div className="prep-badge">
         <Sparkles size={19} />
-        QuestionMakerBd AI
+        {BRAND.nameEn} AI
       </div>
       <div className="prep-art" aria-hidden="true">
         <div className="prep-ring" />

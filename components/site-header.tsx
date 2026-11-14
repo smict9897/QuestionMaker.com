@@ -1,4 +1,5 @@
 "use client";
+import { BRAND } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -107,17 +108,17 @@ export default function SiteHeader({ user, logout, notice }: { user: U; logout: 
               <Menu size={22} />
             </button>
 
-            <Link href="/" aria-label="QuestionMakerBd.com হোম" className="flex items-center gap-2.5 group shrink-0">
+            <Link href="/" aria-label={`${BRAND.nameBn} হোম`} className="flex items-center gap-2.5 group shrink-0">
               {/* হোমপেজের মতো গ্লাসমরফিক লোগো আইকন */}
               <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] shadow-md shadow-violet-500/20 group-hover:scale-105 transition-transform">
                 <img src="/questionmaker-icon.png" width={40} height={40} alt="" className="rounded-xl" />
               </div>
               <div className="flex flex-col justify-center">
                 <span className="font-extrabold text-[13px] sm:text-lg tracking-tight leading-none text-[#16112e] dark:text-white">
-                  QuestionMakerBd.com
+                  {BRAND.nameBn}
                 </span>
                 <span className="text-[10px] sm:text-xs font-semibold text-violet-500 dark:text-violet-300 mt-0.5">
-                  Empowering Assessments with AI
+                  {BRAND.tagline}
                 </span>
               </div>
             </Link>

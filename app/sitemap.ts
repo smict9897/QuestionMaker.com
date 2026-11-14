@@ -1,10 +1,11 @@
+import { publicSiteOrigin } from "@/lib/brand";
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = (process.env.SITE_URL ?? "https://saifulsir.com").replace(/\/$/, "");
+  const base = publicSiteOrigin(process.env.SITE_URL);
 
   const [posts, cats, pages] = await Promise.all([
     db.post.findMany({

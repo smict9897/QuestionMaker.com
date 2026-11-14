@@ -3,7 +3,7 @@
   display: inline-flex;
   flex-direction: column;
   min-width: 0;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--qk-body), Kalpurush, sans-serif;
   text-align: left;
 }
 .qm-wordmark .qm-wordmark-title {
@@ -12,8 +12,8 @@
   color: #123452;
   font-size: clamp(17px, 2.2vw, 27px);
   font-weight: 850;
-  letter-spacing: -0.055em;
-  line-height: 1.15;
+  letter-spacing: 0;
+  line-height: 1.4;
   white-space: nowrap;
   animation: qm-header-enter 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   transition:

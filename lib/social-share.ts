@@ -22,7 +22,7 @@ async function postToTelegram({
   coverUrl?: string | null;
 }) {
   try {
-    const caption = `📢 <b>${title}</b>\n\n${excerpt ? `${excerpt}\n\n` : ""}👉 বিস্তারিত পড়তে ক্লিক করুন:\n${url}\n\n#SaifulSir #Education #Update`;
+    const caption = `📢 <b>${title}</b>\n\n${excerpt ? `${excerpt}\n\n` : ""}👉 বিস্তারিত পড়তে ক্লিক করুন:\n${url}\n\n#Proshnobook #Education #Update`;
 
     if (coverUrl && coverUrl.startsWith("http")) {
       await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
@@ -109,7 +109,7 @@ async function postToWhatsAppGroup({
   coverUrl?: string | null;
 }) {
   try {
-    const messageText = `📢 *${title}*\n\n${excerpt ? `${excerpt}\n\n` : ""}👉 সম্পূর্ণ পড়তে লিংকে ক্লিক করুন:\n${url}\n\n_SaifulSir.com - শিক্ষার সবকিছু একসাথে_`;
+    const messageText = `📢 *${title}*\n\n${excerpt ? `${excerpt}\n\n` : ""}👉 সম্পূর্ণ পড়তে লিংকে ক্লিক করুন:\n${url}\n\n_Proshnobook — প্রশ্নবুক.কম_`;
 
     // ছবি থাকলে ছবিসহ হোয়াটসঅ্যাপ গ্রুপে পাঠাবে
     if (coverUrl && coverUrl.startsWith("http")) {

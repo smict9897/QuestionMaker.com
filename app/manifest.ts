@@ -1,12 +1,12 @@
+import { BRAND } from "@/lib/brand";
 import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "QuestionMakerBd.com",
-    short_name: "QuestionMakerBd",
-    description:
-      "নোট, প্রশ্নব্যাংক, মডেল টেস্ট আর AI কুইজ, শিক্ষার সবকিছু একসাথে।",
+    name: `${BRAND.nameEn} — ${BRAND.nameBn}`,
+    short_name: BRAND.nameBn,
+    description: BRAND.description,
     start_url: "/",
     scope: "/",
     display: "standalone",

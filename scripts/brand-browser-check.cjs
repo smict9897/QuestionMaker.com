@@ -44,7 +44,7 @@ async function check() {
       const errors = [];
       page.on("pageerror", (e) => errors.push(String(e)));
       await page.goto("http://127.0.0.1:5174");
-      assert.equal(await page.locator("h2").innerText(), "QuestionMakerBd.com");
+      assert.equal(await page.locator("h2").innerText(), "প্রশ্নবুক.কম");
       assert.equal(
         await page
           .locator("img")
