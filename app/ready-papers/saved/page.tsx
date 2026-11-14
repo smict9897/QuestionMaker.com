@@ -68,6 +68,11 @@ export default async function SavedReady() {
                 timeZone: "Asia/Dhaka",
               })}
             </p>
+            <p>
+              {p.originHash
+                ? "Checkout-এর অপরিবর্তনীয় উৎস-রেকর্ড সংরক্ষিত আছে। এটি কপিরাইট বা পুনর্বিক্রির অনুমতি নয়।"
+                : "পুরোনো কপি: অপরিবর্তনীয় উৎস-রেকর্ড নেই; পুনর্বিক্রির যোগ্যতা যাচাই হয়নি।"}
+            </p>
             <Link href={`/ready-papers/${p.paperId}?saved=${p.id}`}>
               প্রশ্নপত্র ও উত্তরপত্র খুলুন →
             </Link>

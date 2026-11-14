@@ -6,6 +6,7 @@ export const READY_MONTH_PAISA = 9900;
 export const READY_MONTH_UNITS = 30;
 export const readySelectionSchema = z.object({
   paperId: z.string().uuid(),
+  sourceUrl: z.string().url().max(2048).optional(),
   selected: z
     .array(z.number().int().min(1).max(100))
     .min(1)
