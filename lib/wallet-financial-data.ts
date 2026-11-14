@@ -1,11 +1,7 @@
+import { scanFinancialReport } from "@/lib/wallet-financial-scan";
 import "server-only";
 import { db } from "@/lib/db";
-import {
-  financialReport,
-  reportRange,
-  REPORT_SCAN_LIMIT,
-  PLATFORM_RECEIPT_PREFIX,
-} from "@/lib/wallet-financial-report";
+import { reportRange } from "@/lib/wallet-financial-report";
 /** A repeatable-read snapshot, not three unrelated live totals. Never scans purchased copies. */
 export async function readFinancialReport(
   actorId: string,
@@ -29,22 +25,28 @@ export async function readFinancialReport(
       const [clock] = await tx.$queryRaw<
         { at: Date }[]
       >`SELECT transaction_timestamp() AS at`;
-      const query = (prefix: string) =>
-        tx.setting.findMany({
-          where: { key: { startsWith: prefix } },
-          orderBy: { key: "asc" },
-          take: REPORT_SCAN_LIMIT + 1,
-          select: { key: true, value: true },
-        });
-      const sales = await query(PLATFORM_RECEIPT_PREFIX),
-        refunds = await query("market:refund:v1:"),
-        withdrawals = await query("wallet:withdrawal:v1:");
-      return {
+      const report = await scanFinancialReport(
+        {
+          page: (prefix, after, take) =>
+            tx.setting.findMany({
+              where: {
+                key: { startsWith: prefix, ...(after ? { gt: after } : {}) },
+              },
+              orderBy: { key: "asc" },
+              take,
+              select: { key: true, value: true },
+            }),
+          sales: (keys) =>
+            tx.setting.findMany({
+              where: { key: { in: keys } },
+              take: keys.length,
+              select: { key: true, value: true },
+            }),
+        },
         range,
-        asOf: clock.at.toISOString(),
-        ...financialReport(sales, refunds, withdrawals, range),
-      };
+      );
+      return { range, asOf: clock.at.toISOString(), ...report };
     },
-    { isolationLevel: "RepeatableRead", maxWait: 5000, timeout: 20000 },
+    { isolationLevel: "RepeatableRead", maxWait: 5000, timeout: 60000 },
   );
 }
