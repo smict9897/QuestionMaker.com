@@ -4,6 +4,7 @@ import { put } from "@vercel/blob";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { assertResourceSourceAvailable } from "@/lib/resource-source";
 import { staff } from "@/lib/guard";
 import {
   prepareResourcePdf,
@@ -101,13 +102,25 @@ export async function addResource(fd: FormData): Promise<void> {
       url.password
     )
       throw Error("সঠিক HTTP/HTTPS লিংক দিন।");
-    await db.resource.create({
-      data: {
-        title: d.title,
-        category: d.category,
-        fileUrl,
-        priceBdt: d.price,
-      },
+    await db.$transaction(async (tx) => {
+      if (
+        (
+          await tx.user.findUnique({
+            where: { id: actor.id },
+            select: { role: true },
+          })
+        )?.role !== "ADMIN"
+      )
+        throw Error("অনুমতি নেই।");
+      await assertResourceSourceAvailable(tx, url.href);
+      await tx.resource.create({
+        data: {
+          title: d.title,
+          category: d.category,
+          fileUrl: url.href,
+          priceBdt: d.price,
+        },
+      });
     });
   }
   revalidatePath("/", "layout");

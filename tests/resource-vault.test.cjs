@@ -20,8 +20,11 @@ async function setup() {
   let session = "a",
     queue = Promise.resolve(),
     fail = "",
-    hook = null;
-  const calls = [];
+    hook = null,
+    deleteFail = false,
+    deleteHook = null;
+  const calls = [],
+    deletions = [];
   const tx = {
     user: { findUnique: async ({ where }) => users[where.id] || null },
     purchase: {
@@ -33,6 +36,13 @@ async function setup() {
     },
     $queryRaw: async () => [],
     setting: {
+      findFirst: async ({ where }) => {
+        for (const [key, value] of store) {
+          if (where.NOT?.key?.in?.includes(key)) continue;
+          if (value.includes(where.value.contains)) return { key };
+        }
+        return null;
+      },
       findUnique: async ({ where }) =>
         store.has(where.key)
           ? { key: where.key, value: store.get(where.key) }
@@ -44,12 +54,23 @@ async function setup() {
         return data;
       },
       update: async ({ where, data }) => {
+        if (fail && where.key.startsWith(fail)) throw Error("forced");
         if (!store.has(where.key)) throw Error("missing");
         store.set(where.key, data.value);
         return data;
       },
     },
     resource: {
+      findFirst: async ({ where }) =>
+        [...resources.values()].find(
+          (r) =>
+            r.id !== where.id.not &&
+            r.fileUrl?.toLowerCase() ===
+              (typeof where.fileUrl === "string"
+                ? where.fileUrl
+                : where.fileUrl.equals
+              ).toLowerCase(),
+        ) || null,
       findUnique: async ({ where }) =>
         resources.has(where.id) ? { ...resources.get(where.id) } : null,
       update: async ({ where, data }) => {
@@ -119,7 +140,12 @@ async function setup() {
                         blobs.set(url, Buffer.from(bytes));
                         return { url };
                       },
-                      del: async (url) => blobs.delete(url),
+                      del: async (url) => {
+                        deletions.push(url);
+                        if (deleteFail) throw Error("provider unavailable");
+                        blobs.delete(url);
+                        if (deleteHook) await deleteHook(url);
+                      },
                     }
                   : n.startsWith("@/")
                     ? load(n.slice(2) + ".ts")
@@ -148,7 +174,7 @@ async function setup() {
   const doc = await PDFDocument.create();
   doc.addPage([200, 300]);
   const bytes = Buffer.from(await doc.save()),
-    url = "https://store.public.blob.vercel-storage.com/legacy.pdf";
+    url = "https://store.public.blob.vercel-storage.com/notes/legacy.pdf";
   blobs.set(url, bytes);
   resources.set("r", {
     id: "r",
@@ -166,6 +192,11 @@ async function setup() {
     bytes,
     url,
     calls,
+    deletions,
+    retirement: load("lib/resource-retirement.ts"),
+    migrationAction: load("app/actions/resource-vault.ts"),
+    setDeleteFail: (v) => (deleteFail = v),
+    setDeleteHook: (v) => (deleteHook = v),
     vault: load("lib/resource-vault.ts"),
     upload: load("app/actions/resources.ts"),
     manage: load("app/actions/manage.ts"),
@@ -398,5 +429,201 @@ test(
     f.set("price", "100");
     await assert.rejects(() => s.manage.updateResource("r", f));
     assert.equal(s.resources.get("r").priceBdt, 0);
+  }),
+);
+test(
+  "explicit retirement verifies encrypted archive, removes original and leaves paid delivery working with immutable attempts",
+  run(async (s) => {
+    await s.vault.migrateResourcePdf("a", "r");
+    assert.equal(
+      await s.retirement.retireResourceOriginal("a", "r"),
+      "REMOVED",
+    );
+    assert.equal(s.blobs.has(s.url), false);
+    assert.deepEqual(await s.vault.readPrivateResource("u", "r"), s.bytes);
+    const audit = JSON.parse(s.store.get("resource-vault:migration:v1:r"));
+    assert.equal(audit.originalRetired, true);
+    assert.equal(
+      JSON.parse(s.store.get("resource-retirement:v1:r")).status,
+      "REMOVED",
+    );
+    assert.equal(
+      [...s.store.keys()].filter((k) =>
+        k.startsWith("resource-retirement-attempt:"),
+      ).length,
+      2,
+    );
+    const n = s.deletions.length;
+    assert.equal(
+      await s.retirement.retireResourceOriginal("a", "r"),
+      "REMOVED",
+    );
+    assert.equal(s.deletions.length, n);
+  }),
+);
+test(
+  "shared resource or setting reference blocks retirement before source deletion",
+  run(async (s) => {
+    await s.vault.migrateResourcePdf("a", "r");
+    s.resources.set("shared", { id: "shared", fileUrl: s.url });
+    await assert.rejects(() => s.retirement.retireResourceOriginal("a", "r"));
+    assert.equal(s.blobs.has(s.url), true);
+    s.resources.delete("shared");
+    s.store.set("readyorigin:v1:shared", JSON.stringify({ url: s.url }));
+    await assert.rejects(() => s.retirement.retireResourceOriginal("a", "r"));
+    assert.equal(s.blobs.has(s.url), true);
+    assert.equal(s.store.has("resource-retirement:v1:r"), false);
+  }),
+);
+test(
+  "uncertain provider failure preserves blocked-source intent and can be explicitly retried",
+  run(async (s) => {
+    await s.vault.migrateResourcePdf("a", "r");
+    s.setDeleteFail(true);
+    assert.equal(
+      await s.retirement.retireResourceOriginal("a", "r"),
+      "UNKNOWN",
+    );
+    assert.equal(s.blobs.has(s.url), true);
+    assert.equal(
+      JSON.parse(s.store.get("resource-retirement:v1:r")).status,
+      "UNKNOWN",
+    );
+    s.setDeleteFail(false);
+    assert.equal(
+      await s.retirement.retireResourceOriginal("a", "r"),
+      "REMOVED",
+    );
+    assert.equal(s.blobs.has(s.url), false);
+  }),
+);
+test(
+  "post-deletion DB failure cannot erase persisted intent or silently restore a public fallback",
+  run(async (s) => {
+    await s.vault.migrateResourcePdf("a", "r");
+    s.setDeleteHook(() => s.setFail("resource-retirement:v1:"));
+    await assert.rejects(() => s.retirement.retireResourceOriginal("a", "r"));
+    assert.equal(s.blobs.has(s.url), false);
+    assert.equal(
+      JSON.parse(s.store.get("resource-retirement:v1:r")).status,
+      "PENDING",
+    );
+    assert.equal(s.resources.get("r").fileUrl, "private-resource:v1:r");
+    assert.deepEqual(await s.vault.readPrivateResource("u", "r"), s.bytes);
+    s.setFail("");
+    s.setDeleteHook(null);
+    const key = "resource-retirement:v1:r",
+      state = JSON.parse(s.store.get(key));
+    state.updatedAt = new Date(Date.now() - 301000).toISOString();
+    s.store.set(key, JSON.stringify(state));
+    assert.equal(
+      await s.retirement.retireResourceOriginal("a", "r"),
+      "REMOVED",
+    );
+  }),
+);
+test(
+  "tombstone prevents reintroducing a retired public URL through new free resource links",
+  run(async (s) => {
+    await s.vault.migrateResourcePdf("a", "r");
+    await s.retirement.retireResourceOriginal("a", "r");
+    const f = new FormData();
+    for (const [k, v] of Object.entries({
+      title: "Reintroduced file",
+      category: "Library",
+      price: "0",
+      link: s.url,
+    }))
+      f.set(k, v);
+    await assert.rejects(() => s.upload.addResource(f));
+    assert.equal(s.resources.size, 1);
+  }),
+);
+test(
+  "non-admin or absent backup consent cannot trigger deletion",
+  run(async (s) => {
+    await s.vault.migrateResourcePdf("a", "r");
+    await assert.rejects(() => s.retirement.retireResourceOriginal("u", "r"));
+    const f = new FormData();
+    f.set("resourceId", "r");
+    f.set("confirmed", "on");
+    assert.equal(
+      (await s.migrationAction.retirePaidResourceOriginal({}, f)).ok,
+      false,
+    );
+    assert.equal(s.blobs.has(s.url), true);
+    assert.equal(s.store.has("resource-retirement:v1:r"), false);
+  }),
+);
+test(
+  "new resource references are blocked during provider deletion, not just after completion",
+  run(async (s) => {
+    await s.vault.migrateResourcePdf("a", "r");
+    let blocked = false;
+    s.setDeleteHook(async () => {
+      const f = new FormData();
+      for (const [k, v] of Object.entries({
+        title: "Concurrent reference",
+        category: "Library",
+        price: "0",
+        link: s.url,
+      }))
+        f.set(k, v);
+      try {
+        await s.upload.addResource(f);
+      } catch {
+        blocked = true;
+      }
+    });
+    assert.equal(
+      await s.retirement.retireResourceOriginal("a", "r"),
+      "REMOVED",
+    );
+    assert.equal(blocked, true);
+    assert.equal(s.resources.size, 1);
+  }),
+);
+test(
+  "concurrent retire requests share intent and do not issue independent destructive operations",
+  run(async (s) => {
+    await s.vault.migrateResourcePdf("a", "r");
+    const results = await Promise.allSettled(
+      Array.from({ length: 8 }, () =>
+        s.retirement.retireResourceOriginal("a", "r"),
+      ),
+    );
+    assert.ok(
+      results.some((r) => r.status === "fulfilled" && r.value === "REMOVED"),
+    );
+    assert.equal(s.deletions.filter((u) => u === s.url).length, 1);
+    assert.equal(
+      JSON.parse(s.store.get("resource-retirement:v1:r")).status,
+      "REMOVED",
+    );
+  }),
+);
+test(
+  "retirement rejects namespace outside notes and corrupted encrypted archive before deleting source",
+  run(async (s) => {
+    await s.vault.migrateResourcePdf("a", "r");
+    const migrationKey = "resource-vault:migration:v1:r",
+      audit = JSON.parse(s.store.get(migrationKey));
+    s.store.set(
+      migrationKey,
+      JSON.stringify({
+        ...audit,
+        sourceUrl:
+          "https://store.public.blob.vercel-storage.com/ready-papers/file.pdf",
+      }),
+    );
+    await assert.rejects(() => s.retirement.retireResourceOriginal("a", "r"));
+    assert.equal(s.blobs.has(s.url), true);
+    s.store.set(migrationKey, JSON.stringify(audit));
+    const m = JSON.parse(s.store.get("resource-vault:v1:r")),
+      cipher = s.blobs.get(m.url);
+    cipher[cipher.length - 1] ^= 1;
+    await assert.rejects(() => s.retirement.retireResourceOriginal("a", "r"));
+    assert.equal(s.blobs.has(s.url), true);
+    assert.equal(s.store.has("resource-retirement:v1:r"), false);
   }),
 );

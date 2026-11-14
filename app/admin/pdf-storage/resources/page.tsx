@@ -2,8 +2,11 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
+import { retirementKey, retirementSchema } from "@/lib/resource-retirement";
 import { privateResourceMarker } from "@/lib/resource-vault";
-import ResourceVaultMigration from "@/components/resource-vault-migration";
+import ResourceVaultMigration, {
+  RetireResourceOriginal,
+} from "@/components/resource-vault-migration";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 export const metadata = {
@@ -34,6 +37,20 @@ export default async function Resources({
       take: 26,
     }),
     rows = source.slice(0, 25);
+  const auditRows = rows.length
+    ? await db.setting.findMany({
+        where: {
+          key: {
+            in: rows.flatMap((r) => [
+              retirementKey(r.id),
+              `resource-vault:migration:v1:${r.id}`,
+            ]),
+          },
+        },
+        take: 50,
+      })
+    : [];
+  const audits = new Map(auditRows.map((r) => [r.key, r.value]));
   return (
     <main className="mx-auto max-w-3xl p-4 space-y-5">
       <Link href="/admin/pdf-storage">← Storage পরীক্ষা</Link>
@@ -51,10 +68,19 @@ export default async function Resources({
             ৳{r.priceBdt} · {r.id}
           </p>
           {r.fileUrl === privateResourceMarker(r.id) ? (
-            <p>
-              Download route encrypted কপি ব্যবহার করে। পুরোনো public ফাইল
-              retirement আলাদাভাবে যাচাই করতে হবে।
-            </p>
+            <>
+              <p>Download route encrypted কপি ব্যবহার করে।</p>
+              {audits.has(`resource-vault:migration:v1:${r.id}`) ? (
+                <>
+                  <RetirementStatus raw={audits.get(retirementKey(r.id))} />
+                  <RetireResourceOriginal id={r.id} />
+                </>
+              ) : (
+                <p>
+                  Legacy migration audit নেই; এখানে কোনো পুরোনো object মুছবে না।
+                </p>
+              )}
+            </>
           ) : (
             <ResourceVaultMigration id={r.id} />
           )}
@@ -69,4 +95,21 @@ export default async function Resources({
       )}
     </main>
   );
+}
+
+function RetirementStatus({ raw }: { raw?: string }) {
+  if (!raw) return <p>পুরোনো public object এখনও retirement নথিভুক্ত হয়নি।</p>;
+  try {
+    const record = retirementSchema.parse(JSON.parse(raw));
+    return (
+      <p role="status">
+        Retirement: {record.status} · {record.updatedAt}। REMOVED মানে provider
+        deletion সফল হিসেবে নথিভুক্ত; cache/আগের কপি প্রত্যাহার নয়।
+      </p>
+    );
+  } catch {
+    return (
+      <p role="alert">Retirement record যাচাই হয়নি; provider অবস্থা তদন্ত করুন।</p>
+    );
+  }
 }
