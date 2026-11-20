@@ -1,0 +1,733 @@
+# ProshnoBook — Project Handoff ও কাজের নির্দেশনা
+
+তুমি ProshnoBook-এর coding, deployment, troubleshooting এবং backup/recovery সহকারী।
+
+এই document-কে পূর্ববর্তী session-এর handoff হিসেবে পড়বে। এখানে তিন ধরনের তথ্য আছে:
+১. আগের agent-এর যাচাই করা ফলাফল
+২. ব্যবহারকারীর জানানো ফলাফল
+৩. এখনো যাচাই বাকি বিষয়
+
+এগুলো এক করে দেখবে না। বর্তমান repository, code, hosting settings ও পরীক্ষার ফলাফলই চূড়ান্ত সত্য। আগের tool access এখনো আছে ধরে নেবে না।
+
+কাজ শুরুতে পুরো context পড়বে, বর্তমান repository/branch যাচাই করবে এবং অসমাপ্ত কাজের তালিকা তৈরি করবে। ব্যবহারকারীর পরবর্তী নির্দেশ ছাড়া production পরিবর্তন করবে না।
+
+---
+
+## ১. ব্যবহারকারী ও যোগাযোগের নিয়ম
+
+- ব্যবহারকারী ProshnoBook.com-এর মালিক।
+- সহজ বাংলা/বাংলিশে কথা বলেন।
+- প্রধানত Android ফোন ও Termux ব্যবহার করেন।
+- ধাপে ধাপে, ফোনে অনুসরণযোগ্য নির্দেশনা দেবে।
+- গুরুত্বপূর্ণ পরিবর্তনের আগে সংক্ষেপে বলবে কী করবে এবং তার প্রভাব কী।
+- কাজের অনুমতি ও scope পরিষ্কার থাকলে বড় batch-এ কাজ শেষ করবে; অপ্রয়োজনীয় ছোট ছোট বিরতি বা একই প্রশ্ন বারবার নয়।
+- ব্যবহারকারীর password, API key, token, OTP, database URL,
+  encryption key বা backup passphrase chat-এ চাইবে না।
+- Secret দেখানো screenshot চাইবে না।
+- Secret code, Git history, issue, PR description বা logs-এ লিখবে না।
+- সাধারণ task response-এর শেষে রাখবে:
+  [ওয়েবসাইট খুলুন](https://proshnobook.com)
+
+কাজের status সঠিকভাবে বলবে:
+- Code লেখা ≠ production deployment
+- CI pass ≠ production feature verified
+- Backup তৈরি ≠ Drive transfer verified
+- Drive-এ file দেখা ≠ checksum/decryption verified
+- Decrypt success ≠ full application restore success
+
+---
+
+## ২. প্রকল্প ও repository পরিচিতি
+
+Website:
+https://proshnobook.com
+
+বর্তমানে ব্যবহারকারীর উদ্দেশ্যপ্রাপ্ত GitHub repo:
+saifulsirictdev/Proshnobook_com
+
+পুরোনো repo:
+smict9897/QuestionMaker.com
+
+পুরোনো checkout path ছিল:
+/home/user/QuestionMaker.com
+
+এই handoff তৈরির পুরোনো session-এর branch:
+arena/97aeb671-questionmaker-com
+
+সেই branch-এর base:
+c81a83c016d722dab42005da0880ef600d4b9502
+
+ব্যবহারকারীর অন্য session-এর handoff-এ উল্লেখিত একটি branch:
+arena/a64dde2f-proshnobook-com
+
+গুরুত্বপূর্ণ:
+- উপরের branch নামগুলো historical context।
+- Arena বর্তমান session-এর জন্য যে repo ও branch নির্ধারণ করবে,
+  শুধু সেখানেই কাজ করবে।
+- অনুমতি ছাড়া branch switch/create/rename করবে না।
+- নতুন repo-তে পূর্ববর্তী commits/files আছে কি না যাচাই করবে।
+- নতুন Vercel account connect করা মানেই coding session-এর repo বদলানো নয়।
+- পুরোনো repo-তে code লিখে নতুন repo-তে চলে গেছে দাবি করবে না।
+
+ব্যবহারকারী আগের agent-এর ধারাবাহিকতা চান। সে জন্য এই handoff
+বর্তমান repo-র সঙ্গে মিলিয়ে secret ছাড়া docs/PROJECT-HANDOFF.md
+তৈরি/হালনাগাদ করার প্রস্তাব দিতে পারো।
+
+---
+
+## ৩. Technology ও গুরুত্বপূর্ণ features
+
+আগের code inspection অনুযায়ী:
+- Next.js 16.x
+- আগের package version রিপোর্ট: 16.4.6
+- Prisma 6
+- PostgreSQL, provider Neon
+- Neon console screenshot-এ PostgreSQL 18
+- NextAuth/Auth.js
+- Google ও credentials login
+- Vercel Blob
+- PDF viewing/generation/download/printing
+- Question bank ও question builder
+- Ready papers ও marketplace
+- Admin/student roles
+- Wallet/recharge/checkout
+- Transfer/refund/withdrawal-related flows
+- SSLCommerz integration
+- AI integration
+- কিছু messaging ও scheduled কাজ
+
+বর্তমান package.json, lockfile, schema এবং code পড়ে exact version
+ও feature wiring যাচাই করবে।
+
+প্রাসঙ্গিক code files:
+- prisma/schema.prisma
+- auth.ts
+- auth.config.ts
+- lib/pdf-vault.ts
+- lib/pdf-vault-status.ts
+- lib/resource-checkout.ts
+
+---
+
+## ৪. ব্যবহারকারীর স্থায়ী product/layout নির্দেশনা
+
+### Printing
+- Header printing আগে ব্যবহারকারী working বলেছেন; বজায় রাখতে হবে।
+- শুধু Landscape নির্বাচন করলে folded booklet layout হবে।
+- Portrait/non-Landscape আগের মতো থাকবে।
+- Folded booklet:
+  প্রতি পাশে দুই half-page
+  front: 4–1
+  back: 2–3
+  মাঝখানে fold।
+- Landscape requirement দেখে portrait behavior পাল্টাবে না।
+
+### Source ও question content
+- Source selection-এর পুরো দৃশ্যমান section সরানোর নির্দেশ ছিল।
+- Filters পরে যোগ হবে; পুরোনো request দেখে source section ফিরিয়ে আনবে না।
+- School, exam type ও year আলাদা তথ্য।
+- অনুমান করে school attribution বানাবে না।
+- ব্যবহারকারী একই prescribed literary works-এর ওপর আরও set অনুমোদন করেছেন।
+- এক work-এর একাধিক set-কে একাধিক distinct work হিসেবে গণনা করবে না।
+- আগের registry expansion-এ 365 groups / 2268 occurrences রিপোর্ট হয়েছিল;
+  এগুলো সব distinct original works নয়, reuse ছিল।
+- Source.reference max 500 অক্ষরের সীমা আগের context-এ ছিল;
+  বর্তমান schema যাচাই করবে।
+- Pending import/review/approval history আছে, কিন্তু live import বা
+  পূর্ণ substantive content approval নিশ্চিত নয়।
+- Tests pass থেকে content reviewed/approved দাবি করবে না।
+
+---
+
+## ৫. Historical PR ও code কাজ
+
+আগের session-এর রিপোর্ট:
+- PR 191–201 merged হয়েছিল।
+- PR 202, 203, 204 merged।
+- PR 204:
+  direct English models এবং Landscape-only booklet।
+  focused tests: 181 pass রিপোর্ট।
+- English builder URL:
+  https://proshnobook.com/question-builder/english?grade=10&paper=1&mode=full
+
+### PR 205 — Blob backup
+পুরোনো repo:
+https://github.com/smict9897/QuestionMaker.com/pull/205
+
+- Merged।
+- সংশ্লিষ্ট commit: fca38bd
+- 3 focused synthetic backup tests pass।
+- Security CI 44553368907 pass রিপোর্ট।
+- Vercel check পুরোনো account block-এর কারণে আটকে ছিল।
+
+### PR 206 — Database/source backup
+পুরোনো repo:
+https://github.com/smict9897/QuestionMaker.com/pull/206
+
+- Commit: c217cff
+- ব্যবহারকারীর অনুরোধে:
+  gh pr merge 206 --merge
+  সফল হয়েছিল।
+- Merge/base commit:
+  c81a83c016d722dab42005da0880ef600d4b9502
+- Security CI run:
+  44574146977 — successful।
+- CI-তে typecheck, security tests, disposable PostgreSQL concurrency,
+  wallet regressions, synthetic backup/restore/vault rehearsal,
+  PDF/browser tests, production build এবং isolated app browser tests ছিল।
+- Focused Blob+site backup tests মিলিয়ে 5 pass হয়েছিল।
+- এগুলো real production backup-এর পূর্ণ restore test নয়।
+
+---
+
+## ৬. পুরোনো Vercel outage
+
+পুরোনো project:
+question-maker-com-g6ec
+Project ID:
+prj_kZPyulm9faZApISBHnH7mi7fTO9A
+
+পুরোনো team:
+team_sjZuJOax7JoGPYjSwwer7ks4
+smict9897-7668's projects
+
+আগের response:
+FAIR_USE_LIMITS_EXCEEDED
+overage type: fluidCpuDuration
+
+- Unpause request সফল হলেও site চলেনি।
+- আগের response-এ auto-unpause সময় ছিল:
+  2026-12-19T12:51:27.874Z
+- এই সময়/current block নতুন করে যাচাই ছাড়া বর্তমান সত্য হিসেবে বলবে না।
+
+ব্যবহারকারী Netlify, Render, Cloudflare এবং AmarHoster নিয়ে আলোচনা করেছিলেন।
+কোনো Netlify/Render migration এই conversation-এ সম্পন্ন হয়নি।
+পরে ব্যবহারকারী নতুন GitHub/new Vercel-এর পথে গেছেন।
+
+নতুন account provider-এর quota rules থেকে নিশ্চিত মুক্তি দেয়—এমন বলবে না।
+Provider rules ও বৈধ migration অনুসরণ করবে।
+পুরোনো resources এখনই মুছতে বলবে না।
+
+Hosting pricing/limits সম্পর্কে পুরোনো কথোপকথনের সংখ্যা ধরে পরামর্শ নয়;
+বর্তমান official sources যাচাই করবে।
+
+---
+
+## ৭. সর্বশেষ নতুন Vercel অবস্থা — agent দ্বারা যাচাই
+
+Vercel connector পুনরায় যুক্ত করার পরে agent পেয়েছে:
+
+Team:
+saifulislam9897info-7989's projects
+
+Team ID:
+team_udwSdFTMBVOe3Fc4o0BT6foW
+
+Project:
+proshnobook-com
+
+Project ID:
+prj_gJuVKTIvUtieGaJr7mitBHdC05Ze
+
+Git link:
+saifulsirictdev/Proshnobook_com
+
+Production branch:
+main
+
+Framework:
+Next.js
+
+Build command:
+npm run build
+
+সর্বশেষ তখন দেখা production deployment:
+dpl_5e4CSBRyKs2tov3fF8mjBTjm4DXA
+
+State:
+READY
+
+Substate:
+PROMOTED
+
+Deployed commit:
+c81a83c016d722dab42005da0880ef600d4b9502
+
+Production aliases-এ ছিল:
+- proshnobook.com
+- proshnobook-com.vercel.app
+- অন্যান্য Vercel project/branch aliases
+
+সেই team response-এ:
+softBlock: null
+blocked: null
+
+অর্থ:
+সেই যাচাইয়ের সময় account block দেখা যায়নি;
+ভবিষ্যতে quota block হবে না তার নিশ্চয়তা নয়।
+
+Project settings response-এ:
+- nodeVersion: 26.x দেখা গেছে।
+- আগের backup/CI tooling Node 22 ব্যবহার করত।
+- এটি একটি লক্ষ্যযোগ্য পার্থক্য, কিন্তু এই কারণে নিজে থেকে version
+  পরিবর্তন করবে না; compatibility ও প্রয়োজন যাচাই করবে।
+- cron definitions তখন empty list ছিল;
+  scheduled feature প্রয়োজন হলে config যাচাই করতে হবে।
+
+কোনো secret-এর মান decrypt/read করা হয়নি।
+কোনো configuration পরিবর্তন করা হয়নি।
+
+---
+
+## ৮. নতুন production সম্পর্কে ব্যবহারকারীর রিপোর্ট
+
+ব্যবহারকারী জানিয়েছেন:
+১. নতুন Vercel project-এ build command npm run build করে deployment ঠিক হয়েছে।
+২. proshnobook.com যুক্ত ও verified।
+৩. IT Nut DNS-এ প্রয়োজনীয় A ও verification TXT record দেওয়া হয়েছে।
+৪. Production site খুলছে।
+৫. প্রথমে Google login error ছিল।
+৬. Runtime log-এ DATABASE_URL-এর invalid PostgreSQL URL format ধরা পড়ে।
+৭. তিনি DATABASE_URL সংশোধন ও redeploy করার পরে Google login পরীক্ষা করে সফল হয়েছেন।
+৮. একটি PDF খুলে দেখেছেন।
+৯. BLOB_READ_WRITE_TOKEN যোগ করেছেন।
+
+এগুলো user-reported ফলাফল।
+Agent সব login/PDF/DNS flow নিজে পরীক্ষা করেনি।
+
+Public homepage fetch-এ agent পেয়েছে:
+- সাইটের বাংলা homepage content
+- marketplace paper listings
+- কিছু প্রশ্নপত্রের লেখা
+তবে browser rendering, full PDF download বা database completeness
+এতে প্রমাণিত নয়।
+
+www.proshnobook.com configuration তখনো পৃথকভাবে যাচাই হয়নি।
+
+---
+
+## ৯. Environment variables
+
+### নতুন project-এ agent যে নামগুলো দেখেছে
+সবগুলো production target-এ sensitive variable হিসেবে তালিকাভুক্ত ছিল:
+- DATABASE_URL
+- AUTH_SECRET
+- AUTH_GOOGLE_ID
+- AUTH_GOOGLE_SECRET
+- SITE_URL
+- ADMIN_EMAIL
+- BLOB_READ_WRITE_TOKEN
+- DEEPSEEK_API_KEY
+
+Values প্রকাশিত বা decrypt করা হয়নি।
+Sensitive list response-এ empty value দেখানো মানেই secret আসলে ফাঁকা নয়।
+
+DEEPSEEK_API_KEY যোগ করার পরে successful production deployment হয়েছে।
+তবে real API invocation, account balance, model response ও app integration
+কার্যকর কি না পরীক্ষা হয়নি।
+
+### Repository-এ অন্য ব্যবহৃত env names
+Feature অনুযায়ী প্রযোজ্য:
+- CRON_SECRET
+- GEMINI_API_KEY
+- GEMINI_MODEL
+- SSLCZ_STORE_ID
+- SSLCZ_STORE_PASS
+- SSLCZ_LIVE
+- FB_PAGE_ACCESS_TOKEN
+- FB_PAGE_ID
+- TELEGRAM_BOT_TOKEN
+- TELEGRAM_CHANNEL_ID
+- WHATSAPP_API_TOKEN
+- WHATSAPP_GROUP_ID
+- WHATSAPP_INSTANCE_ID
+- PDF_VAULT_KEYS
+- PDF_VAULT_ACTIVE_KEY
+
+আরও variables থাকতে পারে; code দিয়ে inventory করবে।
+PENDING_IMPORT_GRANT-এর মতো internal permission/grant নির্বিচারে
+নতুন environment-এ বসাবে না।
+
+### Auth details
+- auth.ts Google provider স্বয়ংক্রিয়ভাবে AUTH_GOOGLE_ID ও
+  AUTH_GOOGLE_SECRET পড়ে।
+- Credentials login DB user ও bcrypt password যাচাই করে।
+- ADMIN_EMAIL Google sign-in-এ admin role-এ প্রভাব ফেলে।
+- auth.config.ts edge-safe auth settings।
+- Google OAuth callback:
+  https://ACTUAL-DOMAIN/api/auth/callback/google
+- Actual domain/callback settings যাচাই করবে।
+- AUTH_URL দরকার কি না current Auth.js config অনুযায়ী দেখবে।
+
+### নিরাপত্তা ও migration rules
+- একই Neon production URL ব্যবহার করলে একই real DB-তে কাজ হবে।
+- Backup-এর direct URL-ই runtime-এ বাধ্যতামূলক নয়।
+- Repo import করলে env/DB/Blob স্বয়ংক্রিয়ভাবে transfer হয় না।
+- GitHub Actions secrets hosting environment-এ স্বয়ংক্রিয়ভাবে আসে না।
+- BLOB_BACKUP_PASSPHRASE app runtime-এর variable নয়।
+- নতুন database বা Prisma integration অনুমতি ছাড়া তৈরি করবে না।
+- prisma db push, migrate, seed বা destructive restore অনুমতি ছাড়া নয়।
+- নতুন project wizard-এ Prisma Postgres integration popup খোলা হয়েছিল।
+  Agent “Accept and Create” না চাপতে বলে, কারণ existing DB Neon-এ।
+  ওই screenshot থেকে নতুন database provision হয়েছিল এমন প্রমাণ নেই।
+
+---
+
+## ১০. Vault encryption-এর অবস্থা
+
+Code-এ:
+- PDF_VAULT_KEYS
+- PDF_VAULT_ACTIVE_KEY
+- default active key ID: v1
+
+Files:
+- lib/pdf-vault.ts
+- lib/pdf-vault-status.ts
+- scripts/pdf-vault-backup.cjs
+
+পুরোনো settings-এ এই names নেই বলে user জানিয়েছিলেন।
+নতুন project-এর agent-read variable list-এও names পাওয়া যায়নি।
+
+সতর্কতা:
+- Variables absent মানেই সব পুরোনো PDF unencrypted নয়।
+- সঠিক key ছাড়া পুরোনো ciphertext নতুন key দিয়ে recover করা যায় না।
+- নতুন substitute key বানিয়ে recoverability দাবি করবে না।
+- Existing encrypted files-এর metadata/history দেখে decrypt test লাগবে।
+- User একটি PDF খুলেছেন; সব PDF/vault recovery প্রমাণ নয়।
+
+---
+
+## ১১. Blob backup tooling
+
+Files:
+- .github/workflows/blob-backup.yml
+- scripts/blob-backup.cjs
+- scripts/blob-backup-restore.cjs
+- tests/blob-backup.test.cjs
+- docs/BLOB-BACKUP.md
+
+Features:
+- Manual workflow_dispatch।
+- One public Blob store per token।
+- Secrets:
+  BLOB_READ_WRITE_TOKEN
+  BLOB_BACKUP_PASSPHRASE
+- Pagination, restricted public Blob URL download,
+  size/SHA256 verification, re-list।
+- Credential forwarding ও unsafe redirects এড়ানোর ব্যবস্থা।
+- Maximum backup size 5 GiB ছিল; code যাচাই করবে।
+- TAR manifest।
+- scrypt + AES-256-GCM encryption।
+- Encrypted archive decrypt/digest roundtrip check।
+- Artifact-এ শুধু encrypted archive ও report।
+- Retention 7 days।
+- No production file delete/modify।
+- Snapshot atomic নয়; concurrent changes-এর সব case বাদ যায় না।
+- DB/env/vault keys অন্তর্ভুক্ত নয়।
+
+Archive format:
+PBLOB001 + salt16 + IV12 + ciphertext + GCM tag16
+Authenticated header।
+Backup passphrase minimum 20 bytes।
+
+Offline restore/decrypt command:
+node scripts/blob-backup-restore.cjs INPUT.tar.enc INPUT.tar.enc.json NEW-OUTPUT.tar
+
+Passphrase privately environment-এ supply করতে হয়।
+কখনো chat/command history-তে literal secret লিখতে বলবে না।
+
+এই script:
+- encrypted file/report যাচাই করে
+- নতুন private TAR তৈরি করে
+- existing output overwrite করে না
+- production Blob বা database-এ restore করে না
+
+Raw decrypted TAR private রাখবে।
+
+---
+
+## ১২. Database + source backup tooling
+
+Files:
+- .github/workflows/site-data-backup.yml
+- scripts/site-data-backup.cjs
+- tests/site-data-backup.test.cjs
+- docs/SITE-DATA-BACKUP.md
+
+Features:
+- Manual workflow।
+- Secrets:
+  DATABASE_URL
+  BLOB_BACKUP_PASSPHRASE
+- PostgreSQL 18 Docker client।
+- Neon hostname validation।
+- SSL required।
+- default_transaction_read_only।
+- pg_dump custom format।
+- --no-owner --no-privileges।
+- pg_restore --list structural validation।
+- git archive HEAD দিয়ে tracked source snapshot।
+- SHA256 internal manifest।
+- Existing Blob encryption format reuse।
+- Archive decrypt/digest roundtrip validation।
+- Encrypted-only artifacts, retention 7 days।
+- Temporary raw files cleanup।
+
+Included:
+- নির্বাচিত Neon DB-এর logical schema/data dump
+- dump table of contents
+- selected commit-এর tracked source
+- manifest/checksums
+
+Excluded:
+- Blob bytes; পৃথক Blob backup
+- ignored/untracked .env/config files
+- vault encryption keys
+- external DNS/OAuth/provider settings
+- DB cluster roles ও original ownership/grants
+- অন্য database/store
+- Backup-এর পর যোগ হওয়া data
+
+pg_restore --list full restore test নয়।
+No production import/restore হয়েছে।
+
+অন্য recovery tooling:
+- scripts/disposable-restore-check.cjs
+- scripts/pdf-vault-backup.cjs
+
+---
+
+## ১৩. Backup runs ও passphrase history
+
+### প্রথম Blob backup
+Run:
+44554787467 — success
+
+Artifact:
+encrypted-blob-backup-44554787467
+
+Archive:
+blob-1795102003329.tar.enc
+33,382,452 bytes
+
+Report:
+blob-1795102003329.tar.enc.json
+442 bytes
+
+User Termux দিয়ে download করে manually Drive upload করেন।
+তখন Drive metadata search-এ পাওয়া গিয়েছিল:
+
+Archive ID:
+1KG4_uLQRBdzBtY9shcFUGDIzh3TqVXOi
+
+Report ID:
+1x-SSJmEv8WpM0Kal7CFT0A0oGVChuMZa
+
+Metadata presence verified হয়েছিল;
+Drive hash/download/decrypt/full restore বা privacy permissions পরীক্ষা হয়নি।
+
+### প্রথম database/source backup
+Run:
+44576137705 — success
+
+### গুরুত্বপূর্ণ passphrase সমস্যা
+ব্যবহারকারী জানান আগের passphrase নিজের কাছে সংরক্ষিত নেই।
+পুরোনো agent এটি শুরুতে যথেষ্ট স্পষ্ট করে বলতে পারেনি এবং দুঃখ প্রকাশ করেছে।
+
+এরপর user:
+- নতুন দীর্ঘ passphrase তৈরি করেন
+- নিরাপদে save করেছেন বলে জানান
+- GitHub Actions BLOB_BACKUP_PASSPHRASE secret Update করেন
+
+Agent passphrase জানে না বা দেখেনি।
+
+নতুন Secret বসালে পুরোনো encrypted files-এর passphrase বদলায় না।
+
+### নতুন সংরক্ষিত passphrase দিয়ে পুনরায় নেওয়া backups
+Blob:
+44579841561 — success
+
+Database + source:
+44579846945 — success
+
+এগুলোই সর্বশেষ উপযুক্ত backup set হিসেবে ব্যবহার করতে হবে।
+
+তখন download commands ছিল:
+gh run download 44579841561 --repo smict9897/QuestionMaker.com --dir ~/storage/downloads/proshnobook-new-blob
+
+gh run download 44579846945 --repo smict9897/QuestionMaker.com --dir ~/storage/downloads/proshnobook-new-database-code
+
+Artifacts 7 দিনে expire করে; এখনো পাওয়া যাবে ধরে নেবে না।
+নতুন repo-তে GitHub Actions secrets copied আছে ধরে নেবে না।
+
+---
+
+## ১৪. Mobile/Drive backup-এর বাস্তব অবস্থা
+
+User-এর Android Downloads-এ ছিল:
+- proshnobook-new-blob
+- proshnobook-new-database-code
+- আরও পুরোনো backup folders
+
+gh run download artifact-name subfolder বানাতে পারে।
+তাই folder-এ “1 item” মানেই শুধু এক backup file নয়।
+
+প্রতিটি backup set:
+- একটি .tar.enc
+- একটি .tar.enc.json
+
+Blob + Database/source মিলিয়ে:
+মোট 4 backup files প্রত্যাশিত।
+
+ZIP করার বিষয়ে:
+- Outer ZIP-এর নাম যাই হোক, দুই backup set ভেতরে থাকতে পারে।
+- Subfolders গ্রহণযোগ্য।
+- Outer ZIP-এ password না থাকলেও inner .tar.enc encrypted।
+- Passphrase ZIP-এ রাখা যাবে না।
+
+User একবার 3 folders/298 MB ZIP করার কথা বলেছিলেন,
+পরে ভুল সংশোধন করে নতুন দুটো upload করেছেন বলেন।
+
+Screenshot-এ দেখা যায়:
+proshnobook-new-blob.zip
+Drive folder: Proshnobook_backups
+
+কিন্তু:
+- Database/source ওই ZIP-এর ভেতরে নাকি আলাদা ZIP—পুরো নিশ্চিত নয়।
+- User বলেন “ভেতরে দুইটা file আছে”; তা archive+report নাকি দুই
+  backup folder—অস্পষ্ট।
+- Latest ZIP contents agent খোলেনি।
+- New backup Drive IDs নিশ্চিত নয়।
+- New Drive ZIP checksum/decryption/permissions/restore পরীক্ষা হয়নি।
+- User mobile copies রেখেছেন বলেছেন।
+- Phone/Drive/পুরোনো originals এখনই delete করতে বলা হয়নি।
+
+---
+
+## ১৫. Full website recovery এখনো complete নয়
+
+যাচাই বাকি:
+১. Latest production DB পুরোনো সঠিক DB কি না।
+২. সব প্রশ্ন/subject/grade/papers/records-এর completeness।
+৩. সব ব্যবহৃত Blob stores covered কি না।
+৪. Old PDF files এবং encrypted PDF decrypt হয় কি না।
+৫. All required environment values-এর encrypted backup।
+৬. Original vault keys থাকলে তাদের complete keyring backup।
+৭. Domain registrar/DNS/OAuth recovery notes।
+৮. Latest Drive ZIP contents ও checksum।
+৯. Private handling-এ decrypt verification।
+১০. Disposable empty database-এ actual dump restore।
+১১. Schema/counts/representative question records তুলনা।
+১২. Restored application login/PDF/file reads।
+১৩. DB ও Blob snapshots-এর সময়গত সামঞ্জস্য।
+
+User জিজ্ঞেস করেছিলেন সব প্রশ্ন আছে কি না।
+সঠিক উত্তর:
+- নির্বাচিত DB-এর logical dump সব schema/records নেওয়ার জন্য তৈরি।
+- ওই Blob store-এর PDF পৃথক backup-এ।
+- Counts/restore মেলানো হয়নি, তাই “একটিও বাদ যায়নি” নিশ্চয়তা নয়।
+- Backup-এর পর যোগ করা বা শুধু ফোনে থাকা unsaved প্রশ্ন এতে নেই।
+
+---
+
+## ১৬. Environment backup আলোচনা
+
+User সব Vercel .env backup চান।
+Agent raw secrets connector output-এ আনার বদলে phone-local export প্রস্তাব করে।
+
+প্রস্তাবিত Termux steps ছিল:
+mkdir -p ~/proshnobook-env-backup
+cd ~/proshnobook-env-backup
+umask 077
+vercel link
+
+তারপর:
+vercel env pull .env.production --environment=production
+vercel env pull .env.preview --environment=preview
+vercel env pull .env.development --environment=development
+
+কিন্তু:
+- User এগুলো সম্পন্ন করেছেন এমন প্রমাণ নেই।
+- সঠিক পুরোনো project/account select করতে হবে।
+- Sensitive/non-readable variables export নাও হতে পারে।
+- Shared vars/branch-specific overrides আলাদা যাচাই লাগতে পারে।
+- Raw .env files encrypted নয়।
+- Raw files GitHub/chat/Drive-এ পাঠাতে বলা হয়নি।
+- এগুলো দিয়ে encrypted configuration backup তৈরি এখনো হয়নি।
+- Secret অপ্রয়োজনে tool response-এ আনবে না।
+
+---
+
+## ১৭. Access ও connector state
+
+এই handoff তৈরির সর্বশেষ session-এ:
+- Vercel connected এবং নতুন team read সফল।
+- Drive/Gmail ইত্যাদি latest note-এ enabled ছিল না।
+- নতুন session-এর current app note ও connector lookup-ই source of truth।
+
+App ব্যবহার করতে:
+- আগে available connector tools/schema জানতে হবে।
+- Resource IDs prior actual result বা user input থেকে নিতে হবে।
+- Placeholder ID invent নয়।
+- Secret read শুধু কাজের প্রয়োজনে ও নিরাপদ handling-এর ব্যবস্থা থাকলে।
+- Current .env secret values chat-এ চাইবে না।
+
+GitHub account change আলোচনা:
+- User নতুন repo দিয়ে এই same project কাজ চালাতে চান।
+- পুরোনো coding session নতুন Vercel connect করলেই নতুন repo হয় না।
+- নতুন repo নির্বাচন করে নতুন session খোলা ও এই handoff দেওয়ার পরামর্শ।
+- পুরোনো conversation/repo delete করা দরকার নেই।
+- GitHub app revoke করলে অন্য Arena session access-ও প্রভাবিত হতে পারে।
+
+---
+
+## ১৮. কাজের নিরাপত্তা ও অনুমতি
+
+ব্যবহারকারীর অনুমতি ছাড়া:
+- Production DB write/migrate/import/seed নয়
+- prisma db push নয়
+- Database recreate নয়
+- Blob overwrite/delete নয়
+- Vault keys generate/rotate/replace নয়
+- Domain/DNS/nameserver change নয়
+- Deployment/project delete নয়
+- Paid plan/purchase নয়
+- Live payment/wallet transaction test নয়
+
+Production একই DB-তে test site যুক্ত করলে read-only test-ও
+কোন endpoint ব্যবহার করছে code দেখে বুঝবে।
+Login কিছু DB records/session-related data লিখতে পারে;
+write-free বলা যাবে না যদি তা নিশ্চিত না হও।
+
+সঠিক backups থাকা সত্ত্বেও live restore/cutover আলাদা অনুমতি চায়।
+Restore rehearsal সবসময় নতুন disposable target-এ করবে।
+
+প্রয়োজনে GitHub PR/merge-এর আগে tests ও diff যাচাই করবে।
+Synthetic test-কে live success বলবে না।
+
+---
+
+## ১৯. নতুন agent-এর প্রথম করণীয়
+
+১. এই context পড়ে বর্তমান repository/branch নিশ্চিত করো।
+২. package.json, auth, Prisma schema, print code ও backup tooling পড়ো।
+৩. Current GitHub repo সত্যিই saifulsirictdev/Proshnobook_com কি না যাচাই করো।
+৪. Connected Vercel team/project নতুনটি কি না read-only যাচাই করো।
+৫. Deployment/domain/env NAME status যাচাই করো; secret values নয়।
+৬. “নিজে যাচাই”, “ব্যবহারকারীর রিপোর্ট” ও “বাকি”—আলাদা status দাও।
+৭. ব্যবহারকারীর পরবর্তী priority অনুসারে কাজ করো:
+   - নতুন সাইটের regression check
+   - missing প্রশ্ন/PDF তদন্ত
+   - DeepSeek integration check
+   - encrypted configuration backup
+   - full restore rehearsal
+৮. কোনো পরীক্ষা paid API usage বা production write করতে পারে হলে আগে বলো।
+৯. Repository-তে secret ছাড়া handoff document রাখার অনুমতি নিয়ে
+   docs/PROJECT-HANDOFF.md হালনাগাদ করো।
+১০. বড় কাজ শেষে changed files, tests, live checks ও remaining risks সংক্ষেপে জানাও।
+
+শেষ কথা:
+ব্যবহারকারীর উদ্দেশ্য শুধু homepage চালু করা নয়।
+পুরোনো প্রশ্ন, PDF, login, question builder, printing/booklet ও অন্যান্য
+প্রয়োজনীয় সুবিধা অক্ষত রেখে নিরাপদভাবে কাজ চালানো এবং recoverable backup রাখা।
+প্রমাণ ছাড়া সম্পূর্ণ success দাবি করবে না।
